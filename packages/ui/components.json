@@ -11,10 +11,10 @@
   },
   "iconLibrary": "lucide",
   "aliases": {
-    "components": "@repo/ui/components",
-    "utils": "@repo/ui/lib/utils",
-    "hooks": "@repo/ui/hooks",
-    "lib": "@repo/ui/lib",
-    "ui": "@repo/ui/components"
+    "components": "@ototabi/ui/components",
+    "utils": "@ototabi/ui/lib/utils",
+    "hooks": "@ototabi/ui/hooks",
+    "lib": "@ototabi/ui/lib",
+    "ui": "@ototabi/ui/components"
   }
 }

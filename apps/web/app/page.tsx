@@ -1,6 +1,6 @@
 import Image, { type ImageProps } from "next/image";
-import { Button } from "@repo/ui/components/button";
-import { Textarea } from "@repo/ui/components/textarea";
+import { Button } from "@ototabi/ui/components/button";
+import { Textarea } from "@ototabi/ui/components/textarea";
 
 type Props = Omit<ImageProps, "src"> & {
   srcLight: string;

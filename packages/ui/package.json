@@ -1,5 +1,5 @@
 {
-  "name": "@repo/ui",
+  "name": "@ototabi/ui",
   "version": "0.0.0",
   "private": true,
   "exports": {
@@ -15,8 +15,8 @@
     "check-types": "tsc --noEmit"
   },
   "devDependencies": {
-    "@repo/eslint-config": "*",
-    "@repo/typescript-config": "*",
+    "@ototabi/eslint-config": "*",
+    "@ototabi/typescript-config": "*",
     "@turbo/gen": "^2.5.4",
     "@types/node": "^22.15.29",
     "@types/react": "19.0.10",

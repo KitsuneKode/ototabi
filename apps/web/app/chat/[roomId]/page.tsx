@@ -1,4 +1,4 @@
-import { Button } from '@repo/ui/components/button';
+import { Button } from '@ototabi/ui/components/button'
 
 export default function ChatPage() {
   return (
@@ -6,5 +6,5 @@ export default function ChatPage() {
       chat page
       <Button></Button>
     </div>
-  );
+  )
 }

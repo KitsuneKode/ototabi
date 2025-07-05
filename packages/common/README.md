@@ -1,4 +1,4 @@
-# @repo/common
+# @ototabi/common
 
 To install dependencies:
 

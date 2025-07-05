@@ -2,5 +2,6 @@
   "semi": false,
   "singleQuote": true,
   "sortingMethod": "lineLength",
-  "sortingOrder": "ascending"
+  "sortingOrder": "ascending",
+  "plugins": ["prettier-plugin-sort-imports"]
 }
