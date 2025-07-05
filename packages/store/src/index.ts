@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@/generated/client'
 
 export const prisma =
   globalThis.prisma ||
@@ -6,12 +6,12 @@ export const prisma =
     omit: {
       user: { password_hash: true },
     },
-  });
+  })
 
 declare global {
   var prisma:
     | PrismaClient<{ omit: { user: { password_hash: true } } }>
-    | undefined;
+    | undefined
 }
 
-if (process.env.NODE_ENV === 'development') globalThis.prisma = prisma;
+if (process.env.NODE_ENV === 'development') globalThis.prisma = prisma

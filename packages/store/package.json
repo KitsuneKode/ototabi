@@ -1,5 +1,5 @@
 {
-  "name": "@repo/store",
+  "name": "@ototabi/store",
   "module": "src/index.ts",
   "type": "module",
   "private": true,
@@ -7,10 +7,14 @@
     ".": "./src/index.ts"
   },
   "devDependencies": {
-    "@repo/typescript-config": "workspace:*",
+    "@ototabi/typescript-config": "*",
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.11.1",
+    "prisma": "^6.11.1"
   }
 }

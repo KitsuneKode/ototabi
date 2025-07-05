@@ -1,5 +1,5 @@
 {
-  "name": "@repo/backend-common",
+  "name": "@ototabi/backend-common",
   "version": "1.0.0",
   "description": "",
   "main": "./src/index.ts",
@@ -15,9 +15,11 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@repo/common": "*",
-    "@repo/typescript-config": "*",
+    "@ototabi/typescript-config": "*",
     "@types/bun": "latest"
+  },
+  "dependencies": {
+    "@ototabi/common": "*"
   },
   "peerDependencies": {
     "typescript": "^5"

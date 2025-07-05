@@ -1,4 +1,4 @@
-# @repo/backend-common
+# @ototabi/backend-common
 
 To install dependencies:
 
