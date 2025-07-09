@@ -3,6 +3,9 @@
   "module": "src/app.ts",
   "type": "module",
   "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "devDependencies": {
     "@ototabi/typescript-config": "*",
     "@types/bun": "latest"

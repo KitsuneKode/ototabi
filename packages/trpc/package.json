@@ -1,6 +1,6 @@
 {
   "name": "@ototabi/trpc",
-  "module": "src/server.ts",
+  "module": "src/index.ts",
   "type": "module",
   "private": true,
   "devDependencies": {
@@ -11,8 +11,10 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@ototabi/auth": "*",
     "@ototabi/store": "*",
     "@trpc/server": "^11.4.3",
+    "superjson": "^2.2.2",
     "zod": "^3.25.76"
   }
 }

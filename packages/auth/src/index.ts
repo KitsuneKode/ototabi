@@ -1,5 +1,6 @@
 import { prisma } from '@ototabi/store'
 import { betterAuth } from 'better-auth'
+export { fromNodeHeaders } from 'better-auth/node'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 
 export const auth = betterAuth({
