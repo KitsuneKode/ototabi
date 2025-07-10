@@ -1,6 +1,7 @@
 import { appRouter } from '@/routers'
 import { createTRPCContext } from '@/trpc'
 import type { AppRouter } from '@/routers'
+import { createExpressMiddleware } from '@trpc/server/adapters/express'
 import type { inferRouterInputs, inferRouterOutputs } from '@trpc/server'
 
 /**
@@ -19,5 +20,10 @@ type RouterInputs = inferRouterInputs<AppRouter>
  **/
 type RouterOutputs = inferRouterOutputs<AppRouter>
 
-export { createTRPCContext, appRouter }
+const expressMiddleWare = createExpressMiddleware({
+  router: appRouter,
+  createContext: createTRPCContext,
+})
+
+export { expressMiddleWare, appRouter, createTRPCContext }
 export type { AppRouter, RouterInputs, RouterOutputs }
