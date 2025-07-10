@@ -23,6 +23,14 @@ interface Action {
   value: string
 }
 
+/**
+ * Updates the form state for authentication inputs based on the dispatched action.
+ *
+ * @param state - The current form state containing email, name, and password fields.
+ * @param action - The action specifying which field to update and its new value.
+ * @returns The updated form state with the specified field changed.
+ * @throws Error if an invalid action type is provided.
+ */
 function reducer(state: typeof defaultFormValue, action: Action) {
   switch (action.type) {
     case 'email':
