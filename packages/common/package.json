@@ -18,7 +18,8 @@
   "license": "ISC",
   "devDependencies": {
     "@ototabi/typescript-config": "*",
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/winston": "^2.4.4"
   },
   "dependencies": {
     "date-fns": "^4.1.0",

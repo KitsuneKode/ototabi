@@ -4,8 +4,6 @@ import cluster from 'cluster'
 import config from '@/utils/config'
 import { logger } from '@/utils/logger'
 
-const numCPUs = os.cpus().length
-
 try {
   config.validate(['jwtSecret', 'port', 'frontendUrl', 'databaseUrl'])
 } catch (error) {
@@ -14,6 +12,9 @@ try {
 }
 
 const port = config.getConfig('port')
+
+const numCPUs =
+  config.getConfig('nodeEnv') === 'development' ? 3 : os.cpus().length
 
 if (cluster.isPrimary) {
   logger.info(`Master process ${process.pid} is running`)

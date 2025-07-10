@@ -5,7 +5,7 @@ const authConfigSchema = {
   port: () => Number(process.env.PORT) || 8080,
   frontendUrl: () => process.env.FRONTEND_URL || '',
   databaseUrl: () => process.env.DATABASE_URL || '',
-  env: () => process.env.NODE_ENV || 'development',
+  nodeEnv: () => process.env.NODE_ENV || 'development',
 }
 
 const config = ConfigLoader.getInstance(authConfigSchema, 'auth')
