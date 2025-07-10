@@ -1,18 +1,20 @@
 import cors from 'cors'
 import express from 'express'
+import config from '@/utils/config'
 import { expressMiddleWare } from '@ototabi/trpc'
+import { expressMiddleWareSimple } from '@ototabi/trpc/simp'
 
 const app = express()
 
 app.use(
   cors({
-    origin: 'http://your-frontend-domain.com', // Replace with your frontend's origin
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed HTTP methods
-    credentials: true, // Allow credentials (cookies, authorization headers, etc.)
+    origin: config.getConfig('frontendUrl'),
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
   }),
 )
 
-app.use('/trpc', expressMiddleWare)
+app.use('/api/trpc', expressMiddleWareSimple)
 
 app.use(express.json())
 

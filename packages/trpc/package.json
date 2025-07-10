@@ -4,7 +4,8 @@
   "type": "module",
   "private": true,
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./simp": "./src/simple.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",

@@ -4,9 +4,11 @@ import type { TRPCRouterRecord } from '@trpc/server'
 import { protectedProcedure, publicProcedure } from '@/trpc'
 
 export const userRouter = {
-  getUser: publicProcedure.input(z.string()).query((opts) => {
-    opts.input // string
-    return { id: opts.input, name: 'Bilbo' }
+  getUser: publicProcedure.query(() => {
+    return { id: '1', name: 'Bilbo' }
+  }),
+  getAllUser: publicProcedure.query(async () => {
+    return prisma.user.findMany()
   }),
   createUser: protectedProcedure
     .input(z.object({ name: z.string().min(5) }))
