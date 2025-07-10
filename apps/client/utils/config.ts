@@ -3,7 +3,7 @@ import { ConfigLoader } from '@ototabi/common/config-loader'
 const clientConfigSchema = {
   frontendUrl: () => process.env.NEXT_PUBLIC_APP_URL || '',
   apiBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || '',
-  jwtSecret: () => process.env.JWT_SECRET || '',
+// Removed jwtSecret from clientConfigSchema as it should not be exposed on the client side.
   databaseUrl: () => process.env.DATABASE_URL || '',
   nodeEnv: () => process.env.NODE_ENV || 'development',
 }
