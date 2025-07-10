@@ -1,6 +1,7 @@
 import { prisma } from '@ototabi/store'
 import { betterAuth } from 'better-auth'
-export { fromNodeHeaders } from 'better-auth/node'
+export { fromNodeHeaders, toNodeHandler } from 'better-auth/node'
+import { nextCookies } from 'better-auth/next-js'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 
 export const auth = betterAuth({
@@ -11,6 +12,7 @@ export const auth = betterAuth({
     enabled: true,
     autoSignIn: false, //defaults to true
   },
+  plugins: [nextCookies()], // make sure this is the last plugin in the array
   socialProviders: {
     //   github: {
     //     clientId: process.env.GITHUB_CLIENT_ID as string,

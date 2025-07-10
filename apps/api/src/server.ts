@@ -5,7 +5,14 @@ import config from '@/utils/config'
 import { logger } from '@/utils/logger'
 
 try {
-  config.validate(['jwtSecret', 'port', 'frontendUrl', 'databaseUrl'])
+  config.validate([
+    'jwtSecret',
+    'port',
+    'frontendUrl',
+    'databaseUrl',
+    'betterAuthSecret',
+    'betterAuthUrl',
+  ])
 } catch (error) {
   logger.error('Configuration validation failed:', error)
   process.exit(1)

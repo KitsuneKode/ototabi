@@ -4,7 +4,8 @@
   "type": "module",
   "private": true,
   "exports": {
-    ".": "./src/index.ts"
+    "./server": "./src/index.ts",
+    "./client": "./src/client.ts"
   },
   "devDependencies": {
     "@ototabi/typescript-config": "*",
