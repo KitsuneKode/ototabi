@@ -3,14 +3,16 @@ import { PrismaClient } from '@/generated/client'
 export const prisma =
   globalThis.prisma ||
   new PrismaClient({
-    omit: {
-      user: { password_hash: true },
-    },
+    // omit: {
+    //   user: { password_hash: true },
+    // },
   })
 
 declare global {
   var prisma:
-    | PrismaClient<{ omit: { user: { password_hash: true } } }>
+    | PrismaClient<{
+        // omit: { user: { : true } }
+      }>
     | undefined
 }
 

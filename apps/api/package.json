@@ -25,9 +25,9 @@
   "dependencies": {
     "@ototabi/backend-common": "*",
     "@ototabi/common": "*",
+    "@ototabi/auth": "*",
     "@ototabi/store": "*",
     "@ototabi/trpc": "*",
-    "better-auth": "^1.2.12",
     "cors": "^2.8.5",
     "express": "^5.1.0"
   }

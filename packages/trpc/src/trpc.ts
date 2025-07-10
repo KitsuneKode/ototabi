@@ -2,7 +2,7 @@ import superjson from 'superjson'
 import { z, ZodError } from 'zod/v4'
 import { prisma as db } from '@ototabi/store'
 import { initTRPC, TRPCError } from '@trpc/server'
-import { auth, fromNodeHeaders } from '@ototabi/auth'
+import { auth, fromNodeHeaders } from '@ototabi/auth/server'
 
 import * as trpcExpress from '@trpc/server/adapters/express'
 
