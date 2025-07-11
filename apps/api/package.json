@@ -22,12 +22,13 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@ototabi/auth": "*",
     "@ototabi/backend-common": "*",
     "@ototabi/common": "*",
-    "@ototabi/auth": "*",
     "@ototabi/store": "*",
     "@ototabi/trpc": "*",
     "cors": "^2.8.5",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "livekit-server-sdk": "^2.13.1"
   }
 }

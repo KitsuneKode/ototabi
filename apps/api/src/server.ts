@@ -12,6 +12,9 @@ try {
     'databaseUrl',
     'betterAuthSecret',
     'betterAuthUrl',
+    'liveKitApiKey',
+    'liveKitApiSecret',
+    'liveKitUrl',
   ])
 } catch (error) {
   logger.error('Configuration validation failed:', error)
