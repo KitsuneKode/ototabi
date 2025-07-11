@@ -12,9 +12,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ototabi/store": "*",
-    "@ototabi/common": "*",
+    "@livekit/components-react": "^2.9.13",
+    "@livekit/components-styles": "^1.1.6",
     "@ototabi/auth": "*",
+    "@ototabi/common": "*",
+    "@ototabi/store": "*",
     "@ototabi/trpc": "*",
     "@ototabi/ui": "*",
     "@tanstack/react-query": "^5.82.0",
