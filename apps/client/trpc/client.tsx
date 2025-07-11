@@ -10,6 +10,14 @@ import { createTRPCClient, httpBatchLink } from '@trpc/client'
 import { createTRPCContext } from '@trpc/tanstack-react-query'
 export const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>()
 let browserQueryClient: QueryClient
+/**
+ * Returns a React Query client instance, creating a new one per request on the server or reusing a singleton on the browser.
+ *
+ * Ensures that the same query client is reused across renders in the browser to prevent issues with React suspense and data consistency.
+ * On the server, always creates a new client to avoid sharing state between requests.
+ *
+ * @returns The React Query client instance
+ */
 function getQueryClient() {
   if (typeof window === 'undefined') {
     // Server: always make a new query client
@@ -22,6 +30,11 @@ function getQueryClient() {
   if (!browserQueryClient) browserQueryClient = makeQueryClient()
   return browserQueryClient
 }
+/**
+ * Constructs the full tRPC API endpoint URL using the configured API base URL.
+ *
+ * @returns The complete URL for the tRPC API endpoint.
+ */
 function getUrl() {
   const base = (() => {
     // if (typeof window !== 'undefined') return ''
@@ -32,6 +45,13 @@ function getUrl() {
 
 console.log(getUrl())
 
+/**
+ * Provides tRPC and React Query client contexts to its child components.
+ *
+ * Wraps children with both `QueryClientProvider` and `TRPCProvider`, ensuring that a properly configured React Query client and tRPC client are available throughout the component subtree.
+ *
+ * @param props - Contains the React children to be rendered within the provider context
+ */
 export function TRPCReactProvider(
   props: Readonly<{
     children: React.ReactNode
