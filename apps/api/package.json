@@ -1,20 +1,33 @@
 {
   "name": "@ototabi/api",
-  "module": "./src/index.ts",
+  "module": "./src/server.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "start": "bun ./src/server.ts",
+    "dev": "bun --watch run ./src/server.ts",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "lint": "bun run lint",
+    "lint:fix": "bun run lint --fix"
+  },
   "devDependencies": {
     "@ototabi/typescript-config": "*",
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "prettier": "^3.6.2",
+    "prettier-plugin-sort-imports": "^1.8.8"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
     "@ototabi/backend-common": "*",
-    "@ototabi/store": "*",
     "@ototabi/common": "*",
-    "better-auth": "^1.2.12",
+    "@ototabi/auth": "*",
+    "@ototabi/store": "*",
+    "@ototabi/trpc": "*",
+    "cors": "^2.8.5",
     "express": "^5.1.0"
   }
 }

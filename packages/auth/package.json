@@ -1,8 +1,12 @@
 {
   "name": "@ototabi/auth",
-  "module": "src/app.ts",
+  "module": "src/index.ts",
   "type": "module",
   "private": true,
+  "exports": {
+    "./server": "./src/index.ts",
+    "./client": "./src/client.ts"
+  },
   "devDependencies": {
     "@ototabi/typescript-config": "*",
     "@types/bun": "latest"

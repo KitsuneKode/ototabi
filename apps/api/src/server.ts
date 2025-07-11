@@ -4,16 +4,24 @@ import cluster from 'cluster'
 import config from '@/utils/config'
 import { logger } from '@/utils/logger'
 
-const numCPUs = os.cpus().length
-
 try {
-  config.validate(['jwtSecret', 'port', 'frontendUrl', 'databaseUrl'])
+  config.validate([
+    'jwtSecret',
+    'port',
+    'frontendUrl',
+    'databaseUrl',
+    'betterAuthSecret',
+    'betterAuthUrl',
+  ])
 } catch (error) {
   logger.error('Configuration validation failed:', error)
   process.exit(1)
 }
 
 const port = config.getConfig('port')
+
+const numCPUs =
+  config.getConfig('nodeEnv') === 'development' ? 3 : os.cpus().length
 
 if (cluster.isPrimary) {
   logger.info(`Master process ${process.pid} is running`)
