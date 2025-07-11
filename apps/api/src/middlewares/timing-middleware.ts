@@ -18,7 +18,7 @@ export const timingMiddleWare = async (
   const result = await next()
 
   const end = Date.now()
-  logger.info(`[AUTH] ${req.path} took ${end - start}ms to execute`)
+  logger.info(`[TIMING] ${req.path} took ${end - start}ms to execute`)
 
   return result
 }

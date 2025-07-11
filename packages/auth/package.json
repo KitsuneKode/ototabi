@@ -1,6 +1,6 @@
 {
   "name": "@ototabi/auth",
-  "module": "src/app.ts",
+  "module": "src/index.ts",
   "type": "module",
   "private": true,
   "exports": {

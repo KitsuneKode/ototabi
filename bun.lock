@@ -14,11 +14,11 @@
     "apps/api": {
       "name": "@ototabi/api",
       "dependencies": {
+        "@ototabi/auth": "*",
         "@ototabi/backend-common": "*",
         "@ototabi/common": "*",
         "@ototabi/store": "*",
         "@ototabi/trpc": "*",
-        "better-auth": "^1.2.12",
         "cors": "^2.8.5",
         "express": "^5.1.0",
       },
@@ -38,6 +38,7 @@
       "name": "@ototabi/client",
       "version": "0.1.0",
       "dependencies": {
+        "@ototabi/auth": "*",
         "@ototabi/common": "*",
         "@ototabi/store": "*",
         "@ototabi/trpc": "*",
