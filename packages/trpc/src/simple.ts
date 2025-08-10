@@ -1,51 +1,47 @@
-import z from 'zod'
-import { initTRPC } from '@trpc/server'
-import * as trpcExpress from '@trpc/server/adapters/express'
-import { createExpressMiddleware } from '@trpc/server/adapters/express'
+// import superjson from 'superjson'
+// import { z, ZodError } from 'zod/v4'
+// import { authRouter } from './routers/auth'
+// import { userRouter } from './routers/user'
+// import { prisma as db } from '@ototabi/store'
+// import { uploadsRouter } from './routers/uploads'
+// import { initTRPC, TRPCError } from '@trpc/server'
+// import { auth, fromNodeHeaders } from '@ototabi/auth/server'
+// import * as trpcExpress from '@trpc/server/adapters/express'
+// import { createExpressMiddleware } from '@trpc/server/adapters/express'
+// import {
+//   authRouterSimple,
+//   userRouterSimple,
+//   type AuthRouterSimple,
+//   type UserRouterSimple,
+// } from './routers'
+// import {
+//   publicProcedure,
+//   createTRPCContext,
+//   createTRPCRouter,
+//   protectedProcedure,
+// } from '@ototabi/trpc/utils/simpleutiles'
 
-const createTRPCContext = async ({
-  req,
-  res,
-}: trpcExpress.CreateExpressContextOptions) => {
-  return { userId: 'user_123' }
-}
-// Avoid exporting the entire t-object
-// since it's not very descriptive.
-// For instance, the use of a t variable
-// is common in i18n libraries.
+// const appRouter = createTRPCRouter({
+//   hello: publicProcedure
+//     .input(
+//       z.object({
+//         text: z.string(),
+//       }),
+//     )
+//     .query((opts) => {
+//       return {
+//         greeting: `hello ${opts.input.text}`,
+//       }
+//     }),
+//   auth: authRouterSimple as AuthRouterSimple,
+//   user: userRouterSimple as UserRouterSimple,
+// })
+// // export type definition of API
 
-type Context = Awaited<ReturnType<typeof createTRPCContext>>
+// const expressMiddleWareSimple = createExpressMiddleware({
+//   router: appRouter,
+//   createContext: createTRPCContext,
+// })
 
-const t = initTRPC.context<Context>().create({
-  /**
-   * @see https://trpc.io/docs/server/data-transformers
-   */
-  // transformer: superjson,
-})
-// Base router and procedure helpers
-const createTRPCRouter = t.router
-const createCallerFactory = t.createCallerFactory
-const baseProcedure = t.procedure
-
-const appRouter = createTRPCRouter({
-  hello: baseProcedure
-    .input(
-      z.object({
-        text: z.string(),
-      }),
-    )
-    .query((opts) => {
-      return {
-        greeting: `hello ${opts.input.text}`,
-      }
-    }),
-})
-// export type definition of API
-
-const expressMiddleWareSimple = createExpressMiddleware({
-  router: appRouter,
-  createContext: createTRPCContext,
-})
-
-export { expressMiddleWareSimple, appRouter, createTRPCContext }
-export type AppRouter = typeof appRouter
+// export { expressMiddleWareSimple, appRouter, createTRPCContext }
+// export type AppRouter = typeof appRouter

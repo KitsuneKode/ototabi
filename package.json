@@ -5,7 +5,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "db:generate": "turbo run db:generate",
-    "db:migrate": "turbo run migrate db:migrate",
+    "db:migrate": "turbo run db:migrate",
     "db:studio": "turbo run db:studio",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
