@@ -1,6 +1,6 @@
+import { caller, trpc } from '@/trpc/server'
 import { Button } from '@ototabi/ui/components/button'
 import { Textarea } from '@ototabi/ui/components/textarea'
-
 /**
  * Renders the home page with a centered layout containing a heading, a button, and a textarea.
  *
@@ -8,11 +8,13 @@ import { Textarea } from '@ototabi/ui/components/textarea'
  *
  * @returns The JSX element for the home page UI.
  */
-export default function Home() {
+export default async function Home() {
+  const calls = await caller.auth.getSession()
   return (
     <div className="flex min-h-svh items-center justify-center">
       <div className="flex flex-col items-center justify-center gap-4">
         <h1 className="text-2xl font-bold">Hello World</h1>
+        {JSON.stringify(calls)}
         <Button size="sm">Button</Button>
         <Textarea />
       </div>

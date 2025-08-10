@@ -2,12 +2,13 @@
 // ^-- to make sure we can mount the Provider from a server component
 import { useState } from 'react'
 import config from '@/utils/config'
+import { SuperJSON } from 'superjson'
+import type { AppRouter } from '@ototabi/trpc'
 import { makeQueryClient } from './query-client'
-import type { AppRouter } from '@ototabi/trpc/simp'
 import type { QueryClient } from '@tanstack/react-query'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { createTRPCClient, httpBatchLink } from '@trpc/client'
 import { createTRPCContext } from '@trpc/tanstack-react-query'
+import { createTRPCClient, httpBatchLink, loggerLink } from '@trpc/client'
 export const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>()
 let browserQueryClient: QueryClient
 /**
@@ -65,9 +66,19 @@ export function TRPCReactProvider(
   const [trpcClient] = useState(() =>
     createTRPCClient<AppRouter>({
       links: [
+        loggerLink({
+          enabled: (op) =>
+            config.getConfig('nodeEnv') === 'development' ||
+            (op.direction === 'down' && op.result instanceof Error),
+        }),
         httpBatchLink({
-          // transformer: superjson, <-- if you use a data transformer
+          transformer: SuperJSON, //<-- if you use a data transformer
           url: getUrl(),
+          headers: () => {
+            const headers = new Headers()
+            headers.set('x-trpc-source', 'react-next')
+            return headers
+          },
         }),
       ],
     }),

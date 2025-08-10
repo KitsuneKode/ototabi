@@ -49,8 +49,8 @@ const Demo = () => {
   const [signInState, setSignInState] = useState(false)
   const [signOutState, setSignOutState] = useState(false)
   const [state, dispatch] = useReducer(reducer, defaultFormValue)
-  const data = useQuery(trpc.hello.queryOptions({ text: 'hi' }))
-
+  const data = useQuery(trpc.auth.getSecretMessage.queryOptions())
+  const authState = authClient.useSession()
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     console.log(state)
@@ -93,7 +93,8 @@ const Demo = () => {
     <>
       <div className="mb-10 flex items-center justify-center">
         <h1>{data.isLoading && 'Loading...'}</h1>
-        {data.data && <p>{JSON.stringify(data.data, null, 2)}</p>}
+        {data && <p>{JSON.stringify(data, null, 2)}</p>}
+        {/* {authState.data && <p>{JSON.stringify(authState.data, null, 2)}</p>} */}
       </div>
 
       {!signInState && !signOutState && (

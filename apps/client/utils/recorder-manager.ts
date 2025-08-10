@@ -1,5 +1,7 @@
-// import { openDB } from 'idb'
-// import { uploadToS3 } from './s3-upload'
+// filename: recorder-manager.ts
+
+import { db } from './indexDb'
+import { S3Uploader } from './s3-uploader'
 import {
   LocalParticipant,
   LocalTrack,
@@ -9,480 +11,285 @@ import {
   Track,
 } from 'livekit-client'
 
-/**
- * Database setup for indexDB
- */
-
-// const DB_NAME = 'recordingChunksDB'
-// const STORE_NAME = 'chunks'
-
-// const openDB = (): Promise<IDBDatabase> => {
-//   return new Promise((resolve, reject) => {
-//     const request = indexedDB.open(DB_NAME, 1)
-
-//     request.onerror = () => reject(request.error)
-//     request.onsuccess = () => resolve(request.result)
-
-//     request.onupgradeneeded = (event) => {
-//       const db = (event.target as IDBOpenDBRequest).result
-//       if (!db.objectStoreNames.contains(STORE_NAME)) {
-//         db.createObjectStore(STORE_NAME, { keyPath: 'id' })
-//       }
-//     }
-//   })
-// }
-
-// const saveChunk = async (
-//   chunkId: string,
-//   chunkData: Blob,
-//   metadata: RecordingChunk,
-// ): Promise<void> => {
-//   const db = await openDB()
-//   return new Promise((resolve, reject) => {
-//     const transaction = db.transaction(STORE_NAME, 'readwrite')
-//     const store = transaction.objectStore(STORE_NAME)
-
-//     const chunk = {
-//       id: chunkId,
-//       data: chunkData,
-//       metadata,
-//       timestamp: Date.now(),
-//     }
-
-//     const request = store.put(chunk)
-
-//     request.onsuccess = () => resolve()
-//     request.onerror = () => reject(request.error)
-//   })
-// }
-
-// const getChunk = async (
-//   chunkId: string,
-// ): Promise<{ data: Blob; metadata: RecordingChunk } | undefined> => {
-//   const db = await openDB()
-//   return new Promise((resolve) => {
-//     const transaction = db.transaction(STORE_NAME, 'readonly')
-//     const store = transaction.objectStore(STORE_NAME)
-//     const request = store.get(chunkId)
-
-//     request.onsuccess = () => resolve(request.result)
-//     request.onerror = () => resolve(undefined)
-//   })
-// }
-
-// const deleteChunk = async (chunkId: string): Promise<void> => {
-//   const db = await openDB()
-//   return new Promise((resolve, reject) => {
-//     const transaction = db.transaction(STORE_NAME, 'readwrite')
-//     const store = transaction.objectStore(STORE_NAME)
-//     const request = store.delete(chunkId)
-
-//     request.onsuccess = () => resolve()
-//     request.onerror = () => reject(request.error)
-//   })
-// }
+type RecordingState = 'idle' | 'recording' | 'stopped'
 
 /**
- * Metadata for each recorded chunk.
- */
-export interface RecordingChunk {
-  id: string
-  startTime: number // Milliseconds relative to session start
-  endTime: number // Milliseconds relative to session start
-  trackSid: string
-}
-
-/**
- * Represents a single, continuous recording session.
- * A new session is created when recording starts or after a reconnection.
- */
-export interface RecordingSession {
-  id: string
-  startTime: number // Unix timestamp (ms) of session start
-  chunks: Map<string, Blob> // Map from chunk id to blob data
-  metadata: Map<string, RecordingChunk> // Map from chunk id to metadata
-}
-
-type RecordingState = 'idle' | 'recording' | 'paused' | 'stopped'
-
-interface RecorderManagerOptions {
-  room: Room
-  /** How often to slice the recording into chunks (in ms) */
-  chunkInterval?: number
-}
-
-/**
- * Manages local recording of multiple media tracks in a LiveKit room.
- * It is designed to be robust against reconnections and to produce
- * data that is easy to upload and process in a post-production pipeline.
+ * The central orchestrator for the local recording feature.
  */
 export class RecorderManager {
+  // State management properties
   private room: Room
   private localParticipant: LocalParticipant
   private recorders: Map<string, MediaRecorder> = new Map()
-  private sessions: RecordingSession[] = []
-  private currentSession: RecordingSession | null = null
+  private uploaders: Map<string, S3Uploader> = new Map()
+  private trackPartCounters: Map<string, number> = new Map()
   private state: RecordingState = 'idle'
-  private recordingStartTimestamp = 0
-  private chunkInterval: number
+  private chunkInterval: number = 4000 // Slice video every 4 seconds
+  private queueIntervalId: number | null = null // ID for the setInterval that runs the upload queue
 
-  constructor({ room, chunkInterval = 5000 }: RecorderManagerOptions) {
+  constructor({ room }: { room: Room }) {
     this.room = room
     this.localParticipant = room.localParticipant
-    this.chunkInterval = chunkInterval
 
-    this.room.on(RoomEvent.Reconnected, this.handleReconnect)
-    this.room.on(RoomEvent.Disconnected, this.handleDisconnect)
+    // Bind event handlers to ensure `this` is correctly scoped.
+    this.handleTrackPublished = this.handleTrackPublished.bind(this)
+    this.handleTrackUnpublished = this.handleTrackUnpublished.bind(this)
+    this.handleDisconnect = this.handleDisconnect.bind(this)
+
+    // On initialization, immediately check for and recover any incomplete uploads from previous sessions.
+    this.recoverOrphanedUploads().then(() => {
+      // Start the background queue processor only after recovery is complete.
+      this.queueIntervalId = window.setInterval(
+        () => this.processUploadQueue(),
+        2000,
+      )
+    })
+  }
+
+  /**
+   * Starts the recording process. It begins listening for LiveKit events
+   * and starts recording any tracks that are already published.
+   */
+  public async startRecording() {
+    if (this.state === 'recording') return
+    this.state = 'recording'
+    this.localParticipant.on(
+      RoomEvent.LocalTrackPublished,
+      this.handleTrackPublished,
+    )
     this.localParticipant.on(
       RoomEvent.LocalTrackUnpublished,
       this.handleTrackUnpublished,
     )
-
-    this.localParticipant.on(RoomEvent.LocalTrackPublished, (e) => {
-      console.log('Track published sdfksdjfhlsd', e.trackInfo)
-    })
+    this.room.on(RoomEvent.Disconnected, this.handleDisconnect)
+    this.localParticipant.trackPublications.forEach(({ track }) =>
+      this.startTrackRecorder(track as LocalTrack),
+    )
   }
 
   /**
-   * Starts the recording of all local tracks.
-   */
-  public async startRecording() {
-    console.log('Starting recording')
-    if (this.state === 'recording') {
-      console.warn('Recording is already in progress.')
-      return
-    }
-
-    this.state = 'recording'
-    this.recordingStartTimestamp = performance.now()
-
-    this.currentSession = {
-      id: crypto.randomUUID(),
-      startTime: Date.now(),
-      chunks: new Map(),
-      metadata: new Map(),
-    }
-    this.sessions.push(this.currentSession)
-
-    this.localParticipant.trackPublications.forEach(({ track }) => {
-      if (track) {
-        this.startTrackRecorder(track)
-      }
-    })
-  }
-
-  private startTrackRecorder(track: LocalTrack) {
-    console.log('Starting track recorder')
-    if (
-      !track.mediaStreamTrack ||
-      !track.sid ||
-      this.recorders.has(track.sid)
-    ) {
-      return
-    }
-
-    const mediaStream = new MediaStream()
-    mediaStream.addTrack(track.mediaStreamTrack)
-
-    const mimeType =
-      track.kind === Track.Kind.Video
-        ? 'video/webm;'
-        : 'audio/webm; codecs=opus'
-
-    if (!MediaRecorder.isTypeSupported(mimeType)) {
-      console.error(`MimeType ${mimeType} not supported for this track.`)
-      return
-    }
-
-    const recorder = new MediaRecorder(mediaStream, { mimeType })
-    this.recorders.set(track.sid, recorder)
-
-    recorder.ondataavailable = (e) => {
-      console.log('Track recorder got data')
-      this.handleDataAvailable(e, track.sid!)
-    }
-    recorder.onerror = (e) => console.error('MediaRecorder error:', e)
-
-    recorder.start(this.chunkInterval)
-  }
-
-  private async handleDataAvailable(event: BlobEvent, trackSid: string) {
-    console.log('Handling data available')
-    if (event.data.size === 0 || !this.currentSession) {
-      return
-    }
-
-    const chunkId = crypto.randomUUID()
-    const chunkMetadata: RecordingChunk = {
-      id: chunkId,
-      startTime: event.timeStamp - this.recordingStartTimestamp,
-      endTime: performance.now() - this.recordingStartTimestamp,
-      trackSid,
-    }
-
-    // try {
-    //   // Store the chunk in IndexedDB
-    //   await saveChunk(chunkId, event.data, chunkMetadata)
-
-    //   // Update session metadata
-    //   this.currentSession.chunks.set(chunkId, event.data)
-    //   this.currentSession.metadata.set(chunkId, chunkMetadata)
-
-    //   console.log(`Chunk ${chunkId} saved successfully`)
-    // } catch (error) {
-    //   console.error('Failed to save chunk:', error)
-    //   // Optionally implement retry logic here
-    // }
-  }
-
-  /**
-   * Stops the recording for all tracks.
+   * Stops the recording process, finalizes all uploads, and cleans up listeners.
    */
   public async stopRecording() {
-    console.log('Stopping recording')
-    if (this.state === 'idle' || this.state === 'stopped') {
-      return
-    }
-
+    if (this.state === 'idle' || this.state === 'stopped') return
     this.state = 'stopped'
-    this.recorders.forEach((recorder) => {
-      if (recorder.state !== 'inactive') {
-        recorder.stop()
-      }
-    })
-    this.recorders.clear()
+    if (this.queueIntervalId) clearInterval(this.queueIntervalId)
+    this.queueIntervalId = null
+    this.localParticipant.off(
+      RoomEvent.LocalTrackPublished,
+      this.handleTrackPublished,
+    )
+    this.localParticipant.off(
+      RoomEvent.LocalTrackUnpublished,
+      this.handleTrackUnpublished,
+    )
+    this.room.off(RoomEvent.Disconnected, this.handleDisconnect)
+    Array.from(this.recorders.keys()).forEach((trackSid) =>
+      this.stopTrackRecorder(trackSid),
+    )
   }
 
   /**
-   * Pauses the recording for all tracks.
+   * Checks IndexedDB for any sessions that were not completed (due to a crash)
+   * and re-initializes their S3Uploaders to resume uploading.
    */
-  public pauseRecording() {
-    console.log('Pausing recording')
-    if (this.state !== 'recording') {
-      return
-    }
-    this.state = 'paused'
-    this.recorders.forEach((recorder) => {
-      if (recorder.state === 'recording') {
-        recorder.requestData()
-        recorder.pause()
+  private async recoverOrphanedUploads() {
+    const orphanedSessions = await db.uploadSessions.toArray()
+
+    for (const session of orphanedSessions) {
+      try {
+        const uploader = new S3Uploader(session.trackSid, session)
+        await uploader.recoverExistingParts()
+        this.uploaders.set(session.trackSid, uploader)
+      } catch (error) {
+        console.error(
+          `Failed to recover session for track ${session.trackSid}`,
+          error,
+        )
       }
-    })
+    }
   }
 
   /**
-   * Resumes the recording for all tracks.
+   * Initializes and starts a MediaRecorder for a given media track.
+   * It also kicks off the S3 multipart upload and persists the session for recovery.
+   * @param track The LocalTrack to record.
    */
-  public resumeRecording() {
-    console.log('Resuming recording')
-    if (this.state !== 'paused') {
+  private async startTrackRecorder(track: LocalTrack) {
+    const trackSid = track.sid
+    if (!trackSid || !track.mediaStreamTrack || this.recorders.has(trackSid))
       return
-    }
-    this.state = 'recording'
-    this.recorders.forEach((recorder) => {
-      if (recorder.state === 'paused') {
-        recorder.resume()
+    try {
+      // 1. Initialize and start the S3 uploader
+      const uploader = new S3Uploader(trackSid)
+      await uploader.start()
+      this.uploaders.set(trackSid, uploader)
+      this.trackPartCounters.set(trackSid, 0)
+
+      // 2. Save session to DB for crash recovery
+      await db.uploadSessions.put({
+        trackSid: trackSid,
+        uploadId: uploader.getUploadId()!,
+        s3Key: uploader.getS3Key()!,
+      })
+
+      // 3. Setup the browser's MediaRecorder
+      const mediaStream = new MediaStream([track.mediaStreamTrack])
+      const mimeType =
+        track.kind === Track.Kind.Video
+          ? 'video/webm;codecs=vp9,opus'
+          : 'audio/webm;codecs=opus'
+      if (!MediaRecorder.isTypeSupported(mimeType))
+        throw new Error(`MimeType ${mimeType} not supported.`)
+
+      const recorder = new MediaRecorder(mediaStream, { mimeType })
+
+      // 4. This is the core capture loop. When MediaRecorder provides a chunk of data...
+      recorder.ondataavailable = async (e: BlobEvent) => {
+        if (e.data.size === 0) return
+        const partNumber = (this.trackPartCounters.get(trackSid) ?? 0) + 1
+        this.trackPartCounters.set(trackSid, partNumber)
+        // ...its ONLY job is to save it to IndexedDB. This is fast and non-blocking.
+        // The actual upload happens in the background queue.
+        await db.chunks.put({
+          id: `${trackSid}-${partNumber}`,
+          trackSid,
+          partNumber,
+          data: e.data,
+          status: 'pending',
+        })
       }
-    })
+
+      // 5. Start recording, slicing data into chunks at the specified interval.
+      recorder.start(this.chunkInterval)
+      this.recorders.set(trackSid, recorder)
+    } catch (error) {
+      console.error(`Failed to start recorder for ${trackSid}:`, error)
+      // Clean up if setup fails
+      this.uploaders.delete(trackSid)
+    }
   }
 
-  private handleReconnect = () => {
-    if (this.state === 'recording' || this.state === 'paused') {
-      const wasPaused = this.state === 'paused'
-      console.log(
-        'Reconnected, starting a new recording session for continuity.',
-      )
-      this.stopRecording()
-      // A small delay to allow tracks to re-establish
-      setTimeout(() => {
-        this.startRecording()
-        if (wasPaused) {
-          this.pauseRecording()
-        }
-      }, 1000)
+  /**
+   * Stops the recorder for a single track and finalizes its upload.
+   * @param trackSid The SID of the track to stop.
+   */
+  private async stopTrackRecorder(trackSid: string) {
+    const recorder = this.recorders.get(trackSid)
+    if (recorder) {
+      if (recorder.state !== 'inactive') recorder.stop()
+      this.recorders.delete(trackSid)
     }
+    // Ensure any final chunks for this track are uploaded before completing.
+    await this.processUploadQueue(trackSid)
+    const uploader = this.uploaders.get(trackSid)
+    if (uploader) {
+      await uploader
+        .complete()
+        .catch((err) =>
+          console.error(`Finalization failed for ${trackSid}`, err),
+        )
+      // Clean up the session from the DB and memory after successful completion.
+      await db.uploadSessions.delete(trackSid)
+      this.uploaders.delete(trackSid)
+    }
+  }
+
+  /**
+   * The background worker. It periodically queries the DB for pending chunks
+   * and attempts to upload them.
+   * @param specificTrackSid If provided, only process chunks for this track.
+   */
+  private async processUploadQueue(specificTrackSid?: string) {
+    // Find one chunk that is 'pending' or 'failed'.
+    const query = specificTrackSid
+      ? db.chunks.where({ trackSid: specificTrackSid, status: 'pending' })
+      : db.chunks.where('status').anyOf('pending', 'failed')
+
+    const chunkToUpload = await query.first()
+    if (!chunkToUpload) return // No work to do.
+
+    // Faking upload for testing purposes
+    console.log(
+      `[TESTING] Faking upload for chunk ${chunkToUpload.id} part ${chunkToUpload.partNumber}`,
+    )
+    await db.chunks.update(chunkToUpload.id, { status: 'uploading' })
+    // Simulate network delay
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    await db.chunks.update(chunkToUpload.id, { status: 'uploaded' })
+
+    const uploader = this.uploaders.get(chunkToUpload.trackSid)
+    if (!uploader) {
+      // This can happen if recovery failed but chunks still exist.
+      return
+    }
+
+    try {
+      // Mark the chunk as 'uploading' to prevent other queue cycles from picking it up.
+      await db.chunks.update(chunkToUpload.id, { status: 'uploading' })
+      await uploader.uploadChunk(chunkToUpload.data, chunkToUpload.partNumber)
+      // After successful upload, mark it as 'uploaded'.
+      // You could also delete it here to save space: await db.chunks.delete(chunkToUpload.id);
+      await db.chunks.update(chunkToUpload.id, { status: 'uploaded' })
+    } catch (error) {
+      // If upload fails after all retries, mark it as 'failed' so we can try again later.
+      await db.chunks.update(chunkToUpload.id, { status: 'failed' })
+      console.error(`Failed to upload chunk ${chunkToUpload.id}`, error)
+    }
+  }
+
+  // --- LiveKit Event Handlers ---
+
+  private handleTrackPublished = (pub: LocalTrackPublication) => {
+    // If a user shares their screen after recording has started, start recording it.
+    if (this.state === 'recording' && pub.track)
+      this.startTrackRecorder(pub.track)
+  }
+
+  private handleTrackUnpublished = (pub: LocalTrackPublication) => {
+    // If a user stops sharing a track, stop its specific recorder and finalize its upload.
+    this.stopTrackRecorder(pub.trackSid)
   }
 
   private handleDisconnect = () => {
-    if (this.state === 'recording' || this.state === 'paused') {
-      console.log('Disconnected, stopping recording.')
-      this.stopRecording()
-    }
+    // If the user disconnects from the room, stop everything gracefully.
+    if (this.state === 'recording') this.stopRecording()
   }
-
-  private handleTrackUnpublished = (
-    trackPublication: LocalTrackPublication,
-  ) => {
-    const trackSid = trackPublication.trackSid
-    const recorder = this.recorders.get(trackSid)
-    if (recorder && recorder.state !== 'inactive') {
-      recorder.stop()
-      this.recorders.delete(trackSid)
-    }
-  }
-
-  // /**
-  //  * Returns all recorded sessions.
-  //  */
-  // public getRecordingSessions(): RecordingSession[] {
-  //   return this.sessions
-  // }
-
-  // /**
-  //  * Cleans up all resources and event listeners.
-  //  */
-  // /**
-  //  * Uploads a recording session to S3
-  //  */
-  // public async uploadToS3(
-  //   sessionId: string,
-  //   onProgress?: (progress: number) => void,
-  // ): Promise<string> {
-  //   const session = this.sessions.find((s) => s.id === sessionId)
-  //   if (!session) {
-  //     throw new Error('Session not found')
-  //   }
-
-  //   try {
-  //     // Combine all chunks
-  //     const chunks = await this.getAllChunksFromDB(session)
-  //     const sortedChunks = Array.from(chunks.entries()).sort(
-  //       ([_, a], [__, b]) => a.metadata.startTime - b.metadata.startTime,
-  //     )
-
-  //     if (sortedChunks.length === 0) {
-  //       throw new Error('No chunks found to upload')
-  //     }
-
-  //     // Create a single blob from all chunks
-  //     const combinedBlob = new Blob(
-  //       sortedChunks.map(([_, chunk]) => chunk.data),
-  //       { type: sortedChunks[0][1].data.type },
-  //     )
-
-  //     // Generate a unique key for S3
-  //     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-  //     const key = `recordings/session-${sessionId}-${timestamp}.webm`
-
-  //     // Upload to S3
-  //     const s3Url = await uploadToS3(combinedBlob, key, onProgress)
-  //     console.log('Uploaded to S3:', s3Url)
-
-  //     // Clean up local chunks after successful upload
-  //     await this.cleanupSession(sessionId)
-
-  //     return s3Url
-  //   } catch (error) {
-  //     console.error('Error uploading to S3:', error)
-  //     throw error
-  //   }
-  // }
-
-  // /**
-  //  * Combines all chunks from a session and triggers a file download
-  //  */
-  // public async downloadSession(
-  //   sessionId: string,
-  //   fileName: string = 'recording',
-  // ) {
-  //   const session = this.sessions.find((s) => s.id === sessionId)
-  //   if (!session) {
-  //     throw new Error('Session not found')
-  //   }
-
-  //   // Get all chunks from IndexedDB
-  //   const chunks = await this.getAllChunksFromDB(session)
-
-  //   // Sort chunks by their start time
-  //   const sortedChunks = Array.from(chunks.entries()).sort(
-  //     ([_, a], [__, b]) => a.metadata.startTime - b.metadata.startTime,
-  //   )
-
-  //   if (sortedChunks.length === 0) {
-  //     console.warn('No recording chunks found to download')
-  //     return
-  //   }
-
-  //   // Combine chunks into a single Blob
-  //   const combinedBlob = new Blob(
-  //     sortedChunks.map(([_, chunk]) => chunk.data),
-  //     { type: sortedChunks[0][1].data.type },
-  //   )
-
-  //   // Create download link
-  //   const url = URL.createObjectURL(combinedBlob)
-  //   const a = document.createElement('a')
-  //   a.href = url
-  //   a.download = `${fileName}.webm`
-  //   document.body.appendChild(a)
-  //   a.click()
-
-  //   // Cleanup
-  //   setTimeout(() => {
-  //     document.body.removeChild(a)
-  //     window.URL.revokeObjectURL(url)
-  //   }, 0)
-  // }
-
-  // /**
-  //  * Gets all chunks from IndexedDB for a session
-  //  */
-  // private async getAllChunksFromDB(
-  //   session: RecordingSession,
-  // ): Promise<Map<string, { data: Blob; metadata: RecordingChunk }>> {
-  //   const chunks = new Map<string, { data: Blob; metadata: RecordingChunk }>()
-
-  //   for (const [chunkId] of session.metadata) {
-  //     const chunk = await getChunk(chunkId)
-  //     if (chunk) {
-  //       chunks.set(chunkId, chunk)
-  //     }
-  //   }
-
-  //   return chunks
-  // }
-
-  // /**
-  //  * Cleans up a recording session by removing all local chunks
-  //  */
-  // private async cleanupSession(sessionId: string) {
-  //   const session = this.sessions.find((s) => s.id === sessionId)
-  //   if (!session) return
-
-  //   // Delete all chunks from IndexedDB
-  //   for (const [chunkId] of session.metadata) {
-  //     await deleteChunk(chunkId)
-  //   }
-
-  //   // Remove session from memory
-  //   this.sessions = this.sessions.filter((s) => s.id !== sessionId)
-  // }
 
   /**
-   * Cleans up all resources and event listeners
+   * Cleans up all resources, stops recording, and removes all event listeners.
+   * This should be called when the component managing the recorder is unmounted.
    */
   public async cleanup() {
-    console.log('Cleaning up recorder')
-    this.stopRecording()
-    this.room.off(RoomEvent.Reconnected, this.handleReconnect)
-    this.room.off(RoomEvent.Disconnected, this.handleDisconnect)
+    console.log('🧹 Cleaning up RecorderManager...')
+
+    // 1. Stop the recording if it's currently active. This will also
+    //    handle finalizing any pending uploads for the last session.
+    if (this.state === 'recording') {
+      await this.stopRecording()
+    }
+
+    // 2. Ensure the background upload queue is stopped.
+    if (this.queueIntervalId) {
+      clearInterval(this.queueIntervalId)
+      this.queueIntervalId = null
+    }
+
+    // 3. Remove any remaining event listeners to prevent memory leaks.
     this.localParticipant.off(
-      'localTrackUnpublished',
+      RoomEvent.LocalTrackPublished,
+      this.handleTrackPublished,
+    )
+    this.localParticipant.off(
+      RoomEvent.LocalTrackUnpublished,
       this.handleTrackUnpublished,
     )
+    this.room.off(RoomEvent.Disconnected, this.handleDisconnect)
 
-    // // Clean up IndexedDB
-    // try {
-    //   const db = await openDB()
-    //   const transaction = db.transaction(STORE_NAME, 'readwrite')
-    //   const store = transaction.objectStore(STORE_NAME)
-    //   await new Promise((resolve, reject) => {
-    //     const request = store.clear()
-    //     request.onsuccess = resolve
-    //     request.onerror = () => reject(request.error)
-    //   })
-    // } catch (error) {
-    //   console.error('Error cleaning up IndexedDB:', error)
-    // }
+    // 4. Clear all internal state.
+    this.recorders.clear()
+    this.uploaders.clear()
+    this.trackPartCounters.clear()
+    this.state = 'idle'
   }
 }

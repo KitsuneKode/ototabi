@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { prisma } from '@ototabi/store'
 import type { TRPCRouterRecord } from '@trpc/server'
-import { protectedProcedure, publicProcedure } from '@/trpc'
+import { protectedProcedure, publicProcedure } from '../trpc'
 
 export const userRouter = {
   getUser: publicProcedure.query(() => {
@@ -15,7 +15,14 @@ export const userRouter = {
     .mutation(async (opts) => {
       // use your ORM of classhoice
       return prisma.user.create({
-        data: opts.input,
+        data: {
+          name: opts.input.name,
+          email: 'test@example.com',
+          emailVerified: false,
+          id: '1',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
       })
     }),
 } satisfies TRPCRouterRecord
