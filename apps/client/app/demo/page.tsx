@@ -1,4 +1,5 @@
 'use client'
+import Home from '../page'
 import { useTRPC } from '@/trpc/client'
 import { useQuery } from '@tanstack/react-query'
 import { authClient } from '@ototabi/auth/client'
@@ -50,7 +51,12 @@ const Demo = () => {
   const [signOutState, setSignOutState] = useState(false)
   const [state, dispatch] = useReducer(reducer, defaultFormValue)
   const data = useQuery(trpc.auth.getSecretMessage.queryOptions())
-  const authState = authClient.useSession()
+
+  const authState = useQuery(trpc.auth.getSession.queryOptions())
+
+  console.log(authState.data)
+  console.log(data.data)
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     console.log(state)
@@ -93,8 +99,10 @@ const Demo = () => {
     <>
       <div className="mb-10 flex items-center justify-center">
         <h1>{data.isLoading && 'Loading...'}</h1>
-        {data && <p>{JSON.stringify(data, null, 2)}</p>}
-        {/* {authState.data && <p>{JSON.stringify(authState.data, null, 2)}</p>} */}
+        {data && <p>{JSON.stringify(data.data, null, 2)}</p>}
+        {authState.data && (
+          <p>{JSON.stringify(authState.data.user.name, null, 2)}</p>
+        )}
       </div>
 
       {!signInState && !signOutState && (

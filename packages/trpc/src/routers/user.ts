@@ -14,14 +14,12 @@ export const userRouter = {
     .input(z.object({ name: z.string().min(5) }))
     .mutation(async (opts) => {
       // use your ORM of classhoice
-      return prisma.user.create({
+      return prisma.user.update({
         data: {
           name: opts.input.name,
-          email: 'test@example.com',
-          emailVerified: false,
-          id: '1',
-          createdAt: new Date(),
-          updatedAt: new Date(),
+        },
+        where: {
+          email: 'test@das.com',
         },
       })
     }),
