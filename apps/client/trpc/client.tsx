@@ -79,6 +79,13 @@ export function TRPCReactProvider(
             headers.set('x-trpc-source', 'react-next')
             return headers
           },
+
+          fetch: (url, options) => {
+            return fetch(url, {
+              ...options,
+              credentials: 'include',
+            })
+          },
         }),
       ],
     }),
