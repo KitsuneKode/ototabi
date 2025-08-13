@@ -10,9 +10,8 @@
     "db:studio": "bunx prisma studio",
     "db:deploy": "bunx prisma deploy"
   },
-  "exports": {
-    ".": "./src/index.ts"
-  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "devDependencies": {
     "@ototabi/typescript-config": "*",
     "@types/bun": "latest"
