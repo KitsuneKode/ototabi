@@ -54,9 +54,6 @@ const Demo = () => {
 
   const authState = useQuery(trpc.auth.getSession.queryOptions())
 
-  console.log(authState.data)
-  console.log(data.data)
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     console.log(state)
