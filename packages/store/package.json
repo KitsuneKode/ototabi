@@ -4,14 +4,14 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "generate": "bunx prisma generate",
-    "migrate": "bunx prisma migrate",
-    "seed": "bun run src/scripts/seed.ts",
-    "studio": "bunx prisma studio"
+    "db:generate": "bunx prisma generate",
+    "db:migrate": "bunx prisma migrate",
+    "db:seed": "bun run src/scripts/seed.ts",
+    "db:studio": "bunx prisma studio",
+    "db:deploy": "bunx prisma deploy"
   },
-  "exports": {
-    ".": "./src/index.ts"
-  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "devDependencies": {
     "@ototabi/typescript-config": "*",
     "@types/bun": "latest"

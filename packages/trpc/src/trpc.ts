@@ -3,12 +3,10 @@ import { z, ZodError } from 'zod/v4'
 import { prisma as db } from '@ototabi/store'
 import { initTRPC, TRPCError } from '@trpc/server'
 import { auth, fromNodeHeaders } from '@ototabi/auth/server'
-
 import * as trpcExpress from '@trpc/server/adapters/express'
 
 export const createTRPCContext = async ({
   req,
-  res,
 }: trpcExpress.CreateExpressContextOptions) => {
   const headers = fromNodeHeaders(req.headers)
 
@@ -38,6 +36,8 @@ const t = initTRPC.context<Context>().create({
 })
 
 export const createTRPCRouter = t.router
+export const createCallerFactory = t.createCallerFactory
+export const mergeTRPCRouters = t.mergeRouters
 
 const timingMiddleware = t.middleware(async ({ next, path }) => {
   const start = Date.now()
