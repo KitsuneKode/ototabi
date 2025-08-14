@@ -47,11 +47,13 @@ function getUrl() {
 console.log(getUrl())
 
 /**
- * Provides tRPC and React Query client contexts to its child components.
+ * Provides tRPC and React Query contexts to descendant components.
  *
- * Wraps children with both `QueryClientProvider` and `TRPCProvider`, ensuring that a properly configured React Query client and tRPC client are available throughout the component subtree.
+ * Creates or reuses a React Query client and a stable tRPC client, then wraps `children` with
+ * `QueryClientProvider` and `TRPCProvider` so hooks and components in the subtree can access the
+ * configured clients.
  *
- * @param props - Contains the React children to be rendered within the provider context
+ * @param props - Component props containing the React children to render inside the providers.
  */
 export function TRPCReactProvider(
   props: Readonly<{
