@@ -5,13 +5,14 @@ const clientConfigSchema = {
   apiBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || '',
   databaseUrl: () => process.env.DATABASE_URL || '',
   nodeEnv: () => process.env.NODE_ENV || 'development',
+  liveKitUrl: () => process.env.NEXT_PUBLIC_LIVEKIT_URL || '',
 }
 
 const config = ConfigLoader.getInstance(clientConfigSchema, 'client')
 
-config.validate(['frontendUrl', 'apiBaseUrl', 'nodeEnv'])
+config.validate(['frontendUrl', 'apiBaseUrl', 'nodeEnv', 'liveKitUrl'])
 
 if (config.getConfig('nodeEnv') === 'development') {
-  console.log('Configuration loaded:', config.getConfig('apiBaseUrl'))
+  console.log('Configuration loaded:', config.getConfig('liveKitUrl'))
 }
 export default config
