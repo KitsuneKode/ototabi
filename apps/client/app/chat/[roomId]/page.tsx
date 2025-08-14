@@ -27,6 +27,22 @@ import {
   useTracks,
 } from '@livekit/components-react'
 
+/**
+ * Page-level React component that initializes and provides a LiveKit Room for a video conference.
+ *
+ * This component:
+ * - Creates and configures a single LiveKit Room instance (adaptive streaming, dynacast, capture/publish defaults).
+ * - Fetches an access token from the API (using the route `roomId`) and connects the Room to the LiveKit server.
+ * - Registers local track lifecycle listeners and exposes the Room to children via RoomContext.Provider.
+ * - Renders the main conference UI (MyVideoConference), room audio renderer, and control bar.
+ *
+ * Side effects:
+ * - Performs an async network request to obtain a LiveKit token and calls `room.connect(...)`.
+ * - On unmount, disconnects the Room and removes local participant listeners.
+ *
+ * Notes:
+ * - The component currently uses a hard-coded room name (`quickstart-room`) and a TODO remains to obtain room/name from user input.
+ */
 export default function Page() {
   // TODO: get user input for room and name
   const room = 'quickstart-room'
@@ -147,6 +163,19 @@ export default function Page() {
     </RoomContext.Provider>
   )
 }
+/**
+ * Renders the local video conference UI including camera/screen-share tiles and simple recording controls.
+ *
+ * Initializes a RecorderManager wired to the current LiveKit room and exposes Start/Stop recording actions.
+ * - Subscribes to Camera and ScreenShare tracks (placeholders disabled) and renders them in a GridLayout.
+ * - Manages local UI state: recording, upload flag, and upload progress.
+ * - Creates a RecorderManager when mounted and calls its cleanup on unmount.
+ * - startRecording/stopRecording delegate to the RecorderManager and update local recording state.
+ *
+ * Note: Upload functionality is scaffolded in commented code but not active in this component.
+ *
+ * @returns JSX element containing the recording controls, optional upload progress bar, and the track grid.
+ */
 function MyVideoConference() {
   const tracks = useTracks(
     [
