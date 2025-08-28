@@ -3,8 +3,24 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "@ototabi/ui": ["../../packages/ui/src/*"]
+      "@/*": [
+        "./*"
+      ],
+      "@ototabi/ui": [
+        "../../packages/ui/src/*"
+      ],
+      "@ototabi/store": [
+        "../../packages/store/src/*"
+      ],
+      "@ototabi/auth": [
+        "../../packages/auth/src/*"
+      ],
+      "@ototabi/trpc": [
+        "../../packages/trpc/src/*"
+      ],
+      "@ototabi/common": [
+        "../../packages/common/src/*"
+      ]
     },
     "plugins": [
       {
@@ -19,5 +35,7 @@
     "next.config.js",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

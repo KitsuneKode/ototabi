@@ -29,6 +29,8 @@
     "@ototabi/trpc": "*",
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "http-status-codes": "^2.3.0",
     "livekit-server-sdk": "^2.13.1"
   }
 }

@@ -1,7 +1,7 @@
-// filename: recorder-manager.ts
-
-import { db } from './indexDb'
-import { S3Uploader } from './s3-uploader'
+import { db } from '@/lib/localDB'
+import config from '@/utils/config'
+import { randomBytes } from 'crypto'
+import { S3Uploader } from '@/lib/uploader/s3-uploader'
 import {
   LocalParticipant,
   LocalTrack,
@@ -98,6 +98,10 @@ export class RecorderManager {
 
     for (const session of orphanedSessions) {
       try {
+        if (config.getConfig('nodeEnv') === 'development') {
+          console.log(`Recovering session for track ${session.trackSid}`)
+          break
+        }
         const uploader = new S3Uploader(session.trackSid, session)
         await uploader.recoverExistingParts()
         this.uploaders.set(session.trackSid, uploader)
@@ -121,16 +125,21 @@ export class RecorderManager {
       return
     try {
       // 1. Initialize and start the S3 uploader
-      const uploader = new S3Uploader(trackSid)
-      await uploader.start()
-      this.uploaders.set(trackSid, uploader)
-      this.trackPartCounters.set(trackSid, 0)
+      let uploader
+      if (config.getConfig('nodeEnv') === 'development') {
+        console.log(`Starting recorder for track ${trackSid}`)
+      } else {
+        uploader = new S3Uploader(trackSid)
+        await uploader.start()
+        this.uploaders.set(trackSid, uploader)
+        this.trackPartCounters.set(trackSid, 0)
+      }
 
       // 2. Save session to DB for crash recovery
       await db.uploadSessions.put({
         trackSid: trackSid,
-        uploadId: uploader.getUploadId()!,
-        s3Key: uploader.getS3Key()!,
+        uploadId: uploader?.getUploadId() ?? randomBytes(16).toString('hex'),
+        s3Key: uploader?.getS3Key() ?? randomBytes(16).toString('hex'),
       })
 
       // 3. Setup the browser's MediaRecorder
