@@ -6,7 +6,7 @@ import '@livekit/components-styles'
 import { useParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@ototabi/ui/components/button'
-import { RecorderManager } from '@/utils/recorder-manager'
+import { RecorderManager } from '@/lib/recorder/recorder-manager'
 import {
   LocalParticipant,
   Room,

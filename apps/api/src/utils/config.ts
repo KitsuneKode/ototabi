@@ -7,6 +7,7 @@ const authConfigSchema = {
   databaseUrl: () => process.env.DATABASE_URL || '',
   nodeEnv: () => process.env.NODE_ENV || 'development',
   betterAuthUrl: () => process.env.BETTER_AUTH_URL || '',
+  allowedOrigins: () => process.env.ALLOWED_ORIGINS || '',
   betterAuthSecret: () => process.env.BETTER_AUTH_SECRET || '',
   liveKitApiKey: () => process.env.LIVEKIT_API_KEY || '',
   liveKitApiSecret: () => process.env.LIVEKIT_API_SECRET || '',
