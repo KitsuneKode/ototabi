@@ -13,11 +13,12 @@ import "@livekit/components-styles";
 import { Button } from "@ototabi/ui/components/button";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Room, RoomEvent, Track, RoomOptions, VideoPresets } from "livekit-client";
-import { ArrowLeft, CheckCircle, AlertTriangle, Radio } from "lucide-react";
+import { ArrowLeft, CheckCircle, AlertTriangle, Radio, PanelRight } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
+import { KeyboardShortcutsOverlay } from "@/components/ui/keyboard-shortcuts-overlay";
 import { Led, LedInline } from "@/components/ui/led";
 import {
   MonoLabel,
@@ -26,6 +27,7 @@ import {
   NoiseBackground,
   MechButton,
 } from "@/components/ui/retro-primitives";
+import { useKeyboardShortcuts } from "@/lib/hooks/use-keyboard-shortcuts";
 import { useTimer, formatTimer } from "@/lib/hooks/use-timer";
 import { RecorderManager } from "@/lib/recorder/recorder-manager";
 import { useTRPC } from "@/trpc/client";
@@ -60,6 +62,8 @@ export default function StudioPage() {
   >("disconnected");
   const [sidebarTab, setSidebarTab] = useState<"uploads" | "chat">("uploads");
   const [chatInput, setChatInput] = useState("");
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const recorderManager = useRef<RecorderManager | null>(null);
 
@@ -281,6 +285,23 @@ export default function StudioPage() {
 
   const isHost = roomDetails && sessionUser && roomDetails.creatorId === sessionUser.id;
 
+  useKeyboardShortcuts({
+    toggleRecording: () => (isRecording ? handleStopRecording() : handleStartRecording()),
+    toggleMute: () =>
+      room.localParticipant.setMicrophoneEnabled(!room.localParticipant.isMicrophoneEnabled),
+    toggleVideo: () =>
+      room.localParticipant.setCameraEnabled(!room.localParticipant.isCameraEnabled),
+    toggleScreenShare: () =>
+      room.localParticipant.setScreenShareEnabled(!room.localParticipant.isScreenShareEnabled),
+    pttDown: () => room.localParticipant.setMicrophoneEnabled(true),
+    pttUp: () => room.localParticipant.setMicrophoneEnabled(false),
+    toggleShortcuts: () => setShortcutsOpen((p) => !p),
+    dismiss: () => {
+      setShortcutsOpen(false);
+      setSidebarOpen(false);
+    },
+  });
+
   // ─── Error State ────────────────────────────────────────────────────────────
   if (tokenError) {
     return (
@@ -359,6 +380,15 @@ export default function StudioPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {/* Mobile sidebar toggle */}
+            <MechButton
+              onClick={() => setSidebarOpen((p) => !p)}
+              aria-label="Toggle sidebar"
+              className="h-9 w-9 md:hidden"
+            >
+              <PanelRight className="h-4 w-4" />
+            </MechButton>
+
             {/* Connection health LED */}
             <AnalogInset className="flex items-center gap-2 px-3 py-1.5">
               <Led
@@ -444,8 +474,21 @@ export default function StudioPage() {
             <RoomAudioRenderer />
           </main>
 
+          {/* Mobile sidebar backdrop */}
+          {sidebarOpen && (
+            <div
+              className="fixed inset-0 z-20 bg-black/40 md:hidden"
+              onClick={() => setSidebarOpen(false)}
+              aria-hidden
+            />
+          )}
+
           {/* ── Sidebar ──────────────────────────────────────────────────────── */}
-          <aside className="border-border bg-card hidden w-72 flex-col overflow-y-auto border-l-2 shadow-[-4px_0_0_0_var(--color-border)] md:flex">
+          <aside
+            className={`border-border bg-card flex-col overflow-y-auto border-l-2 shadow-[-4px_0_0_0_var(--color-border)] ${
+              sidebarOpen ? "fixed inset-y-0 right-0 z-30 flex w-72" : "hidden"
+            } md:relative md:z-auto md:flex md:w-72`}
+          >
             {/* Tab bar */}
             <div className="border-border flex shrink-0 border-b">
               <button
@@ -651,6 +694,8 @@ export default function StudioPage() {
           <ControlBar variation="minimal" />
         </footer>
       </div>
+
+      <KeyboardShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </RoomContext.Provider>
   );
 }
