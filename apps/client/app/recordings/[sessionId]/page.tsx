@@ -11,6 +11,7 @@ import {
   RefreshCw,
   User,
   Film,
+  BookOpen,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -31,6 +32,14 @@ const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }
   CAMERA: Video,
   SCREENSHARE: Monitor,
 };
+
+function formatTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
 
 function TrackStatusBadge({ status }: { status: string }) {
   if (status === "COMPLETED") {
@@ -64,6 +73,14 @@ export default function RecordingSessionPage() {
 
   const session = useQuery(
     trpc.rooms.getRecordingSessionById.queryOptions({ sessionId }, { enabled: !!sessionId }),
+  );
+
+  const transcript = useQuery(
+    trpc.transcript.getSegments.queryOptions({ sessionId }, { enabled: !!sessionId }),
+  );
+
+  const chapters = useQuery(
+    trpc.transcript.getChapters.queryOptions({ sessionId }, { enabled: !!sessionId }),
   );
 
   // ── Loading ──────────────────────────────────────────────────────────────
@@ -288,6 +305,62 @@ export default function RecordingSessionPage() {
             })
           )}
         </div>
+
+        {/* ── Transcript Section ────────────────────────────────────────── */}
+        {transcript.data && transcript.data.length > 0 && (
+          <div className="space-y-4">
+            <PanelTitle label="AI Transcript" title="Session Transcript" />
+
+            <AnalogCard className="p-6">
+              {chapters.data && chapters.data.length > 0 && (
+                <div className="border-border mb-6 border-b pb-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <BookOpen className="text-accent h-4 w-4" />
+                    <h3 className="text-sm font-bold tracking-wider uppercase">Chapters</h3>
+                  </div>
+                  <div className="space-y-1">
+                    {chapters.data.map((ch) => (
+                      <div
+                        key={ch.id}
+                        className="border-border bg-popover flex items-center gap-3 rounded border px-3 py-2"
+                      >
+                        <MonoLabel className="text-accent shrink-0">
+                          {formatTime(ch.startTime)}
+                        </MonoLabel>
+                        <span className="text-foreground font-mono text-xs">{ch.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="max-h-[400px] space-y-2 overflow-y-auto pr-2">
+                {transcript.data.map((seg) => (
+                  <div
+                    key={seg.id}
+                    className="hover:bg-popover/50 group rounded px-2 py-1.5 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      <MonoLabel className="text-muted-foreground mt-0.5 shrink-0 text-[9px]">
+                        {formatTime(seg.startTime)}
+                      </MonoLabel>
+                      <p className="text-foreground/90 font-mono text-[11px] leading-relaxed">
+                        {seg.text}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </AnalogCard>
+          </div>
+        )}
+
+        {transcript.isLoading && (
+          <AnalogCard className="flex items-center justify-center gap-3 p-12">
+            <RefreshCw className="text-accent h-5 w-5 animate-spin" />
+            <MonoLabel className="animate-pulse">Transcription in progress...</MonoLabel>
+          </AnalogCard>
+        )}
 
         {/* ── Session Footer Note ───────────────────────────────────────── */}
         <AnalogCard className="flex items-start gap-3 p-5">

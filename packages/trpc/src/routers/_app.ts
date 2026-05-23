@@ -1,5 +1,6 @@
 import { chatRouter } from "../modules/chat/chat.router";
 import { roomsRouter } from "../modules/rooms/rooms.router";
+import { transcriptRouter } from "../modules/transcript/transcript.router";
 import { uploadsRouter } from "../modules/uploads/uploads.router";
 import { createTRPCRouter } from "../trpc";
 import { authRouter } from "./auth";
@@ -11,6 +12,7 @@ export const appRouter = createTRPCRouter({
   rooms: roomsRouter,
   uploads: uploadsRouter,
   chat: chatRouter,
+  transcript: transcriptRouter,
 });
 
 export type AppRouter = typeof appRouter;

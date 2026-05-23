@@ -35,7 +35,7 @@ const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }
 };
 
 type ProcessingStatus = "idle" | "loading-ffmpeg" | "processing" | "done" | "error";
-type ProcessingMode = "merge" | "trim" | "720p" | "1080p" | null;
+type ProcessingMode = "merge" | "trim" | "720p" | "1080p" | "cuts" | null;
 
 async function downloadFile(ffmpeg: FFmpeg, filename: string, downloadName: string) {
   const fileData = await ffmpeg.readFile(filename);
@@ -90,9 +90,14 @@ export default function ExportSessionPage() {
   const [trimTrackId, setTrimTrackId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [noiseReduction, setNoiseReduction] = useState(false);
+  const [cutSegments, setCutSegments] = useState<Set<string>>(new Set());
 
   const session = useQuery(
     trpc.rooms.getRecordingSessionById.queryOptions({ sessionId }, { enabled: !!sessionId }),
+  );
+
+  const transcript = useQuery(
+    trpc.transcript.getSegments.queryOptions({ sessionId }, { enabled: !!sessionId }),
   );
 
   const loadFfmpeg = useCallback(async () => {
@@ -126,6 +131,15 @@ export default function ExportSessionPage() {
       const next = new Set(prev);
       if (next.has(trackId)) next.delete(trackId);
       else next.add(trackId);
+      return next;
+    });
+  }, []);
+
+  const toggleCutSegment = useCallback((segId: string) => {
+    setCutSegments((prev) => {
+      const next = new Set(prev);
+      if (next.has(segId)) next.delete(segId);
+      else next.add(segId);
       return next;
     });
   }, []);
@@ -300,6 +314,97 @@ export default function ExportSessionPage() {
       setErrorMessage(err instanceof Error ? err.message : "Trim failed");
     }
   }, [trimTrackId, trimStart, trimEnd, session.data, loadFfmpeg, sessionId, noiseReduction]);
+
+  const handleCuts = useCallback(async () => {
+    if (!session.data || cutSegments.size === 0) return;
+    const segments = transcript.data?.filter((s) => cutSegments.has(s.id));
+    if (!segments?.length) return;
+
+    setProcessingMode("cuts");
+    setProcessingStatus("processing");
+    setProgress(0);
+    setErrorMessage("");
+
+    try {
+      await loadFfmpeg();
+      const ffmpeg = ffmpegRef.current;
+
+      // Get first completed track as source
+      const track = session.data.tracks.find((t) => t.status === "COMPLETED" && t.s3Url);
+      if (!track?.s3Url) throw new Error("No completed track to cut from");
+
+      const data = await fetchFile(track.s3Url);
+      await ffmpeg.writeFile("input.mp4", data);
+
+      // Build filter: trim to keep everything EXCEPT cut segments
+      const allSegments = transcript.data ?? [];
+      // Sort cut segments by start time
+      const sortedCuts = segments.sort((a, b) => a.startTime - b.startTime);
+
+      // Build keep ranges (segments between cut segments)
+      const keepRanges: Array<{ start: number; end: number }> = [];
+      let currentStart = 0;
+      for (const cut of sortedCuts) {
+        if (cut.startTime > currentStart) {
+          keepRanges.push({ start: currentStart, end: cut.startTime - 0.1 });
+        }
+        currentStart = cut.endTime + 0.1;
+      }
+      // Add final range
+      const totalDuration = allSegments[allSegments.length - 1]?.endTime ?? 9999;
+      if (currentStart < totalDuration) {
+        keepRanges.push({ start: currentStart, end: totalDuration });
+      }
+
+      if (keepRanges.length === 0) throw new Error("Cannot cut entire video");
+
+      // Trim to each keep range using concat
+      let concatContent = "";
+      for (let i = 0; i < keepRanges.length; i++) {
+        const r = keepRanges[i]!;
+        const name = `keep_${i}.mp4`;
+        await ffmpeg.exec([
+          "-i",
+          "input.mp4",
+          "-ss",
+          String(r.start),
+          "-to",
+          String(r.end),
+          "-c",
+          "copy",
+          name,
+        ]);
+        concatContent += `file '${name}'\n`;
+      }
+
+      await ffmpeg.writeFile("concat_list.txt", new TextEncoder().encode(concatContent));
+      await ffmpeg.exec([
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        "concat_list.txt",
+        "-c",
+        "copy",
+        "output.mp4",
+      ]);
+
+      await downloadFile(ffmpeg, "output.mp4", `session-${sessionId.slice(-8)}-edited.mp4`);
+
+      await ffmpeg.deleteFile("input.mp4");
+      for (let i = 0; i < keepRanges.length; i++) {
+        await ffmpeg.deleteFile(`keep_${i}.mp4`);
+      }
+      await ffmpeg.deleteFile("concat_list.txt");
+
+      setProcessingStatus("done");
+      setCutSegments(new Set());
+    } catch (err) {
+      setProcessingStatus("error");
+      setErrorMessage(err instanceof Error ? err.message : "Cut edit failed");
+    }
+  }, [session.data, cutSegments, transcript.data, loadFfmpeg, sessionId]);
 
   const procColor =
     processingStatus === "processing" || processingStatus === "loading-ffmpeg"
@@ -497,6 +602,63 @@ export default function ExportSessionPage() {
             </div>
           )}
         </div>
+
+        {/* ── Text-Based Editing ─────────────────────────────────────────── */}
+        {transcript.data && transcript.data.length > 0 && completedTracks.length > 0 && (
+          <AnalogCard className="p-6">
+            <PanelTitle label="AI Transcript Editor" title="Text-Based Editing" className="mb-4" />
+            <MonoLabel className="mb-4 block">
+              Click segments to mark them for removal. Removed sections are cut from the final
+              export.
+            </MonoLabel>
+
+            <div className="max-h-[300px] space-y-1 overflow-y-auto pr-2">
+              {transcript.data.map((seg) => {
+                const selected = cutSegments.has(seg.id);
+                return (
+                  <button
+                    key={seg.id}
+                    onClick={() => toggleCutSegment(seg.id)}
+                    className={`w-full rounded px-3 py-2 text-left transition-colors ${
+                      selected
+                        ? "bg-led-on/10 border-led-on/30 border line-through opacity-60"
+                        : "bg-popover/50 hover:bg-popover border border-transparent"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <MonoLabel className="text-muted-foreground mt-0.5 shrink-0 text-[9px]">
+                        {new Date(seg.startTime * 1000).toISOString().slice(14, 19)}
+                      </MonoLabel>
+                      <p className="text-foreground/90 font-mono text-[11px] leading-relaxed">
+                        {seg.text}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <MechButton
+              onClick={handleCuts}
+              disabled={
+                cutSegments.size === 0 ||
+                processingStatus === "processing" ||
+                processingStatus === "loading-ffmpeg"
+              }
+              className="mt-4 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Scissors className="h-3.5 w-3.5" />
+              Remove {cutSegments.size} Selected Segment{cutSegments.size !== 1 ? "s" : ""}
+            </MechButton>
+
+            {errorMessage && processingMode === "cuts" && (
+              <div className="border-led-on/30 bg-led-on/5 mt-4 flex items-start gap-2 rounded border p-3">
+                <AlertTriangle className="text-led-on mt-0.5 h-4 w-4 shrink-0" />
+                <p className="text-led-on font-mono text-[10px] leading-relaxed">{errorMessage}</p>
+              </div>
+            )}
+          </AnalogCard>
+        )}
 
         {/* ── Merge / Export Section ────────────────────────────────────── */}
         {completedTracks.length > 0 && (
