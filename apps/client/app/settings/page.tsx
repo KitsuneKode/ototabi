@@ -122,7 +122,7 @@ export default function SettingsPage() {
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <header className="flex items-end justify-between border-b-2 border-border pb-4">
           <div className="flex items-end gap-4">
-            <MechButton onClick={() => router.push('/dashboard')} className="px-2.5 py-2 h-9">
+            <MechButton onClick={() => router.push('/dashboard')} aria-label="Back to Dashboard" className="px-2.5 py-2 h-9">
               <ArrowLeft className="h-4 w-4" />
             </MechButton>
             <div>
@@ -270,8 +270,9 @@ export default function SettingsPage() {
 
       {/* ── Delete Confirmation Modal ─────────────────────────────────────── */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-          <AnalogCard className="p-8 max-w-md w-full space-y-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4" role="dialog" aria-modal="true" aria-label="Confirm deletion" tabIndex={-1}>
+          <AnalogCard className="p-8 max-w-md w-full space-y-6 animate-in fade-in zoom-in-95 duration-200">
+            <div role="document">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-full bg-led-on/10 border border-led-on/30 flex items-center justify-center shrink-0 mt-0.5">
                 <ShieldAlert className="h-5 w-5 text-led-on" />
@@ -313,6 +314,7 @@ export default function SettingsPage() {
                 <Trash2 className="h-4 w-4" />
                 {deleteAccount.isPending ? 'DELETING...' : 'CONFIRM'}
               </MechButton>
+            </div>
             </div>
           </AnalogCard>
         </div>

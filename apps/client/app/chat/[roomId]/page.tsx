@@ -291,7 +291,7 @@ export default function StudioPage() {
         {/* ── Header ─────────────────────────────────────────────────────────── */}
         <header className="z-10 flex shrink-0 items-center justify-between border-b-2 border-border bg-card px-5 py-3 shadow-[0_4px_0_0_var(--color-border)]">
           <div className="flex items-center gap-4">
-            <MechButton onClick={() => router.push('/dashboard')} className="h-9 w-9" title="Return to Dashboard">
+            <MechButton onClick={() => router.push('/dashboard')} aria-label="Return to Dashboard" className="h-9 w-9" title="Return to Dashboard">
               <ArrowLeft className="h-4 w-4" />
             </MechButton>
             <div>
@@ -370,10 +370,10 @@ export default function StudioPage() {
         <div className="flex flex-1 overflow-hidden">
 
           {/* Video feed area */}
-          <main className="relative flex min-w-0 flex-1 flex-col bg-[#111] overflow-hidden">
+          <main className="relative flex min-w-0 flex-1 flex-col bg-[#111] overflow-hidden will-change-transform">
             {/* CRT scanline overlay on the entire video area */}
             <div
-              className="pointer-events-none absolute inset-0 z-10 opacity-20"
+              className="pointer-events-none absolute inset-0 z-10 opacity-20 will-change-transform"
               style={{
                 background: 'linear-gradient(rgba(255,255,255,0) 50%, rgba(0,0,0,0.15) 50%)',
                 backgroundSize: '100% 4px',
