@@ -1,8 +1,8 @@
+import { chatRouter } from "../modules/chat/chat.router";
+import { roomsRouter } from "../modules/rooms/rooms.router";
+import { uploadsRouter } from "../modules/uploads/uploads.router";
 import { createTRPCRouter } from "../trpc";
 import { authRouter } from "./auth";
-import { chatRouter } from "./chat";
-import { roomsRouter } from "./rooms";
-import { uploadsRouter } from "./uploads";
 import { userRouter } from "./user";
 
 export const appRouter = createTRPCRouter({
