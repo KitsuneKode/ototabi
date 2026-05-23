@@ -39,20 +39,20 @@ packages/
 
 ## Features
 
-| Feature | Details |
-|---------|---------|
-| **Local recording** | 720p / 1080p / 4K per participant, MediaRecorder + IndexedDB + OPFS |
-| **Separate tracks** | Each participant's camera + mic + screen share = discrete files |
-| **Guest join** | One-click join — no account needed, pre-flight device check |
-| **Pause / resume** | Pause during recording, resume seamlessly |
-| **Upload resilience** | Multipart S3/MinIO with auto-resume, dual IndexedDB + OPFS storage |
-| **Keyboard shortcuts** | `R` record, `M` mute, `Space` push-to-talk, `?` overlay |
-| **Noise reduction** | Free FFmpeg.wasm `afftdn` filter — Riverside charges $24/mo for this |
-| **Text-based editing** | Click transcript text → cuts video at those timestamps |
-| **AI transcript** | Whisper API → word-level timestamps, auto chapters, show notes |
-| **Clip export** | Merge, trim, re-encode (720p/1080p) with FFmpeg.wasm |
-| **Room sharing** | Invite collaborators by email — host / editor / viewer roles |
-| **Billing** | Polar.sh — trial → Creator ($15) → Pro ($29) → Studio ($59) |
+| Feature                | Details                                                              |
+| ---------------------- | -------------------------------------------------------------------- |
+| **Local recording**    | 720p / 1080p / 4K per participant, MediaRecorder + IndexedDB + OPFS  |
+| **Separate tracks**    | Each participant's camera + mic + screen share = discrete files      |
+| **Guest join**         | One-click join — no account needed, pre-flight device check          |
+| **Pause / resume**     | Pause during recording, resume seamlessly                            |
+| **Upload resilience**  | Multipart S3/MinIO with auto-resume, dual IndexedDB + OPFS storage   |
+| **Keyboard shortcuts** | `R` record, `M` mute, `Space` push-to-talk, `?` overlay              |
+| **Noise reduction**    | Free FFmpeg.wasm `afftdn` filter — Riverside charges $24/mo for this |
+| **Text-based editing** | Click transcript text → cuts video at those timestamps               |
+| **AI transcript**      | Whisper API → word-level timestamps, auto chapters, show notes       |
+| **Clip export**        | Merge, trim, re-encode (720p/1080p) with FFmpeg.wasm                 |
+| **Room sharing**       | Invite collaborators by email — host / editor / viewer roles         |
+| **Billing**            | Polar.sh — trial → Creator ($15) → Pro ($29) → Studio ($59)          |
 
 ## Quality Gates
 
@@ -70,15 +70,15 @@ Zero eslint, zero prettier. Built on [oxc](https://oxc.rs).
 
 See [`.env.example`](.env.example). Key vars:
 
-| Var | Purpose |
-|-----|---------|
-| `DATABASE_URL` | PostgreSQL connection |
-| `LIVEKIT_URL / KEY / SECRET` | LiveKit Cloud (or self-hosted) |
-| `AWS_*` or `MINIO_*` | S3-compatible storage |
-| `REDIS_URL` | BullMQ worker queue |
-| `OPENAI_API_KEY` | Optional — enables transcript + LLM features |
-| `POLAR_ACCESS_TOKEN` | Optional — enables subscription billing |
-| `BETTER_AUTH_SECRET` | Session encryption |
+| Var                          | Purpose                                      |
+| ---------------------------- | -------------------------------------------- |
+| `DATABASE_URL`               | PostgreSQL connection                        |
+| `LIVEKIT_URL / KEY / SECRET` | LiveKit Cloud (or self-hosted)               |
+| `AWS_*` or `MINIO_*`         | S3-compatible storage                        |
+| `REDIS_URL`                  | BullMQ worker queue                          |
+| `OPENAI_API_KEY`             | Optional — enables transcript + LLM features |
+| `POLAR_ACCESS_TOKEN`         | Optional — enables subscription billing      |
+| `BETTER_AUTH_SECRET`         | Session encryption                           |
 
 ## Docker Compose
 
