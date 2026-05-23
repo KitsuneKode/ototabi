@@ -31,6 +31,7 @@ export default function RoomJoinPage() {
   const [audioLevel, setAudioLevel] = useState(0);
   const [guestName, setGuestName] = useState("");
   const [guestLoading, setGuestLoading] = useState(false);
+  const [quality, setQuality] = useState<"720p" | "1080p" | "4k">("720p");
 
   const authState = useQuery(trpc.auth.getSession.queryOptions());
   const isSignedIn = !!authState.data?.user;
@@ -138,6 +139,7 @@ export default function RoomJoinPage() {
       audioEnabled: String(audioEnabled),
       videoEnabled: String(videoEnabled),
       screenShareEnabled: String(screenShareEnabled),
+      quality,
       micId: selectedMic,
       camId: selectedCam,
     });
@@ -146,6 +148,7 @@ export default function RoomJoinPage() {
     audioEnabled,
     videoEnabled,
     screenShareEnabled,
+    quality,
     selectedMic,
     selectedCam,
     roomId,
@@ -359,6 +362,26 @@ export default function RoomJoinPage() {
                   </AnalogInset>
                 )}
                 {camError && <MonoLabel className="text-led-on text-[9px]">{camError}</MonoLabel>}
+              </div>
+
+              {/* Recording Quality */}
+              <div className="space-y-2">
+                <Label
+                  htmlFor="quality-select"
+                  className="text-foreground/80 font-mono text-xs font-bold tracking-wider uppercase"
+                >
+                  Recording Quality
+                </Label>
+                <select
+                  id="quality-select"
+                  value={quality}
+                  onChange={(e) => setQuality(e.target.value as "720p" | "1080p" | "4k")}
+                  className="border-border bg-popover text-foreground focus:ring-accent/60 h-10 w-full rounded border px-3 font-mono text-xs shadow-inner focus:ring-1 focus:outline-none"
+                >
+                  <option value="720p">720p HD (1280×720)</option>
+                  <option value="1080p">1080p Full HD (1920×1080)</option>
+                  <option value="4k">4K UHD (3840×2160)</option>
+                </select>
               </div>
 
               {/* Screen Share Toggle */}

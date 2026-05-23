@@ -92,6 +92,27 @@ export class RecorderManager {
     }
   }
 
+  public pauseRecording() {
+    if (this.state !== "recording") return;
+    for (const recorder of this.recorders.values()) {
+      if (recorder.state === "recording") recorder.pause();
+    }
+  }
+
+  public resumeRecording() {
+    if (this.state !== "recording") return;
+    for (const recorder of this.recorders.values()) {
+      if (recorder.state === "paused") recorder.resume();
+    }
+  }
+
+  public get isPaused(): boolean {
+    for (const recorder of this.recorders.values()) {
+      if (recorder.state === "paused") return true;
+    }
+    return false;
+  }
+
   /**
    * Checks IndexedDB for any sessions that were not completed (due to a crash)
    * and re-initializes their S3Uploaders to resume uploading.

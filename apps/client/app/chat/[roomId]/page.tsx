@@ -45,12 +45,25 @@ export default function StudioPage() {
   const micId = searchParams.get("micId") || "";
   const camId = searchParams.get("camId") || "";
 
+  const quality = (searchParams.get("quality") as "720p" | "1080p" | "4k") || "720p";
+
+  const qualityPresets: Record<
+    string,
+    { resolution: { width: number; height: number }; maxBitrate: number }
+  > = {
+    "720p": { resolution: VideoPresets.h720.resolution, maxBitrate: 1_200_000 },
+    "1080p": { resolution: VideoPresets.h1080.resolution, maxBitrate: 2_500_000 },
+    "4k": { resolution: VideoPresets.h2160.resolution, maxBitrate: 5_000_000 },
+  };
+  const qualityConfig = qualityPresets[quality] || qualityPresets["720p"]!;
+
   const [_token, setToken] = useState<string | null>(null);
   const [tokenLoading, setTokenLoading] = useState(true);
   const [tokenError, setTokenError] = useState("");
   const [sessionUser, setSessionUser] = useState<any>(null);
   const [roomDetails, setRoomDetails] = useState<any>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [progressMap, setProgressMap] = useState<
     Map<string, { name: string; progress: number; type: string }>
@@ -92,14 +105,14 @@ export default function StudioPage() {
       dynacast: true,
       videoCaptureDefaults: {
         deviceId: camId || undefined,
-        resolution: VideoPresets.h720.resolution,
+        resolution: qualityConfig.resolution,
       },
       audioCaptureDefaults: {
         deviceId: micId || undefined,
       },
       publishDefaults: {
         videoEncoding: {
-          maxBitrate: 1_200_000,
+          maxBitrate: qualityConfig.maxBitrate,
           maxFramerate: 30,
         },
       },
@@ -212,6 +225,7 @@ export default function StudioPage() {
       });
       setActiveSessionId(session.id);
       setIsRecording(true);
+      setIsPaused(false);
       await recorderManager.current?.startRecording(session.id);
 
       const data = new TextEncoder().encode(
@@ -228,6 +242,7 @@ export default function StudioPage() {
     try {
       await stopSessionMutation.mutateAsync({ sessionId: activeSessionId });
       setIsRecording(false);
+      setIsPaused(false);
       await recorderManager.current?.stopRecording();
 
       const data = new TextEncoder().encode(JSON.stringify({ type: "stop_recording" }));
@@ -421,15 +436,15 @@ export default function StudioPage() {
 
             {isRecording && (
               <AnalogInset className="flex items-center gap-2 px-3 py-1.5">
-                <Led color="red" size="sm" pulse />
+                <Led color={isPaused ? "amber" : "red"} size="sm" pulse={!isPaused} />
                 <MonoLabel className="text-led-on tabular-nums">
-                  REC // {formatTimer(recordingSeconds)}
+                  {isPaused ? "PAUSED" : "REC"} // {formatTimer(recordingSeconds)}
                 </MonoLabel>
               </AnalogInset>
             )}
 
             {isHost && (
-              <div className="flex items-center">
+              <div className="flex items-center gap-2">
                 {!isRecording ? (
                   <Button
                     onClick={handleStartRecording}
@@ -438,12 +453,28 @@ export default function StudioPage() {
                     Start Recording
                   </Button>
                 ) : (
-                  <Button
-                    onClick={handleStopRecording}
-                    className="bg-led-on/90 hover:bg-led-on border-led-on/60 h-9 rounded border px-5 text-[10px] font-bold tracking-widest text-white uppercase shadow-[0_3px_5px_rgba(0,0,0,0.2),0_0_10px_var(--color-led-on)] transition-[transform,box-shadow] duration-150 ease-[var(--ease-mechanical)] active:translate-y-[2px]"
-                  >
-                    Stop Recording
-                  </Button>
+                  <>
+                    <Button
+                      onClick={() => {
+                        if (isPaused) {
+                          recorderManager.current?.resumeRecording();
+                          setIsPaused(false);
+                        } else {
+                          recorderManager.current?.pauseRecording();
+                          setIsPaused(true);
+                        }
+                      }}
+                      className="btn-mechanical text-secondary-foreground h-9 rounded px-4 text-[10px] font-bold tracking-widest uppercase"
+                    >
+                      {isPaused ? "Resume" : "Pause"}
+                    </Button>
+                    <Button
+                      onClick={handleStopRecording}
+                      className="bg-led-on/90 hover:bg-led-on border-led-on/60 h-9 rounded border px-5 text-[10px] font-bold tracking-widest text-white uppercase shadow-[0_3px_5px_rgba(0,0,0,0.2),0_0_10px_var(--color-led-on)] transition-[transform,box-shadow] duration-150 ease-[var(--ease-mechanical)] active:translate-y-[2px]"
+                    >
+                      Stop
+                    </Button>
+                  </>
                 )}
               </div>
             )}

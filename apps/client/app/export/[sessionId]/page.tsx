@@ -89,6 +89,7 @@ export default function ExportSessionPage() {
   const [trimEnd, setTrimEnd] = useState("");
   const [trimTrackId, setTrimTrackId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [noiseReduction, setNoiseReduction] = useState(false);
 
   const session = useQuery(
     trpc.rooms.getRecordingSessionById.queryOptions({ sessionId }, { enabled: !!sessionId }),
@@ -154,17 +155,20 @@ export default function ExportSessionPage() {
       }
 
       await ffmpeg.writeFile("concat_list.txt", new TextEncoder().encode(content));
-      await ffmpeg.exec([
+      const mergeArgs = [
         "-f",
         "concat",
         "-safe",
         "0",
         "-i",
         "concat_list.txt",
-        "-c",
+        ...(noiseReduction ? ["-af", "afftdn"] : []),
+        "-c:v",
         "copy",
+        ...(noiseReduction ? ["-c:a", "aac"] : ["-c:a", "copy"]),
         "output.mp4",
-      ]);
+      ];
+      await ffmpeg.exec(mergeArgs);
 
       await downloadFile(ffmpeg, "output.mp4", `session-${sessionId.slice(-8)}-merged.mp4`);
 
@@ -178,7 +182,7 @@ export default function ExportSessionPage() {
       setProcessingStatus("error");
       setErrorMessage(err instanceof Error ? err.message : "Merge failed");
     }
-  }, [session.data, selectedTracks, loadFfmpeg, sessionId]);
+  }, [session.data, selectedTracks, loadFfmpeg, sessionId, noiseReduction]);
 
   const handleExportRes = useCallback(
     async (resolution: "720p" | "1080p") => {
@@ -209,13 +213,14 @@ export default function ExportSessionPage() {
         }
 
         await ffmpeg.writeFile("concat_list.txt", new TextEncoder().encode(content));
-        await ffmpeg.exec([
+        const exportArgs = [
           "-f",
           "concat",
           "-safe",
           "0",
           "-i",
           "concat_list.txt",
+          ...(noiseReduction ? ["-af", "afftdn"] : []),
           "-vf",
           `scale=${scale}`,
           "-c:v",
@@ -229,7 +234,8 @@ export default function ExportSessionPage() {
           "-b:a",
           "128k",
           "output.mp4",
-        ]);
+        ];
+        await ffmpeg.exec(exportArgs);
 
         await downloadFile(
           ffmpeg,
@@ -248,7 +254,7 @@ export default function ExportSessionPage() {
         setErrorMessage(err instanceof Error ? err.message : `${resolution} export failed`);
       }
     },
-    [session.data, selectedTracks, loadFfmpeg, sessionId],
+    [session.data, selectedTracks, loadFfmpeg, sessionId, noiseReduction],
   );
 
   const handleTrim = useCallback(async () => {
@@ -275,7 +281,12 @@ export default function ExportSessionPage() {
         const duration = trimEnd;
         args.push("-to", duration);
       }
-      args.push("-c", "copy", "output.mp4");
+      if (noiseReduction) {
+        args.push("-af", "afftdn", "-c:v", "copy", "-c:a", "aac");
+      } else {
+        args.push("-c", "copy");
+      }
+      args.push("output.mp4");
 
       await ffmpeg.exec(args);
 
@@ -288,7 +299,7 @@ export default function ExportSessionPage() {
       setProcessingStatus("error");
       setErrorMessage(err instanceof Error ? err.message : "Trim failed");
     }
-  }, [trimTrackId, trimStart, trimEnd, session.data, loadFfmpeg, sessionId]);
+  }, [trimTrackId, trimStart, trimEnd, session.data, loadFfmpeg, sessionId, noiseReduction]);
 
   const procColor =
     processingStatus === "processing" || processingStatus === "loading-ffmpeg"
@@ -492,12 +503,29 @@ export default function ExportSessionPage() {
           <AnalogCard className="p-6">
             <PanelTitle label="Mastering Suite" title="Merge & Export" className="mb-5" />
 
-            {errorMessage && (
+            {errorMessage && !processingMode && (
               <div className="border-led-on/30 bg-led-on/5 mb-4 flex items-start gap-2 rounded border p-3">
                 <AlertTriangle className="text-led-on mt-0.5 h-4 w-4 shrink-0" />
                 <p className="text-led-on font-mono text-[10px] leading-relaxed">{errorMessage}</p>
               </div>
             )}
+
+            <div className="mb-4 flex flex-wrap items-center gap-4">
+              <label className="border-border bg-popover hover:border-accent/30 flex cursor-pointer items-center gap-3 rounded border px-4 py-2.5 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={noiseReduction}
+                  onChange={(e) => setNoiseReduction(e.target.checked)}
+                  className="accent-accent h-4 w-4"
+                />
+                <div>
+                  <MonoLabel className="text-foreground block">Noise Reduction</MonoLabel>
+                  <MonoLabel className="text-muted-foreground/60 text-[9px]">
+                    Apply afftdn filter for cleaner audio
+                  </MonoLabel>
+                </div>
+              </label>
+            </div>
 
             <div className="flex flex-wrap items-center gap-3">
               <MechButton
