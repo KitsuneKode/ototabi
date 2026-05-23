@@ -38,9 +38,12 @@ jobs:
       PORT: 8080
       NODE_ENV: development
       REDIS_URL: redis://localhost:6379
+      TURBO_TELEMETRY_DISABLED: 1
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -56,13 +59,13 @@ jobs:
         run: bun lint
 
       - name: Generate Prisma client
-        run: bun run db:generate
+        run: turbo run db:generate
 
       - name: Run migrations
         run: cd packages/store && bun run prisma migrate deploy
 
-      - name: Type check
-        run: bun typecheck
+      - name: Type check (affected only)
+        run: turbo run typecheck --affected
 
-      - name: Build
-        run: bun run build
+      - name: Build (affected only)
+        run: turbo run build --affected
