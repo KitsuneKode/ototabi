@@ -222,8 +222,8 @@ export default function RecordingSessionPage() {
                       const Icon = TRACK_TYPE_ICON[track.type] ?? Mic
                       return (
                         <AnalogInset key={track.id} className="p-4">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <div className="flex items-center gap-3">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div className="flex items-center gap-2">
                               <div className="w-8 h-8 bg-card border border-border rounded flex items-center justify-center shrink-0">
                                 <Icon className="h-4 w-4 text-muted-foreground" />
                               </div>

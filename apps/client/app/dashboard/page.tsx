@@ -63,6 +63,10 @@ export default function DashboardPage() {
     ),
   )
 
+  const recentSessions = useQuery(
+    trpc.rooms.listRecentSessions.queryOptions(),
+  )
+
   const handleCreateRoom = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault()
@@ -87,12 +91,38 @@ export default function DashboardPage() {
   // ── Loading ──────────────────────────────────────────────────────────────
   if (authState.isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background font-sans text-foreground">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 rounded-full border-2 border-border border-t-accent animate-spin" />
-          <span className="font-mono text-xs uppercase font-bold tracking-widest animate-pulse">
-            Initializing Dashboard Console...
-          </span>
+      <div className="min-h-screen bg-background text-foreground font-sans p-4 md:p-8 flex flex-col relative overflow-x-hidden">
+        <NoiseBackground />
+        <div className="max-w-6xl w-full mx-auto flex-1 flex flex-col relative z-10 space-y-8">
+
+          <div className="flex items-center justify-center gap-3 py-4">
+            <div className="h-8 w-8 rounded-full border-2 border-border border-t-accent animate-spin" />
+            <span className="font-mono text-xs uppercase font-bold tracking-widest animate-pulse">
+              Initializing Dashboard Console...
+            </span>
+          </div>
+
+          {/* Skeleton cards */}
+          <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b-2 border-border pb-4 gap-4">
+            <div className="space-y-3">
+              <div className="h-10 w-64 rounded bg-card border border-border animate-pulse" />
+              <div className="h-4 w-48 rounded bg-card border border-border animate-pulse" />
+            </div>
+            <div className="flex gap-3">
+              <div className="h-8 w-32 rounded bg-card border border-border animate-pulse" />
+              <div className="h-8 w-28 rounded bg-card border border-border animate-pulse" />
+            </div>
+          </header>
+
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
+            <div className="md:col-span-5 flex flex-col gap-6">
+              <div className="h-64 rounded-lg bg-card border border-border animate-pulse" />
+              <div className="h-80 rounded-lg bg-card border border-border animate-pulse" />
+            </div>
+            <div className="md:col-span-7">
+              <div className="h-[480px] rounded-lg bg-card border border-border animate-pulse" />
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -141,7 +171,7 @@ export default function DashboardPage() {
             <MonoLabel className="block mt-1.5">Model 16-A // Host Room Controller Board</MonoLabel>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             {/* User tag */}
             <div className="flex items-center gap-2 bg-card border border-border px-3 py-1.5 rounded shadow-sm">
               <Led color="amber" size="sm" pulse />
@@ -174,7 +204,7 @@ export default function DashboardPage() {
           <div className="md:col-span-5 flex flex-col gap-6">
 
             {/* Create Room */}
-            <AnalogCard className="p-6">
+            <AnalogCard className="p-4 md:p-6">
               <MonoLabel className="block mb-1">Sequence Config</MonoLabel>
               <h2 className="text-xl font-bold uppercase tracking-tight mb-4">Initialize Room</h2>
               <form onSubmit={handleCreateRoom} className="space-y-4">
@@ -207,7 +237,7 @@ export default function DashboardPage() {
             </AnalogCard>
 
             {/* Rooms List */}
-            <AnalogCard className="p-6 flex-1 flex flex-col min-h-[350px]">
+            <AnalogCard className="p-4 md:p-6 flex-1 flex flex-col min-h-[350px]">
               <div className="flex justify-between items-center mb-4">
                 <PanelTitle label="Telemetry Links" title="Active Rooms" />
                 <MonoLabel className="bg-popover border border-border px-2 py-0.5 rounded">
@@ -232,13 +262,13 @@ export default function DashboardPage() {
                   FETCHING ROOM TELEMETRY...
                 </div>
               ) : !roomsList.data?.length ? (
-                <AnalogInset className="flex-1 flex flex-col items-center justify-center p-8 text-center border-dashed">
-                  <FolderOpen className="h-8 w-8 text-muted-foreground/30 mb-3" />
-                  <MonoLabel className="block mb-1">No active channels</MonoLabel>
-                  <p className="font-mono text-[10px] text-muted-foreground/60 leading-normal max-w-[200px]">
-                    Create a recording room above to configure a telemetry channel.
-                  </p>
-                </AnalogInset>
+                  <AnalogInset className="flex-1 flex flex-col items-center justify-center p-8 text-center border-dashed">
+                    <FolderOpen className="h-8 w-8 text-muted-foreground/30 mb-3" />
+                    <MonoLabel className="block mb-1">No active channels</MonoLabel>
+                    <p className="font-mono text-[10px] text-muted-foreground/60 leading-normal max-w-[240px]">
+                      Create your first room above, or join an existing one with an invite link.
+                    </p>
+                  </AnalogInset>
               ) : filteredRooms.length === 0 ? (
                 <AnalogInset className="flex-1 flex flex-col items-center justify-center p-8 text-center border-dashed">
                   <Search className="h-8 w-8 text-muted-foreground/30 mb-3" />
@@ -248,7 +278,7 @@ export default function DashboardPage() {
                   </p>
                 </AnalogInset>
               ) : (
-                <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 flex-1">
+                <div className="space-y-3 max-h-[400px] md:max-h-[500px] overflow-y-auto pr-1 flex-1">
                   {filteredRooms.map((room) => (
                     <div
                       key={room.id}
@@ -299,7 +329,7 @@ export default function DashboardPage() {
           {/* ── Column 2: Sessions Panel ─────────────────────────────────── */}
           <div className="md:col-span-7">
             {selectedRoomId ? (
-              <AnalogCard className="p-6 min-h-[480px] flex flex-col">
+              <AnalogCard className="p-4 md:p-6 min-h-[480px] flex flex-col">
                 <div className="flex justify-between items-center mb-4 border-b border-border pb-3">
                   <PanelTitle label="CH 1 : Room History" title={selectedRoom?.name ?? '...'} />
                   <MechButton onClick={() => router.push(`/rooms/${selectedRoom?.code}/settings`)}>
@@ -395,21 +425,72 @@ export default function DashboardPage() {
                 <div className="mt-6 border-t border-border pt-4 flex items-start gap-2.5">
                   <LedInline color="green" size="sm" className="mt-0.5 shrink-0" />
                   <MonoLabel className="leading-relaxed">
-                    SYSTEM NOTE: Ototabi aggregates raw recordings from browser client databases. If a track shows UPLOADING, the participant must open their recovery console.
+                    SYSTEM NOTE: Ototabi aggregates raw recordings from browser client databases. If a track shows UPLOADING, visit the{' '}
+                    <Link href="/recovery" className="text-accent hover:underline underline-offset-2">
+                      Recovery Console
+                    </Link>{' '}
+                    to resume uploads.
                   </MonoLabel>
                 </div>
               </AnalogCard>
             ) : (
-              <div className="flex min-h-[480px] flex-col items-center justify-center space-y-4 border border-dashed border-border/60 bg-card/30 rounded-lg p-12 text-center">
-                <Sliders className="h-12 w-12 text-muted-foreground/20 animate-pulse" />
-                <div>
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                    Console Channel Muted
-                  </h3>
-                  <p className="mt-2 max-w-xs font-mono text-xs leading-relaxed text-muted-foreground/60">
-                    Select a recording room from the active list to establish connection telemetry.
-                  </p>
-                </div>
+              <div className="min-h-[480px]">
+                {recentSessions.isLoading ? (
+                  <div className="h-[480px] rounded-lg bg-card border border-border animate-pulse flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="h-6 w-6 rounded-full border-2 border-border border-t-accent animate-spin" />
+                      <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest animate-pulse">
+                        Loading Recent Sessions...
+                      </span>
+                    </div>
+                  </div>
+                ) : !recentSessions.data?.length ? (
+                  <div className="flex min-h-[480px] flex-col items-center justify-center space-y-4 border border-dashed border-border/60 bg-card/30 rounded-lg p-12 text-center">
+                    <Sliders className="h-12 w-12 text-muted-foreground/20 animate-pulse" />
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                        No Recent Sessions
+                      </h3>
+                      <p className="mt-2 max-w-xs font-mono text-xs leading-relaxed text-muted-foreground/60">
+                        No recent sessions. Create a room and start recording.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <AnalogCard className="p-6 min-h-[480px] flex flex-col">
+                    <PanelTitle label="Cross-Room Query" title="Recent Sessions" />
+                    <div className="mt-4 space-y-3 flex-1 overflow-y-auto pr-1">
+                      {recentSessions.data.map((session) => (
+                        <div key={session.id} className="border border-border bg-card rounded p-4 shadow-sm hover:border-accent/30 transition-colors">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <MonoLabel className="bg-popover border border-border px-2 py-0.5 rounded">
+                                {session.id.slice(-6).toUpperCase()}
+                              </MonoLabel>
+                              <MonoLabel className="text-muted-foreground">
+                                {session.room.name}
+                              </MonoLabel>
+                            </div>
+                            <MonoLabel className="text-[10px] text-muted-foreground">
+                              {new Date(session.startedAt).toLocaleDateString()}
+                            </MonoLabel>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <MonoLabel>
+                              Tracks: {session.tracks.length} | {session.tracks.every((t) => t.status === 'COMPLETED') ? 'ALL UPLOADED' : 'SYNC PENDING'}
+                            </MonoLabel>
+                            <Link
+                              href={`/recordings/${session.id}`}
+                              className="inline-flex items-center gap-1 btn-mechanical px-3 py-1 text-xs font-bold uppercase tracking-wider rounded text-secondary-foreground active:scale-95 transition-transform"
+                            >
+                              View <ExternalLink className="h-3.5 w-3.5" />
+                            </Link>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </AnalogCard>
+                )}
               </div>
             )}
           </div>
