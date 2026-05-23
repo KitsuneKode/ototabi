@@ -1,0 +1,10 @@
+{
+  "extends": "@ototabi/typescript-config/backend.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}

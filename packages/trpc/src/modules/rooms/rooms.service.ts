@@ -1,3 +1,4 @@
+import { getTranscriptQueue } from "@ototabi/jobs/queues";
 import { TRPCError } from "@trpc/server";
 
 import { roomsPolicy } from "./rooms.policy";
@@ -71,7 +72,29 @@ export const roomsService = {
     const session = await roomsRepository.findSession(sessionId);
     if (!session)
       throw new TRPCError({ code: "NOT_FOUND", message: "Recording session not found" });
-    return roomsRepository.markSessionComplete(sessionId);
+    const result = await roomsRepository.markSessionComplete(sessionId);
+
+    // Queue background jobs
+    try {
+      const audioTrack = await roomsRepository.findFirstAudioTrack(sessionId);
+      if (audioTrack?.s3Url) {
+        await getTranscriptQueue().add(`transcript-${sessionId}`, {
+          sessionId,
+          audioTrackS3Key: audioTrack.s3Url,
+        });
+      } else {
+        // Queue without audio URL — worker will retry until upload completes
+        await getTranscriptQueue().add(
+          `transcript-${sessionId}`,
+          { sessionId, audioTrackS3Key: "" },
+          { delay: 30000 },
+        );
+      }
+    } catch {
+      // Queue is optional — don't block session completion
+    }
+
+    return result;
   },
 
   async getRecordingSessions(roomId: string) {

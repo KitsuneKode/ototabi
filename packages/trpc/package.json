@@ -11,6 +11,7 @@
     "@aws-sdk/client-s3": "^3.864.0",
     "@aws-sdk/s3-request-presigner": "^3.864.0",
     "@ototabi/auth": "*",
+    "@ototabi/jobs": "*",
     "@ototabi/store": "*",
     "@trpc/server": "^11.4.3",
     "superjson": "^2.2.2",

@@ -1,0 +1,3 @@
+{
+  "extends": "@ototabi/typescript-config/base.json"
+}

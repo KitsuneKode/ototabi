@@ -121,15 +121,18 @@ model ChatMessage {
 }
 
 model RecordingSession {
-  id        String           @id @default(cuid())
-  roomId    String
-  room      Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  status    String           // "RECORDING" | "COMPLETED"
-  tracks    RecordingTrack[]
-  startedAt DateTime         @default(now())
-  endedAt   DateTime?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id              String           @id @default(cuid())
+  roomId          String
+  room            Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  status          String           // "RECORDING" | "COMPLETED"
+  tracks          RecordingTrack[]
+  transcriptSegments TranscriptSegment[]
+  chapters        Chapter[]
+  showNotes       ShowNotes?
+  startedAt       DateTime         @default(now())
+  endedAt         DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@map("recording_session")
 }
@@ -149,4 +152,43 @@ model RecordingTrack {
   updatedAt DateTime         @updatedAt
 
   @@map("recording_track")
+}
+
+model TranscriptSegment {
+  id         String   @id @default(cuid())
+  sessionId  String
+  userId     String?
+  startTime  Float
+  endTime    Float
+  text       String
+  confidence Float?
+  createdAt  DateTime @default(now())
+  session    RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, startTime])
+  @@map("transcript_segment")
+}
+
+model Chapter {
+  id        String   @id @default(cuid())
+  sessionId String
+  title     String
+  startTime Float
+  endTime   Float?
+  createdAt DateTime @default(now())
+  session   RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("chapter")
+}
+
+model ShowNotes {
+  id        String   @id @default(cuid())
+  sessionId String   @unique
+  summary   String   @db.Text
+  keywords  Json     @default("[]")
+  seoTitles Json     @default("[]")
+  createdAt DateTime @default(now())
+  session   RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("show_notes")
 }

@@ -114,6 +114,13 @@ export const roomsRepository = {
     });
   },
 
+  async findFirstAudioTrack(sessionId: string) {
+    return prisma.recordingTrack.findFirst({
+      where: { sessionId, type: "MICROPHONE", status: "COMPLETED", s3Url: { not: null } },
+      select: { s3Url: true },
+    });
+  },
+
   async listSessions(roomId: string) {
     return prisma.recordingSession.findMany({
       where: { roomId },
