@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ototabi Mockup // Design 6: Obsidian Gold</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,500;1,300&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .serif-font {
+      font-family: 'Cormorant Garamond', serif;
+    }
+    .gold-glow {
+      box-shadow: 0 0 20px rgba(212, 175, 55, 0.08), inset 0 0 10px rgba(212, 175, 55, 0.02);
+    }
+  </style>
+</head>
+<body class="bg-[#080809] text-[#E5E0DA] min-h-screen flex flex-col justify-between overflow-x-hidden p-6 sm:p-12">
+
+  <!-- Header -->
+  <header class="w-full max-w-4xl mx-auto flex justify-between items-center border-b border-[#242220] pb-6 mb-12">
+    <div class="flex items-center gap-2">
+      <span class="size-1.5 rounded-full bg-[#D4AF37]"></span>
+      <span class="text-xs font-semibold tracking-[0.3em] uppercase text-[#D4AF37] serif-font italic">
+        Ototabi / Golden Room
+      </span>
+    </div>
+    <span class="text-[9px] text-[#A69F97] tracking-widest uppercase font-light">SYS_06 // OBSIDIAN</span>
+  </header>
+
+  <!-- Main Container -->
+  <main class="w-full max-w-2xl mx-auto flex-1 flex flex-col justify-center py-6">
+    <div class="space-y-12">
+      <!-- Title -->
+      <div class="space-y-3 text-center sm:text-left">
+        <h1 class="text-5xl sm:text-6xl font-light tracking-tight leading-none text-[#F4EFEA] serif-font italic">
+          Enter the studio gallery
+        </h1>
+        <p class="text-xs text-[#8F8A83] max-w-md leading-relaxed font-light">
+          Calibrate your recording device feeds in high-definition. Audio is buffered locally to assure lossless fidelity on final render.
+        </p>
+      </div>
+
+      <!-- Preview Box (Glassmorphic) -->
+      <div class="relative w-full aspect-video bg-zinc-900/20 border border-[#2B2925] rounded-none flex items-center justify-center overflow-hidden gold-glow">
+        <div class="absolute inset-0 bg-radial-gradient from-transparent via-[#080809]/40 to-[#080809] pointer-events-none"></div>
+        <div class="text-center space-y-2">
+          <span class="text-[9px] tracking-[0.25em] uppercase text-[#C2BCAE] block">STREAM ACTIVE</span>
+          <span class="text-xs text-[#8F8A83] serif-font italic">Waiting for connection...</span>
+        </div>
+
+        <!-- Gold Accent Line bottom -->
+        <div class="absolute bottom-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent"></div>
+      </div>
+
+      <!-- Input Meter & Controls -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-6 border-t border-[#242220]">
+        <div class="space-y-3">
+          <span class="text-[9px] tracking-widest uppercase text-[#8F8A83] block font-light">Input Gain Meter</span>
+          <div class="flex items-center gap-4">
+            <div class="flex-1 h-[1px] bg-[#242220] relative">
+              <div class="absolute inset-y-0 left-0 w-[45%] bg-[#D4AF37] transition-all duration-300"></div>
+            </div>
+            <span class="text-[9px] text-[#D4AF37] font-mono">45%</span>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <span class="text-[9px] tracking-widest uppercase text-[#8F8A83] block font-light">Secure Room Code</span>
+          <span class="text-xs text-[#E5E0DA] font-semibold tracking-wider font-mono">OTB-GOLD-99X</span>
+        </div>
+      </div>
+
+      <!-- Button -->
+      <div class="pt-6 flex justify-center sm:justify-start">
+        <button 
+          onclick="alert('Entering Premium Studio (Mockup Mode)')"
+          class="inline-flex items-center gap-3 border border-[#D4AF37]/50 hover:border-[#D4AF37] bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 text-[#D4AF37] text-xs font-semibold tracking-widest uppercase px-10 py-3.5 transition-all duration-300"
+        >
+          <span>Connect Device Feed</span>
+          <span class="text-[10px]">&rarr;</span>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full max-w-4xl mx-auto border-t border-[#242220] pt-6 mt-12 flex justify-between items-center text-[9px] text-[#8F8A83] tracking-widest uppercase font-light">
+    <span>Obsidian & Champagne Gold Luxury</span>
+    <span>v1.0.6</span>
+  </footer>
+</body>
+</html>

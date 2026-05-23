@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ototabi Mockup // Design 3: Synth Vapor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .futuristic-title {
+      font-family: 'Syne', sans-serif;
+    }
+    .neon-border {
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.15), inset 0 0 15px rgba(255, 0, 122, 0.1);
+    }
+    .neon-text-glow {
+      text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+    }
+    .scanlines {
+      background: linear-gradient(
+        rgba(18, 10, 36, 0) 50%,
+        rgba(0, 0, 0, 0.25) 50%
+      );
+      background-size: 100% 4px;
+    }
+  </style>
+</head>
+<body class="bg-[#0A0518] text-[#F3EBF9] min-h-screen flex flex-col justify-between overflow-x-hidden relative">
+  <!-- Scanlines overlay -->
+  <div class="scanlines fixed inset-0 pointer-events-none z-50 opacity-40"></div>
+  
+  <!-- Grid background -->
+  <div class="fixed inset-0 z-0 opacity-[0.08] pointer-events-none" style="background-image: linear-gradient(#FF007A 1px, transparent 1px), linear-gradient(90deg, #FF007A 1px, transparent 1px); background-size: 40px 40px;"></div>
+
+  <!-- Header -->
+  <header class="relative z-10 w-full max-w-5xl mx-auto px-6 py-6 flex justify-between items-center border-b border-[#FF007A]/20">
+    <div class="flex items-center gap-3">
+      <div class="size-2 bg-[#00F0FF] rounded-full animate-ping"></div>
+      <span class="text-sm font-extrabold uppercase tracking-[0.25em] text-[#00F0FF] neon-text-glow futuristic-title">
+        OTOTABI // SYSTEM
+      </span>
+    </div>
+    <span class="text-[9px] text-[#FF007A] font-bold tracking-widest uppercase">SYS_MOCK_03 // NEON</span>
+  </header>
+
+  <!-- Main Content -->
+  <main class="relative z-10 flex-1 flex items-center justify-center p-6 w-full max-w-4xl mx-auto">
+    <div class="w-full bg-[#120A24]/85 border border-[#FF007A]/30 p-8 rounded-lg neon-border backdrop-blur-md grid grid-cols-1 md:grid-cols-12 gap-8">
+      
+      <!-- Video Grid Column (7 cols) -->
+      <div class="md:col-span-7 flex flex-col gap-4">
+        <div class="relative aspect-video w-full bg-[#05020B] border border-[#00F0FF]/30 rounded flex items-center justify-center overflow-hidden">
+          <div class="absolute inset-0 bg-radial-gradient from-transparent to-[#120A24] pointer-events-none"></div>
+          
+          <!-- Cyber Camera Overlay Grid -->
+          <div class="absolute inset-4 border border-dashed border-[#00F0FF]/10 pointer-events-none"></div>
+          
+          <div class="text-center space-y-1 relative z-10">
+            <span class="text-xs font-bold text-[#FF007A] tracking-wider block uppercase">LENS PREVIEW</span>
+            <span class="text-[9px] text-zinc-500 uppercase tracking-widest">INITIALIZING PHOTON CAPTURE</span>
+          </div>
+
+          <!-- Bottom Left Info -->
+          <div class="absolute bottom-4 left-4 flex items-center gap-1.5 bg-black/60 px-2 py-0.5 text-[8px] font-mono text-[#00F0FF] rounded">
+            <span>RES: 1080P</span>
+            <span class="text-zinc-500">|</span>
+            <span>FPS: 60.00</span>
+          </div>
+        </div>
+
+        {/* Input bar */}
+        <div class="bg-[#0D071C] border border-[#FF007A]/20 p-3 rounded">
+          <div class="flex justify-between items-center text-[9px] font-bold text-zinc-400 mb-1.5 uppercase">
+            <span>Audio Waveform Capture</span>
+            <span class="text-[#00F0FF]">ACTIVE</span>
+          </div>
+          <div class="h-1 bg-[#1A0E35] rounded overflow-hidden flex items-stretch">
+            <div class="w-[55%] bg-gradient-to-r from-[#FF007A] to-[#00F0FF]"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Column (5 cols) -->
+      <div class="md:col-span-5 flex flex-col justify-between space-y-6">
+        <div class="space-y-4">
+          <div>
+            <h2 class="text-2xl font-black uppercase text-[#F3EBF9] tracking-wider futuristic-title">
+              LINK TUNING
+            </h2>
+            <p class="text-[9px] text-[#FF007A] font-bold uppercase tracking-wider">
+              CONFIGURE TELEMETRY SOURCES
+            </p>
+          </div>
+
+          <div class="space-y-3">
+            <div class="space-y-1">
+              <label class="text-[8px] uppercase tracking-widest text-[#00F0FF] font-bold block">MIC_SOURCE</label>
+              <div class="bg-[#05020B] border border-[#00F0FF]/20 px-3 py-2 text-xs text-zinc-300 rounded font-mono">
+                [INPUT_01] AUDIO_DRV_DEFAULT
+              </div>
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-[8px] uppercase tracking-widest text-[#00F0FF] font-bold block">CAM_SOURCE</label>
+              <div class="bg-[#05020B] border border-[#00F0FF]/20 px-3 py-2 text-xs text-zinc-300 rounded font-mono">
+                [LENS_01] CAPTURE_DRV_DEFAULT
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button 
+          onclick="alert('Tuning Completed (Mockup Mode)')"
+          class="w-full h-11 bg-gradient-to-r from-[#FF007A] to-[#8000FF] hover:from-[#ff2a94] hover:to-[#9624ff] text-white font-bold uppercase tracking-wider text-xs rounded shadow-[0_0_15px_rgba(255,0,122,0.3)] hover:shadow-[0_0_20px_rgba(255,0,122,0.5)] active:scale-[0.98] transition-all duration-150"
+        >
+          INITIATE CONNECTION
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="relative z-10 w-full max-w-5xl mx-auto px-6 py-6 border-t border-[#FF007A]/20 flex justify-between items-center text-[9px] text-[#FF007A]/60 font-bold uppercase tracking-widest">
+    <span>CYBERPUNK RETROWAVE LAYOUT</span>
+    <span>SYS_V1.99</span>
+  </footer>
+</body>
+</html>

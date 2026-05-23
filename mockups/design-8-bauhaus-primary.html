@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ototabi Mockup // Design 8: Bauhaus Primary</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .bauhaus-border {
+      border: 4px solid #000000;
+    }
+  </style>
+</head>
+<body class="bg-[#F0F0F0] text-black min-h-screen flex flex-col justify-between overflow-x-hidden p-6 sm:p-12">
+
+  <!-- Header -->
+  <header class="w-full max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center bauhaus-border bg-white p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] gap-4">
+    <div class="flex items-center gap-3">
+      <div class="size-6 bg-[#D90429] bauhaus-border"></div>
+      <div class="size-6 bg-[#FFB703] rounded-full bauhaus-border"></div>
+      <div class="size-6 bg-[#023E8A] bauhaus-border rotate-45"></div>
+      <span class="text-lg font-black uppercase tracking-wider pl-2 border-l-4 border-black">
+        OTOTABI / SYSTEM
+      </span>
+    </div>
+    <span class="text-[10px] font-bold tracking-wider uppercase font-mono bg-[#FFB703] px-2 py-0.5 bauhaus-border">DESIGN 08 // BAUHAUS</span>
+  </header>
+
+  <!-- Main Container -->
+  <main class="w-full max-w-4xl mx-auto flex-1 flex flex-col justify-center py-12">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-stretch">
+      <!-- Left Column: Red Highlight and Setup Box (7 cols) -->
+      <div class="md:col-span-7 bauhaus-border bg-white p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col justify-between min-h-[360px]">
+        <div class="space-y-4">
+          <div class="border-b-4 border-black pb-4 flex justify-between items-start">
+            <div>
+              <h2 class="text-2xl font-black uppercase tracking-tight text-[#D90429]">
+                DEVICE_CALIBRATION
+              </h2>
+              <p class="text-[9px] uppercase tracking-wider text-zinc-500 font-bold mt-0.5">
+                Status: Operational / Ready
+              </p>
+            </div>
+            <span class="text-[10px] font-mono text-zinc-400 font-bold">GRID_X_209</span>
+          </div>
+
+          <!-- Video Stream Frame -->
+          <div class="relative w-full aspect-video bauhaus-border bg-[#023E8A] flex flex-col items-center justify-center overflow-hidden">
+            <span class="text-[10px] font-bold uppercase tracking-widest text-[#FFB703]">
+              [ MEDIA STREAM STANDBY ]
+            </span>
+          </div>
+        </div>
+
+        <!-- Waveform meter -->
+        <div class="mt-6 space-y-2">
+          <span class="text-[9px] font-black uppercase tracking-wider">Audio Capture Amplitude</span>
+          <div class="h-4 bauhaus-border bg-white flex items-stretch overflow-hidden">
+            <div class="w-[60%] bg-[#FFB703] border-r-4 border-black"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Navigation Box (5 cols) -->
+      <div class="md:col-span-5 flex flex-col justify-between gap-6">
+        <!-- Info Card -->
+        <div class="bauhaus-border bg-[#023E8A] text-white p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] space-y-4 flex-1">
+          <h3 class="text-lg font-black uppercase tracking-wider text-[#FFB703]">
+            STUDIO PARAMETERS
+          </h3>
+          <p class="text-xs leading-relaxed text-zinc-300 font-medium">
+            Local browser caching is fully operational. Lossless tracks will generate once the record sequence begins.
+          </p>
+          <div class="pt-4 border-t-2 border-[#FFB703] flex justify-between items-center text-[10px] font-mono uppercase">
+            <span>Room Code:</span>
+            <span class="bg-black text-[#FFB703] px-2 py-0.5 font-bold">BH-982</span>
+          </div>
+        </div>
+
+        <!-- Join Button -->
+        <button 
+          onclick="alert('Entering Lobby (Mockup Mode)')"
+          class="w-full h-14 bg-[#D90429] text-white font-black uppercase tracking-wider text-xs bauhaus-border shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:bg-[#b80321] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all duration-100"
+        >
+          INITIATE CONNECTION &rarr;
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full max-w-4xl mx-auto bauhaus-border bg-white p-6 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col sm:flex-row justify-between items-center text-[10px] text-zinc-500 font-bold uppercase tracking-wider gap-4">
+    <span>Swiss Modernist Grid & Bauhaus Primary Palette</span>
+    <span>v1.0.8</span>
+  </footer>
+</body>
+</html>
