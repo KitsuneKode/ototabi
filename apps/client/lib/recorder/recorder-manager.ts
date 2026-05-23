@@ -8,6 +8,7 @@ import {
 } from "livekit-client";
 
 import { db } from "@/lib/localDB";
+import { opfsStorage } from "@/lib/localDB/opfs-storage";
 import { S3Uploader } from "@/lib/uploader/s3-uploader";
 
 type RecordingState = "idle" | "recording" | "stopped";
@@ -180,7 +181,7 @@ export class RecorderManager {
         const total = this.trackTotalBytes.get(trackSid) ?? 0;
         this.trackTotalBytes.set(trackSid, total + e.data.size);
 
-        // Save chunk locally
+        // Save chunk locally (dual storage: IndexedDB + OPFS)
         await db.chunks.put({
           id: `${trackSid}-${partNumber}`,
           trackSid,
@@ -188,6 +189,7 @@ export class RecorderManager {
           data: e.data,
           status: "pending",
         });
+        opfsStorage.writeChunk(this.sessionId!, partNumber, trackSid, e.data).catch(() => {});
       };
 
       // 5. Start slicing data

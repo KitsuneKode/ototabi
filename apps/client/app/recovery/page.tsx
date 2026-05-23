@@ -14,6 +14,7 @@ import {
   MechButton,
 } from "@/components/ui/retro-primitives";
 import { db } from "@/lib/localDB";
+import { opfsStorage } from "@/lib/localDB/opfs-storage";
 import { useTRPC } from "@/trpc/client";
 
 interface PendingTrack {
@@ -34,6 +35,7 @@ export default function RecoveryPage() {
   const [localError, setLocalError] = useState<string | null>(null);
   const [retryingTracks, setRetryingTracks] = useState<Set<string>>(new Set());
   const [completedTracks, setCompletedTracks] = useState<Set<string>>(new Set());
+  const [opfsUsage, setOpfsUsage] = useState<{ files: number; bytes: number } | null>(null);
 
   useEffect(() => {
     async function loadLocalTracks() {
@@ -61,6 +63,13 @@ export default function RecoveryPage() {
         setLocalError("Failed to read local IndexedDB storage.");
       } finally {
         setIsLoadingLocal(false);
+      }
+
+      try {
+        const usage = await opfsStorage.getUsage();
+        setOpfsUsage(usage);
+      } catch {
+        // OPFS may not be available
       }
     }
     loadLocalTracks();
@@ -174,7 +183,9 @@ export default function RecoveryPage() {
               <h1 className="text-3xl leading-none font-bold tracking-tight uppercase">
                 Recovery Console
               </h1>
-              <MonoLabel className="mt-1.5 block">Local IndexedDB Pending Track Recovery</MonoLabel>
+              <MonoLabel className="mt-1.5 block">
+                Local IndexedDB + OPFS Redundant Storage Recovery
+              </MonoLabel>
             </div>
           </div>
           <Led color="amber" size="md" pulse label="PENDING" />
@@ -189,6 +200,14 @@ export default function RecoveryPage() {
               No pending recordings were found in your browser&apos;s local IndexedDB storage. All
               local tracks have been uploaded.
             </p>
+            {opfsUsage && (
+              <div className="border-border mt-6 inline-flex items-center gap-3 rounded border px-4 py-2">
+                <Led color="green" size="sm" />
+                <MonoLabel>
+                  OPFS: {opfsUsage.files} files, {(opfsUsage.bytes / 1024 / 1024).toFixed(1)} MB
+                </MonoLabel>
+              </div>
+            )}
             <MechButton onClick={() => router.push("/dashboard")} className="mx-auto mt-6">
               <ArrowLeft className="h-3.5 w-3.5" />
               Back to Dashboard
