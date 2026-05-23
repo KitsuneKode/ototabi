@@ -3,7 +3,7 @@
 import config from '@/utils/config'
 import '@livekit/components-styles'
 import { useTRPC } from '@/trpc/client'
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { Button } from '@ototabi/ui/components/button'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { RecorderManager } from '@/lib/recorder/recorder-manager'
@@ -29,6 +29,7 @@ import {
   RoomAudioRenderer,
   RoomContext,
   useTracks,
+  useChat,
 } from '@livekit/components-react'
 import { AnalogCard, AnalogInset } from '@/components/ui/analog-card'
 import { Led, LedInline } from '@/components/ui/led'
@@ -48,6 +49,7 @@ export default function StudioPage() {
 
   const audioEnabled = searchParams.get('audioEnabled') === 'true'
   const videoEnabled = searchParams.get('videoEnabled') === 'true'
+  const screenShareEnabled = searchParams.get('screenShareEnabled') === 'true'
   const micId = searchParams.get('micId') || ''
   const camId = searchParams.get('camId') || ''
 
@@ -64,9 +66,10 @@ export default function StudioPage() {
   const [connectionError, setConnectionError] = useState('')
   const [isConnected, setIsConnected] = useState(false)
   const [connectionHealth, setConnectionHealth] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected')
+  const [sidebarTab, setSidebarTab] = useState<'uploads' | 'chat'>('uploads')
+  const [chatInput, setChatInput] = useState('')
 
   const recorderManager = useRef<RecorderManager | null>(null)
-  const roomInstance = useRef<Room | null>(null)
 
   const recordingSeconds = useTimer(isRecording)
 
@@ -113,8 +116,6 @@ export default function StudioPage() {
       },
     } as RoomOptions),
   ).current
-
-  roomInstance.current = room
 
   const handleDataReceived = useCallback(
     (payload: Uint8Array, participant?: any) => {
@@ -189,6 +190,7 @@ export default function StudioPage() {
 
         if (videoEnabled) await room.localParticipant.setCameraEnabled(true)
         if (audioEnabled) await room.localParticipant.setMicrophoneEnabled(true)
+        if (screenShareEnabled) await room.localParticipant.setScreenShareEnabled(true)
 
         recorderManager.current = new RecorderManager({ room })
       } catch (err: any) {
@@ -205,7 +207,7 @@ export default function StudioPage() {
       recorderManager.current?.cleanup()
       room.disconnect()
     }
-  }, [sessionUser, roomId, roomDetails, handleDataReceived, room, audioEnabled, videoEnabled])
+  }, [sessionUser, roomId, roomDetails, handleDataReceived, room, audioEnabled, videoEnabled, screenShareEnabled])
 
   const handleStartRecording = async () => {
     if (!roomDetails) return
@@ -239,6 +241,52 @@ export default function StudioPage() {
       await room.localParticipant.publishData(data, { reliable: true })
     } catch (e) {
       console.error('Failed stopping recording:', e)
+    }
+  }
+
+  const { chatMessages, send } = useChat({ room })
+
+  const persistMessage = useMutation(
+    trpc.chat.sendMessage.mutationOptions(),
+  )
+
+  const persistedMessagesQuery = useQuery(
+    trpc.chat.getMessages.queryOptions(
+      { roomId: roomDetails?.id ?? '' },
+      { enabled: !!roomDetails?.id },
+    ),
+  )
+
+  const allMessages = useMemo(() => {
+    const persisted = (persistedMessagesQuery.data ?? []).map(m => ({
+      id: m.id,
+      timestamp: new Date(m.createdAt).getTime(),
+      message: m.message,
+      from: { identity: m.user.name, name: m.user.name },
+    }))
+
+    const dedupedPersisted = persisted.filter(p =>
+      !chatMessages.some(r =>
+        r.from?.identity === p.from?.identity &&
+        r.message === p.message &&
+        Math.abs(r.timestamp - p.timestamp) < 3000
+      )
+    )
+
+    return [...dedupedPersisted, ...chatMessages].sort((a, b) => a.timestamp - b.timestamp)
+  }, [persistedMessagesQuery.data, chatMessages])
+
+  const handleSend = async () => {
+    if (!chatInput.trim()) return
+    try {
+      await send(chatInput.trim())
+      await persistMessage.mutateAsync({
+        roomId: roomDetails.id,
+        message: chatInput.trim(),
+      })
+      setChatInput('')
+    } catch (e) {
+      console.error('Failed to send message:', e)
     }
   }
 
@@ -314,7 +362,7 @@ export default function StudioPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* Connection health LED */}
             <AnalogInset className="flex items-center gap-2 px-3 py-1.5">
               <Led
@@ -385,108 +433,200 @@ export default function StudioPage() {
               CH 1 : Studio Feed
             </div>
 
-            <div className="flex min-h-0 w-full flex-1 items-center justify-center p-4">
+            <div className="flex min-h-0 w-full flex-1 items-center justify-center p-3 md:p-4">
               <StudioVideoConference />
             </div>
             <RoomAudioRenderer />
           </main>
 
-          {/* ── Sidebar: Upload Monitor (host only) or Guest Progress ─────────── */}
-          {isHost ? (
-            <aside className="hidden w-72 flex-col overflow-y-auto border-l-2 border-border bg-card p-4 shadow-[-4px_0_0_0_var(--color-border)] lg:flex">
-              <PanelTitle label="Track Upload Queues" title="Upload Monitor" className="mb-4 pb-3 border-b border-border" />
+          {/* ── Sidebar ──────────────────────────────────────────────────────── */}
+          <aside className="hidden w-72 flex-col overflow-y-auto border-l-2 border-border bg-card shadow-[-4px_0_0_0_var(--color-border)] md:flex">
+            {/* Tab bar */}
+            <div className="flex border-b border-border shrink-0">
+              <button
+                onClick={() => setSidebarTab('uploads')}
+                className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                  sidebarTab === 'uploads'
+                    ? 'bg-popover text-foreground border-b-2 border-accent'
+                    : 'bg-card text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Uploads
+              </button>
+              <button
+                onClick={() => setSidebarTab('chat')}
+                className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                  sidebarTab === 'chat'
+                    ? 'bg-popover text-foreground border-b-2 border-accent'
+                    : 'bg-card text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Chat
+              </button>
+            </div>
 
-              {progressMap.size === 0 ? (
-                <AnalogInset className="flex flex-1 flex-col items-center justify-center gap-3 border-dashed p-6 text-center">
-                  <Radio className="h-8 w-8 animate-pulse text-muted-foreground/30" />
-                  <div className="space-y-1">
-                    <MonoLabel className="block">Standby Mode</MonoLabel>
-                    <p className="max-w-[160px] font-mono text-[8px] text-muted-foreground/60 leading-normal uppercase">
-                      Upload feeds populate once recorders activate.
-                    </p>
-                  </div>
-                </AnalogInset>
-              ) : (
-                <div className="space-y-3.5">
-                  {Array.from(progressMap.entries()).map(([trackSid, data]) => (
-                    <AnalogInset key={trackSid} className="p-3">
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="max-w-[120px] truncate text-xs font-bold text-foreground uppercase">
-                          {data.name}
-                        </span>
-                        <StatusBadge className="text-[8px]">
-                          {data.type}
-                        </StatusBadge>
-                      </div>
+            {sidebarTab === 'uploads' ? (
+              <div className="flex-1 overflow-y-auto p-4">
+                {isHost ? (
+                  <>
+                    <PanelTitle label="Track Upload Queues" title="Upload Monitor" className="mb-4 pb-3 border-b border-border" />
 
-                      <div className="flex items-center gap-2.5">
-                        <AnalogInset className="h-2 flex-1 p-0">
-                          <div
-                            className={`h-full transition-[width] duration-300 rounded-sm ${
-                              data.progress === 100
-                                ? 'bg-led-green shadow-[0_0_5px_var(--color-led-green)]'
-                                : 'bg-accent shadow-[0_0_5px_var(--color-accent-glow)]'
-                            }`}
-                            style={{ width: `${data.progress}%` }}
-                          />
-                        </AnalogInset>
-                        <span className="min-w-[32px] text-right font-mono text-[10px] font-bold tabular-nums text-foreground">
-                          {data.progress}%
-                        </span>
-                      </div>
-
-                      <div className="mt-2 flex items-center justify-between font-mono text-[8px] text-muted-foreground/60">
-                        <span className="max-w-[140px] truncate uppercase">
-                          SID: {trackSid.slice(-10)}
-                        </span>
-                        {data.progress === 100 && (
-                          <span className="flex items-center gap-0.5 text-led-green font-bold">
-                            <CheckCircle className="h-3 w-3 shrink-0" />
-                            <span>SAVED</span>
-                          </span>
-                        )}
-                      </div>
-                    </AnalogInset>
-                  ))}
-                </div>
-              )}
-            </aside>
-          ) : (
-            /* Guest upload sidebar — own tracks only */
-            progressMap.size > 0 && (
-              <aside className="hidden w-64 flex-col overflow-y-auto border-l-2 border-border bg-card p-4 shadow-[-4px_0_0_0_var(--color-border)] lg:flex">
-                <PanelTitle label="Your Tracks" title="Upload Status" className="mb-4 pb-3 border-b border-border" />
-                <div className="space-y-3.5">
-                  {Array.from(progressMap.entries())
-                    .filter(([, d]) => d.name === sessionUser?.name)
-                    .map(([trackSid, data]) => (
-                      <AnalogInset key={trackSid} className="p-3">
-                        <div className="mb-2 flex items-center justify-between">
-                          <MonoLabel className="text-[8px]">{data.type}</MonoLabel>
-                          {data.progress === 100 && (
-                            <span className="flex items-center gap-0.5 text-led-green font-mono font-bold text-[8px]">
-                              <CheckCircle className="h-3 w-3" />
-                              <span>DONE</span>
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <AnalogInset className="h-2 flex-1 p-0">
-                            <div
-                              className={`h-full transition-[width] duration-300 rounded-sm ${
-                                data.progress === 100 ? 'bg-led-green' : 'bg-accent'
-                              }`}
-                              style={{ width: `${data.progress}%` }}
-                            />
-                          </AnalogInset>
-                          <span className="font-mono text-[10px] font-bold tabular-nums">{data.progress}%</span>
+                    {progressMap.size === 0 ? (
+                      <AnalogInset className="flex flex-col items-center justify-center gap-3 border-dashed p-6 text-center">
+                        <Radio className="h-8 w-8 animate-pulse text-muted-foreground/30" />
+                        <div className="space-y-1">
+                          <MonoLabel className="block">Standby Mode</MonoLabel>
+                          <p className="max-w-[160px] font-mono text-[8px] text-muted-foreground/60 leading-normal uppercase">
+                            Upload feeds populate once recorders activate.
+                          </p>
                         </div>
                       </AnalogInset>
-                    ))}
+                    ) : (
+                      <div className="space-y-3.5">
+                        {Array.from(progressMap.entries()).map(([trackSid, data]) => (
+                          <AnalogInset key={trackSid} className="p-3">
+                            <div className="mb-2 flex items-center justify-between">
+                              <span className="max-w-[120px] truncate text-xs font-bold text-foreground uppercase">
+                                {data.name}
+                              </span>
+                              <StatusBadge className="text-[8px]">
+                                {data.type}
+                              </StatusBadge>
+                            </div>
+
+                            <div className="flex items-center gap-2.5">
+                              <AnalogInset className="h-2 flex-1 p-0">
+                                <div
+                                  className={`h-full transition-[width] duration-300 rounded-sm ${
+                                    data.progress === 100
+                                      ? 'bg-led-green shadow-[0_0_5px_var(--color-led-green)]'
+                                      : 'bg-accent shadow-[0_0_5px_var(--color-accent-glow)]'
+                                  }`}
+                                  style={{ width: `${data.progress}%` }}
+                                />
+                              </AnalogInset>
+                              <span className="min-w-[32px] text-right font-mono text-[10px] font-bold tabular-nums text-foreground">
+                                {data.progress}%
+                              </span>
+                            </div>
+
+                            <div className="mt-2 flex items-center justify-between font-mono text-[8px] text-muted-foreground/60">
+                              <span className="max-w-[140px] truncate uppercase">
+                                SID: {trackSid.slice(-10)}
+                              </span>
+                              {data.progress === 100 && (
+                                <span className="flex items-center gap-0.5 text-led-green font-bold">
+                                  <CheckCircle className="h-3 w-3 shrink-0" />
+                                  <span>SAVED</span>
+                                </span>
+                              )}
+                            </div>
+                          </AnalogInset>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : progressMap.size > 0 ? (
+                  <>
+                    <PanelTitle label="Your Tracks" title="Upload Status" className="mb-4 pb-3 border-b border-border" />
+                    <div className="space-y-3.5">
+                      {Array.from(progressMap.entries())
+                        .filter(([, d]) => d.name === sessionUser?.name)
+                        .map(([trackSid, data]) => (
+                          <AnalogInset key={trackSid} className="p-3">
+                            <div className="mb-2 flex items-center justify-between">
+                              <MonoLabel className="text-[8px]">{data.type}</MonoLabel>
+                              {data.progress === 100 && (
+                                <span className="flex items-center gap-0.5 text-led-green font-mono font-bold text-[8px]">
+                                  <CheckCircle className="h-3 w-3" />
+                                  <span>DONE</span>
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <AnalogInset className="h-2 flex-1 p-0">
+                                <div
+                                  className={`h-full transition-[width] duration-300 rounded-sm ${
+                                    data.progress === 100 ? 'bg-led-green' : 'bg-accent'
+                                  }`}
+                                  style={{ width: `${data.progress}%` }}
+                                />
+                              </AnalogInset>
+                              <span className="font-mono text-[10px] font-bold tabular-nums">{data.progress}%</span>
+                            </div>
+                          </AnalogInset>
+                        ))}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            ) : (
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {allMessages.length === 0 ? (
+                    <AnalogInset className="flex flex-col items-center justify-center gap-3 border-dashed p-6 text-center">
+                      <div className="space-y-1">
+                        <MonoLabel className="block">No Messages</MonoLabel>
+                        <p className="max-w-[160px] font-mono text-[8px] text-muted-foreground/60 leading-normal uppercase">
+                          Chat messages will appear here.
+                        </p>
+                      </div>
+                    </AnalogInset>
+                  ) : (
+                    allMessages.map((msg) => {
+                      const isLocal = msg.from?.identity === sessionUser?.name
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`flex ${isLocal ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div
+                            className={`max-w-[90%] rounded px-3 py-2 ${
+                              isLocal
+                                ? 'bg-accent/20 border border-accent/30'
+                                : 'bg-popover border border-border'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="font-mono text-[8px] font-bold uppercase text-muted-foreground">
+                                {msg.from?.name || msg.from?.identity || 'Unknown'}
+                              </span>
+                              <span className="font-mono text-[7px] text-muted-foreground/50">
+                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                              </span>
+                            </div>
+                            <p className="font-mono text-[11px] text-foreground leading-relaxed break-words">
+                              {msg.message}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
                 </div>
-              </aside>
-            )
-          )}
+                <div className="border-t border-border p-3">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          handleSend()
+                        }
+                      }}
+                      placeholder="Type a message..."
+                      className="flex-1 bg-popover border border-border rounded px-3 py-2 font-mono text-[11px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-accent/60"
+                    />
+                    <MechButton onClick={handleSend} className="px-3 py-2 h-auto">
+                      Send
+                    </MechButton>
+                  </div>
+                </div>
+              </div>
+            )}
+          </aside>
         </div>
 
         {/* ── Control Footer ──────────────────────────────────────────────────── */}
