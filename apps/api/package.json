@@ -15,6 +15,7 @@
     "@ototabi/store": "*",
     "@ototabi/trpc": "*",
     "@t3-oss/env-core": "^0.13.11",
+    "billing": "*",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "helmet": "^8.1.0",

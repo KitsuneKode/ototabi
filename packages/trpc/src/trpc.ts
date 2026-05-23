@@ -54,6 +54,27 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
   return result;
 });
 
+import { prisma } from "@ototabi/store";
+
+const PLAN_ORDER: Record<string, number> = { TRIAL: 0, CREATOR: 1, PRO: 2, STUDIO: 3 };
+
+export function requirePlan(minimum: string) {
+  return t.middleware(async ({ ctx, next }) => {
+    if (!ctx.session?.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+    const sub = await prisma.subscription.findUnique({
+      where: { userId: ctx.session.user.id },
+    });
+    const currentPlan = sub?.plan || "TRIAL";
+    if ((PLAN_ORDER[currentPlan] || 0) < (PLAN_ORDER[minimum] || 0)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: `This feature requires the ${minimum} plan or higher`,
+      });
+    }
+    return next();
+  });
+}
+
 export const publicProcedure = t.procedure.use(timingMiddleware);
 
 export const protectedProcedure = t.procedure.use(timingMiddleware).use(({ ctx, next }) => {

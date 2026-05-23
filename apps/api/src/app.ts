@@ -8,6 +8,7 @@ import helmet from "helmet";
 import { timingMiddleWare } from "@/middlewares/timing-middleware";
 import guestAuthRouter from "@/routes/guest-auth";
 import liveKitAuthRouter from "@/routes/live-kit-auth";
+import polarWebhookRouter from "@/routes/polar-webhook";
 import config from "@/utils/config";
 
 import { errorHandler } from "./middlewares/error-handler-middleware";
@@ -64,6 +65,7 @@ const guestAuthLimiter = rateLimit({
 });
 
 app.use("/api/guest-auth", guestAuthLimiter, guestAuthRouter);
+app.use("/api/polar-webhook", polarWebhookRouter);
 
 app.use(timingMiddleWare);
 
