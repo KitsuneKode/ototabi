@@ -34,7 +34,9 @@ export const roomsService = {
   async getRoom(params: { id?: string; code?: string }) {
     if (!params.id && !params.code)
       throw new TRPCError({ code: "BAD_REQUEST", message: "Provide room id or code" });
-    const room = await roomsRepository.findWithRelations(params.id || params.code || "");
+    const room = params.id
+      ? await roomsRepository.findByIdWithRelations(params.id)
+      : await roomsRepository.findByCodeWithRelations(params.code!);
     if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
     return room;
   },

@@ -34,6 +34,7 @@ import {
   NoiseBackground,
   MechButton,
 } from "@/components/ui/retro-primitives";
+import { formatDate, formatTime, formatDateTime } from "@/lib/date-utils";
 import { useTRPC } from "@/trpc/client";
 
 export default function DashboardPage() {
@@ -295,7 +296,7 @@ export default function DashboardPage() {
 
                       <div className="mt-3 flex items-center justify-between">
                         <MonoLabel className="text-[9px]">
-                          EST: {new Date(room.createdAt).toLocaleDateString()}
+                          EST: {formatDate(room.createdAt)}
                         </MonoLabel>
                         <div className="flex items-center gap-1.5">
                           <button
@@ -372,7 +373,9 @@ export default function DashboardPage() {
                       </h3>
                       <MonoLabel className="mt-2 block">
                         Recorded:{" "}
-                        {new Date(recordingSessions.data[0]?.startedAt ?? "").toLocaleString()}{" "}
+                        {recordingSessions.data[0]?.startedAt
+                          ? formatDateTime(recordingSessions.data[0].startedAt)
+                          : ""}{" "}
                         &bull; Tracks: {recordingSessions.data[0]?.tracks.length ?? 0}
                       </MonoLabel>
                     </AnalogInset>
@@ -406,18 +409,20 @@ export default function DashboardPage() {
                             <div className="text-muted-foreground flex items-center gap-4 font-mono text-[10px]">
                               <span className="flex items-center gap-1">
                                 <Calendar className="text-muted-foreground/60 h-3.5 w-3.5" />
-                                {new Date(session.startedAt).toLocaleDateString()}
+                                {formatDate(session.startedAt)}
                               </span>
                               <span className="flex items-center gap-1">
                                 <Clock className="text-muted-foreground/60 h-3.5 w-3.5" />
-                                {new Date(session.startedAt).toLocaleTimeString()}
+                                {formatTime(session.startedAt)}
                               </span>
                             </div>
                           </div>
                           <div className="mt-1 flex items-center justify-between">
                             <MonoLabel>
-                              Tracks: {session.tracks.length} |{" "}
-                              {session.tracks.every((t) => t.status === "COMPLETED")
+                              Tracks: {session.tracks?.length ?? 0} |{" "}
+                              {session.tracks?.every(
+                                (t: { status: string }) => t.status === "COMPLETED",
+                              )
                                 ? "ALL UPLOADED"
                                 : "SYNC PENDING"}
                             </MonoLabel>
@@ -487,17 +492,19 @@ export default function DashboardPage() {
                                 {session.id.slice(-6).toUpperCase()}
                               </MonoLabel>
                               <MonoLabel className="text-muted-foreground">
-                                {session.room.name}
+                                {session.room?.name ?? "Unknown"}
                               </MonoLabel>
                             </div>
                             <MonoLabel className="text-muted-foreground text-[10px]">
-                              {new Date(session.startedAt).toLocaleDateString()}
+                              {formatDate(session.startedAt)}
                             </MonoLabel>
                           </div>
                           <div className="flex items-center justify-between">
                             <MonoLabel>
-                              Tracks: {session.tracks.length} |{" "}
-                              {session.tracks.every((t) => t.status === "COMPLETED")
+                              Tracks: {session.tracks?.length ?? 0} |{" "}
+                              {session.tracks?.every(
+                                (t: { status: string }) => t.status === "COMPLETED",
+                              )
                                 ? "ALL UPLOADED"
                                 : "SYNC PENDING"}
                             </MonoLabel>

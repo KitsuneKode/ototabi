@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueries } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
 import { RefreshCw, CheckCircle, AlertTriangle, HardDrive, ArrowLeft, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -36,6 +36,25 @@ export default function RecoveryPage() {
   const [retryingTracks, setRetryingTracks] = useState<Set<string>>(new Set());
   const [completedTracks, setCompletedTracks] = useState<Set<string>>(new Set());
   const [opfsUsage, setOpfsUsage] = useState<{ files: number; bytes: number } | null>(null);
+
+  const authState = useQuery(trpc.auth.getSession.queryOptions());
+
+  // ── Auth Gate ──────────────────────────────────────────────────────────
+  if (!authState.isLoading && !authState.data) {
+    return (
+      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
+        <AnalogCard className="w-full max-w-sm p-8 text-center">
+          <AlertTriangle className="text-led-on mx-auto mb-4 h-12 w-12" />
+          <p className="text-led-on mb-2 text-sm font-bold tracking-wider uppercase">
+            Authentication Required
+          </p>
+          <MechButton onClick={() => router.push("/auth/signin")} className="w-full justify-center">
+            Sign In
+          </MechButton>
+        </AnalogCard>
+      </div>
+    );
+  }
 
   useEffect(() => {
     async function loadLocalTracks() {

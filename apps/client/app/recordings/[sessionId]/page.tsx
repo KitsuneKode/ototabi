@@ -25,6 +25,7 @@ import {
   NoiseBackground,
   MechButton,
 } from "@/components/ui/retro-primitives";
+import { formatDateTime, formatTimestamp } from "@/lib/date-utils";
 import { useTRPC } from "@/trpc/client";
 
 const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -32,14 +33,6 @@ const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }
   CAMERA: Video,
   SCREENSHARE: Monitor,
 };
-
-function formatTime(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
 
 function TrackStatusBadge({ status }: { status: string }) {
   if (status === "COMPLETED") {
@@ -75,6 +68,8 @@ export default function RecordingSessionPage() {
     trpc.rooms.getRecordingSessionById.queryOptions({ sessionId }, { enabled: !!sessionId }),
   );
 
+  const authState = useQuery(trpc.auth.getSession.queryOptions());
+
   const transcript = useQuery(
     trpc.transcript.getSegments.queryOptions({ sessionId }, { enabled: !!sessionId }),
   );
@@ -82,6 +77,20 @@ export default function RecordingSessionPage() {
   const chapters = useQuery(
     trpc.transcript.getChapters.queryOptions({ sessionId }, { enabled: !!sessionId }),
   );
+
+  // ── Auth Gate ──────────────────────────────────────────────────────────
+  if (!authState.isLoading && !authState.data) {
+    return (
+      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
+        <MechButton
+          onClick={() => router.push("/auth/signin")}
+          className="w-full max-w-xs justify-center"
+        >
+          Sign In Required
+        </MechButton>
+      </div>
+    );
+  }
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (session.isLoading) {
@@ -124,7 +133,7 @@ export default function RecordingSessionPage() {
 
   // Group tracks by participant
   const byUser = data.tracks.reduce<Record<string, typeof data.tracks>>((acc, track) => {
-    const key = track.user?.name ?? track.user?.email ?? "Unknown";
+    const key = track.user?.name ?? "Unknown";
     if (!acc[key]) acc[key] = [];
     acc[key]!.push(track);
     return acc;
@@ -175,7 +184,7 @@ export default function RecordingSessionPage() {
               },
               {
                 label: "Started At",
-                value: new Date(data.startedAt).toLocaleString(),
+                value: formatDateTime(data.startedAt),
                 accent: false,
               },
               {
@@ -325,7 +334,7 @@ export default function RecordingSessionPage() {
                         className="border-border bg-popover flex items-center gap-3 rounded border px-3 py-2"
                       >
                         <MonoLabel className="text-accent shrink-0">
-                          {formatTime(ch.startTime)}
+                          {formatTimestamp(ch.startTime)}
                         </MonoLabel>
                         <span className="text-foreground font-mono text-xs">{ch.title}</span>
                       </div>
@@ -342,7 +351,7 @@ export default function RecordingSessionPage() {
                   >
                     <div className="flex items-start gap-3">
                       <MonoLabel className="text-muted-foreground mt-0.5 shrink-0 text-[9px]">
-                        {formatTime(seg.startTime)}
+                        {formatTimestamp(seg.startTime)}
                       </MonoLabel>
                       <p className="text-foreground/90 font-mono text-[11px] leading-relaxed">
                         {seg.text}

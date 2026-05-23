@@ -10,6 +10,9 @@ guestAuthRouter.post("/", async (req: Request, res: Response) => {
     if (!name || name.trim().length === 0) {
       return res.status(400).json({ error: "Name is required" });
     }
+    if (name.length > 50) {
+      return res.status(400).json({ error: "Name must be 50 characters or less" });
+    }
 
     const userId = crypto.randomUUID();
     const sessionToken = crypto.randomBytes(32).toString("hex");

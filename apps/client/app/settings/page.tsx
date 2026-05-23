@@ -28,6 +28,7 @@ import {
   NoiseBackground,
   MechButton,
 } from "@/components/ui/retro-primitives";
+import { formatDate } from "@/lib/date-utils";
 import { useTRPC } from "@/trpc/client";
 
 const THEMES = [
@@ -149,7 +150,7 @@ export default function SettingsPage() {
               <p className="text-lg font-bold tracking-tight uppercase">{user.name}</p>
               <MonoLabel>{user.email}</MonoLabel>
               <MonoLabel className="mt-1 text-[9px]">
-                Joined: {new Date(user.createdAt).toLocaleDateString()}
+                Joined: {formatDate(user.createdAt)}
               </MonoLabel>
             </div>
           </AnalogCard>

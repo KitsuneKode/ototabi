@@ -27,6 +27,7 @@ import {
   NoiseBackground,
   MechButton,
 } from "@/components/ui/retro-primitives";
+import { formatTime } from "@/lib/date-utils";
 import { useKeyboardShortcuts } from "@/lib/hooks/use-keyboard-shortcuts";
 import { useTimer, formatTimer } from "@/lib/hooks/use-timer";
 import { RecorderManager } from "@/lib/recorder/recorder-manager";
@@ -316,6 +317,26 @@ export default function StudioPage() {
       setSidebarOpen(false);
     },
   });
+
+  // ─── Auth Gate ──────────────────────────────────────────────────────────
+  if (!authState.isLoading && !authState.data) {
+    return (
+      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
+        <AnalogCard className="w-full max-w-sm p-8 text-center">
+          <AlertTriangle className="text-led-on mx-auto mb-4 h-12 w-12" />
+          <p className="text-led-on mb-2 text-sm font-bold tracking-wider uppercase">
+            Authentication Required
+          </p>
+          <p className="text-muted-foreground mb-6 font-mono text-xs leading-normal">
+            You must be signed in to access the studio.
+          </p>
+          <MechButton onClick={() => router.push("/auth/signin")} className="w-full justify-center">
+            Sign In
+          </MechButton>
+        </AnalogCard>
+      </div>
+    );
+  }
 
   // ─── Error State ────────────────────────────────────────────────────────────
   if (tokenError) {
@@ -679,11 +700,7 @@ export default function StudioPage() {
                                 {msg.from?.name || msg.from?.identity || "Unknown"}
                               </span>
                               <span className="text-muted-foreground/50 font-mono text-[7px]">
-                                {new Date(msg.timestamp).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  second: "2-digit",
-                                })}
+                                {formatTime(msg.timestamp)}
                               </span>
                             </div>
                             <p className="text-foreground font-mono text-[11px] leading-relaxed break-words">

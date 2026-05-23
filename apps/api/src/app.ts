@@ -2,6 +2,7 @@ import { toNodeHandler, auth } from "@ototabi/auth/server";
 import { expressMiddleWare } from "@ototabi/trpc";
 import cors, { type CorsOptions } from "cors";
 import express from "express";
+import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 
 import { timingMiddleWare } from "@/middlewares/timing-middleware";
@@ -53,7 +54,16 @@ app.all("/api/auth/*splat", toNodeHandler(auth));
 
 app.use(express.json());
 
-app.use("/api/guest-auth", guestAuthRouter);
+// Rate limiter for guest auth (abuse prevention)
+const guestAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many guest sessions, try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use("/api/guest-auth", guestAuthLimiter, guestAuthRouter);
 
 app.use(timingMiddleWare);
 

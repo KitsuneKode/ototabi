@@ -18,9 +18,19 @@ export const roomsRepository = {
     return prisma.room.findUnique({ where: { id } });
   },
 
-  async findWithRelations(id: string) {
+  async findByIdWithRelations(id: string) {
     return prisma.room.findFirst({
       where: { id },
+      include: {
+        creator: { select: { id: true, name: true } },
+        _count: { select: { participants: true } },
+      },
+    });
+  },
+
+  async findByCodeWithRelations(code: string) {
+    return prisma.room.findFirst({
+      where: { code },
       include: {
         creator: { select: { id: true, name: true } },
         _count: { select: { participants: true } },
@@ -83,7 +93,7 @@ export const roomsRepository = {
     return prisma.roomParticipant.findMany({
       where: { roomId },
       include: {
-        user: { select: { id: true, name: true, email: true, image: true } },
+        user: { select: { id: true, name: true, image: true } },
       },
       orderBy: { joinedAt: "asc" },
     });
@@ -128,7 +138,7 @@ export const roomsRepository = {
       include: {
         tracks: {
           include: {
-            user: { select: { id: true, name: true, email: true } },
+            user: { select: { id: true, name: true } },
           },
           orderBy: { createdAt: "asc" },
         },
@@ -143,7 +153,7 @@ export const roomsRepository = {
         room: { select: { id: true, name: true, code: true } },
         tracks: {
           include: {
-            user: { select: { id: true, name: true, email: true } },
+            user: { select: { id: true, name: true } },
           },
           orderBy: { createdAt: "asc" },
         },

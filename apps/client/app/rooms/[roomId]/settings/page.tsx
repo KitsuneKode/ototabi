@@ -28,6 +28,7 @@ import {
   NoiseBackground,
   MechButton,
 } from "@/components/ui/retro-primitives";
+import { formatDate, formatTime } from "@/lib/date-utils";
 import { useTRPC } from "@/trpc/client";
 
 export default function RoomSettingsPage() {
@@ -54,6 +55,22 @@ export default function RoomSettingsPage() {
       },
     } as any),
   );
+
+  const authState = useQuery(trpc.auth.getSession.queryOptions());
+
+  // ── Auth Gate ──────────────────────────────────────────────────────────
+  if (!authState.isLoading && !authState.data) {
+    return (
+      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
+        <MechButton
+          onClick={() => router.push("/auth/signin")}
+          className="w-full max-w-xs justify-center"
+        >
+          Sign In Required
+        </MechButton>
+      </div>
+    );
+  }
 
   const sessions = useQuery(
     trpc.rooms.getRecordingSessions.queryOptions(
@@ -265,11 +282,11 @@ export default function RoomSettingsPage() {
                       <div className="mt-0.5 flex items-center gap-2">
                         <Calendar className="text-muted-foreground/60 h-3 w-3" />
                         <MonoLabel className="text-[9px]">
-                          {new Date(session.startedAt).toLocaleDateString()}
+                          {formatDate(session.startedAt)}
                         </MonoLabel>
                         <Clock className="text-muted-foreground/60 h-3 w-3" />
                         <MonoLabel className="text-[9px]">
-                          {new Date(session.startedAt).toLocaleTimeString()}
+                          {formatTime(session.startedAt)}
                         </MonoLabel>
                       </div>
                     </div>

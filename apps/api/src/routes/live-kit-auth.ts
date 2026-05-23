@@ -1,3 +1,4 @@
+import { auth } from "@ototabi/auth/server";
 import { Router, type Request, type Response } from "express";
 import { AccessToken } from "livekit-server-sdk";
 
@@ -12,6 +13,12 @@ liveKitAuthRouter.get("/token", async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Missing "room" query parameter' });
   } else if (!username) {
     return res.status(400).json({ error: 'Missing "username" query parameter' });
+  }
+
+  // Verify caller is authenticated
+  const session = await auth.api.getSession({ headers: req.headers as HeadersInit });
+  if (!session?.user) {
+    return res.status(401).json({ error: "Authentication required" });
   }
 
   const apiKey = config.getConfig("liveKitApiKey");

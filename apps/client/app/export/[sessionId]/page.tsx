@@ -26,6 +26,7 @@ import {
   NoiseBackground,
   MechButton,
 } from "@/components/ui/retro-primitives";
+import { formatDateTime, formatTimestamp } from "@/lib/date-utils";
 import { useTRPC } from "@/trpc/client";
 
 const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -99,6 +100,25 @@ export default function ExportSessionPage() {
   const transcript = useQuery(
     trpc.transcript.getSegments.queryOptions({ sessionId }, { enabled: !!sessionId }),
   );
+
+  const authState = useQuery(trpc.auth.getSession.queryOptions());
+
+  // ── Auth Gate ──────────────────────────────────────────────────────────
+  if (!authState.isLoading && !authState.data) {
+    return (
+      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
+        <AnalogCard className="w-full max-w-sm p-8 text-center">
+          <AlertTriangle className="text-led-on mx-auto mb-4 h-12 w-12" />
+          <p className="text-led-on mb-2 text-sm font-bold tracking-wider uppercase">
+            Authentication Required
+          </p>
+          <MechButton onClick={() => router.push("/auth/signin")} className="w-full justify-center">
+            Sign In
+          </MechButton>
+        </AnalogCard>
+      </div>
+    );
+  }
 
   const loadFfmpeg = useCallback(async () => {
     if (ffmpegLoaded) return;
@@ -514,7 +534,7 @@ export default function ExportSessionPage() {
               { label: "Room Code", value: data.room.code, accent: false },
               {
                 label: "Started At",
-                value: new Date(data.startedAt).toLocaleString(),
+                value: formatDateTime(data.startedAt),
                 accent: false,
               },
               { label: "Total Tracks", value: String(data.tracks.length), accent: true },
@@ -569,7 +589,7 @@ export default function ExportSessionPage() {
                         <div>
                           <p className="text-sm font-bold tracking-tight uppercase">{track.type}</p>
                           <MonoLabel className="text-[9px]">
-                            {track.user?.name ?? track.user?.email ?? "Unknown"}
+                            {track.user?.name ?? "Unknown"}
                           </MonoLabel>
                         </div>
                       </div>
@@ -627,7 +647,7 @@ export default function ExportSessionPage() {
                   >
                     <div className="flex items-start gap-3">
                       <MonoLabel className="text-muted-foreground mt-0.5 shrink-0 text-[9px]">
-                        {new Date(seg.startTime * 1000).toISOString().slice(14, 19)}
+                        {formatTimestamp(seg.startTime)}
                       </MonoLabel>
                       <p className="text-foreground/90 font-mono text-[11px] leading-relaxed">
                         {seg.text}
@@ -766,7 +786,7 @@ export default function ExportSessionPage() {
                   <option value="">— Select —</option>
                   {completedTracks.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.type} — {t.user?.name ?? t.user?.email ?? "Unknown"}
+                      {t.type} — {t.user?.name ?? "Unknown"}
                     </option>
                   ))}
                 </select>
