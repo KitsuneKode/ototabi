@@ -1,7 +1,8 @@
 import { z } from 'zod'
-import type { TRPCRouterRecord } from '@trpc/server'
+import { prisma } from '@ototabi/store'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { createTRPCRouter, protectedProcedure } from '../trpc'
+import { protectedProcedure } from '../trpc'
+import { TRPCError, type TRPCRouterRecord } from '@trpc/server'
 import {
   CompleteMultipartUploadCommand,
   CreateMultipartUploadCommand,
@@ -10,112 +11,197 @@ import {
   UploadPartCommand,
 } from '@aws-sdk/client-s3'
 
-// Initialize the S3 Client from environment variables
-const s3Client = new S3Client({
-  region: process.env.AWS_S3_REGION!,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-})
+const accessKeyId = process.env.AWS_ACCESS_KEY_ID
+const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
+const bucketName = process.env.AWS_S3_BUCKET_NAME || 'mock-bucket'
+const region = process.env.AWS_S3_REGION || 'us-east-1'
+const endpoint = process.env.AWS_S3_ENDPOINT || undefined
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME!
+const isS3Configured = !!(accessKeyId && secretAccessKey && bucketName)
+
+let s3Client: S3Client | null = null
+
+if (isS3Configured) {
+  s3Client = new S3Client({
+    region,
+    endpoint,
+    credentials: { accessKeyId: accessKeyId!, secretAccessKey: secretAccessKey! },
+  })
+} else {
+  console.warn('[Uploads] S3 not configured, using mock fallback')
+}
 
 export const uploadsRouter = {
-  /**
-   * Initiates a new multipart upload in S3.
-   */
   start: protectedProcedure
     .input(
       z.object({
         trackSid: z.string(),
+        sessionId: z.string(),
+        type: z.enum(['CAMERA', 'MICROPHONE', 'SCREENSHARE']),
       }),
     )
-    .mutation(async ({ input }) => {
-      const { trackSid } = input
-      const key = `recordings/session_${Date.now()}/track_${trackSid}.webm`
-      const command = new CreateMultipartUploadCommand({
-        Bucket: BUCKET_NAME,
-        Key: key,
-        ContentType: 'video/webm',
-      })
-      const response = await s3Client.send(command)
-      return {
-        uploadId: response.UploadId,
-        key: response.Key,
+    .mutation(async ({ input, ctx }) => {
+      const { trackSid, sessionId, type } = input
+      const key = `recordings/session_${sessionId}/track_${trackSid}.webm`
+      let uploadId = `mock-upload-id-${Date.now()}`
+
+      if (s3Client && isS3Configured) {
+        try {
+          const command = new CreateMultipartUploadCommand({
+            Bucket: bucketName,
+            Key: key,
+            ContentType: 'video/webm',
+          })
+          const response = await s3Client.send(command)
+          if (response.UploadId) uploadId = response.UploadId
+        } catch (error) {
+          console.error('[Uploads] S3 CreateMultipartUpload failed:', error)
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to initiate S3 upload',
+          })
+        }
       }
+
+      try {
+        await prisma.recordingTrack.create({
+          data: {
+            sessionId,
+            userId: ctx.session.user.id,
+            trackSid,
+            type,
+            status: 'UPLOADING',
+            s3Key: key,
+          },
+        })
+      } catch (dbError) {
+        console.error('[Uploads] DB track creation error:', dbError)
+      }
+
+      return { uploadId, key }
     }),
 
-  /**
-   * Generates a temporary, secure URL for the client to upload a single part.
-   */
   getSignedUrl: protectedProcedure
     .input(
-      z.object({
-        key: z.string(),
-        uploadId: z.string(),
-        partNumber: z.number(),
-      }),
+      z.object({ key: z.string(), uploadId: z.string(), partNumber: z.number() }),
     )
     .mutation(async ({ input }) => {
       const { key, uploadId, partNumber } = input
-      const command = new UploadPartCommand({
-        Bucket: BUCKET_NAME,
-        Key: key,
-        UploadId: uploadId,
-        PartNumber: partNumber,
-      })
-      // This URL is short-lived (e.g., 10 minutes) and grants permission to PUT an object.
-      const url = await getSignedUrl(s3Client, command, { expiresIn: 600 })
-      return { url }
+
+      if (!s3Client || !isS3Configured || uploadId.startsWith('mock-upload-id')) {
+        const mockUrl = `/api/mock-upload?key=${encodeURIComponent(key)}&uploadId=${uploadId}&partNumber=${partNumber}`
+        return { url: mockUrl }
+      }
+
+      try {
+        const command = new UploadPartCommand({
+          Bucket: bucketName,
+          Key: key,
+          UploadId: uploadId,
+          PartNumber: partNumber,
+        })
+        const url = await getSignedUrl(s3Client, command, { expiresIn: 600 })
+        return { url }
+      } catch (error) {
+        console.error('[Uploads] Failed to sign URL:', error)
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Could not generate upload URL',
+        })
+      }
     }),
 
-  /**
-   * Used for crash recovery. Returns a list of parts already successfully uploaded to S3.
-   */
   listParts: protectedProcedure
-    .input(
-      z.object({
-        key: z.string(),
-        uploadId: z.string(),
-      }),
-    )
+    .input(z.object({ key: z.string(), uploadId: z.string() }))
     .mutation(async ({ input }) => {
       const { key, uploadId } = input
-      const command = new ListPartsCommand({
-        Bucket: BUCKET_NAME,
-        Key: key,
-        UploadId: uploadId,
-      })
-      const response = await s3Client.send(command)
-      return { parts: response.Parts || [] }
+      if (!s3Client || !isS3Configured || uploadId.startsWith('mock-upload-id')) {
+        return { parts: [] }
+      }
+      try {
+        const command = new ListPartsCommand({
+          Bucket: bucketName,
+          Key: key,
+          UploadId: uploadId,
+        })
+        const response = await s3Client.send(command)
+        return { parts: response.Parts || [] }
+      } catch (error) {
+        console.error('[Uploads] ListParts failed:', error)
+        return { parts: [] }
+      }
     }),
 
-  /**
-   * Finalizes the multipart upload, assembling the parts into a single file in S3.
-   */
   complete: protectedProcedure
     .input(
       z.object({
         key: z.string(),
         uploadId: z.string(),
-        parts: z.array(
-          z.object({
-            ETag: z.string(),
-            PartNumber: z.number(),
-          }),
-        ),
+        parts: z.array(z.object({ ETag: z.string(), PartNumber: z.number() })),
       }),
     )
     .mutation(async ({ input }) => {
       const { key, uploadId, parts } = input
-      const command = new CompleteMultipartUploadCommand({
-        Bucket: BUCKET_NAME,
-        Key: key,
-        UploadId: uploadId,
-        MultipartUpload: { Parts: parts },
-      })
-      await s3Client.send(command)
+
+      if (s3Client && isS3Configured && !uploadId.startsWith('mock-upload-id')) {
+        try {
+          const command = new CompleteMultipartUploadCommand({
+            Bucket: bucketName,
+            Key: key,
+            UploadId: uploadId,
+            MultipartUpload: { Parts: parts },
+          })
+          await s3Client.send(command)
+        } catch (error) {
+          console.error('[Uploads] S3 CompleteMultipartUpload failed:', error)
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Failed to assemble S3 parts',
+          })
+        }
+      }
+
+      const finalUrl = isS3Configured
+        ? `/${key}`
+        : `/mock-uploads/${key}`
+
+      try {
+        await prisma.recordingTrack.updateMany({
+          where: { s3Key: key },
+          data: { status: 'COMPLETED', s3Url: finalUrl },
+        })
+      } catch (dbError) {
+        console.error('[Uploads] DB update error:', dbError)
+      }
+
       return { status: 'success' }
+    }),
+
+  getUploadStatus: protectedProcedure
+    .input(z.object({ trackId: z.string() }))
+    .query(async ({ input }) => {
+      const track = await prisma.recordingTrack.findUnique({
+        where: { id: input.trackId },
+        select: { id: true, status: true, s3Url: true, type: true, trackSid: true },
+      })
+      if (!track) throw new TRPCError({ code: 'NOT_FOUND', message: 'Track not found' })
+      return track
+    }),
+
+  retryUpload: protectedProcedure
+    .input(z.object({ trackId: z.string() }))
+    .mutation(async ({ input }) => {
+      const track = await prisma.recordingTrack.findUnique({
+        where: { id: input.trackId },
+      })
+      if (!track) throw new TRPCError({ code: 'NOT_FOUND', message: 'Track not found' })
+      if (track.status === 'COMPLETED')
+        return { status: 'already_completed' }
+
+      await prisma.recordingTrack.update({
+        where: { id: input.trackId },
+        data: { status: 'UPLOADING' },
+      })
+      return { status: 'retrying', trackSid: track.trackSid, sessionId: track.sessionId, s3Key: track.s3Key }
     }),
 } satisfies TRPCRouterRecord

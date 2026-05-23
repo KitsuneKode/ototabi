@@ -2,6 +2,7 @@
   "extends": "@ototabi/typescript-config/react-library.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "@ototabi/ui/*": ["./src/*"]
     }

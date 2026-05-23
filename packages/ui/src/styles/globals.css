@@ -1,127 +1,340 @@
 @import 'tailwindcss';
 @source "../../../apps/**/*.{ts,tsx}";
 @source "../../../components/**/*.{ts,tsx}";
-@source "../**/*.{ts,tsx}";
+@source "../../../**/*.{ts,tsx}";
 
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
+/* ─── Retro Analog Design System ──────────────────────────────────────────────
+ *
+ * Light Theme  — warm beige chassis, charcoal text, aged bone white
+ * Dark Theme   — deep warm charcoal, bone white text, inset panel blacks
+ * Accent       — warm amber-orange signal color (active states, highlights)
+ * LED Red      — error / destructive / signal lost
+ * LED Green    — connected / saved / success
+ * Easings      — mechanical (snappy press), strong-out (UI entries), in-out (on-screen)
+ *
+ * NO hardcoded color values in components — use semantic tokens only.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Surfaces */
+  --background:         #a8a396; /* outer chassis body — warm grey-beige */
+  --card:               #d1ccbd; /* analog chassis panel */
+  --popover:            #b5b0a1; /* inset / recessed panel */
+
+  /* Text */
+  --foreground:         #2c2b29; /* charcoal */
+  --card-foreground:    #2c2b29;
+  --popover-foreground: #2c2b29;
+
+  /* Primary — inverted chassis for strong CTAs */
+  --primary:            #2c2b29;
+  --primary-foreground: #f0ede6;
+
+  /* Secondary — raised button base */
+  --secondary:          #e6e2d3;
+  --secondary-foreground: #2c2b29;
+
+  /* Muted */
+  --muted:              #b5b0a1;
+  --muted-foreground:   #5c5952;
+
+  /* Accent — warm amber-orange signal color */
+  --accent:             #e8682a;
+  --accent-foreground:  #ffffff;
+
+  /* Destructive */
+  --destructive:        #c0392b;
+  --destructive-foreground: #ffffff;
+
+  /* Borders & inputs */
+  --border:             #706b60;
+  --input:              #b5b0a1;
+  --ring:               #e8682a; /* accent focus ring */
+
+  /* Radius */
+  --radius:             6px;
+
+  /* Sidebar */
+  --sidebar:            #d1ccbd;
+  --sidebar-foreground: #2c2b29;
+  --sidebar-primary:    #2c2b29;
+  --sidebar-primary-foreground: #f0ede6;
+  --sidebar-accent:     #e6e2d3;
+  --sidebar-accent-foreground: #2c2b29;
+  --sidebar-border:     #706b60;
+  --sidebar-ring:       #e8682a;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  /* Surfaces */
+  --background:         #1a1918; /* deep warm brown-charcoal */
+  --card:               #2c2b29; /* warm charcoal panel */
+  --popover:            #21201f; /* deep inset panel */
+
+  /* Text */
+  --foreground:         #e6e2d3; /* warm bone-white */
+  --card-foreground:    #e6e2d3;
+  --popover-foreground: #e6e2d3;
+
+  /* Primary */
+  --primary:            #e6e2d3;
+  --primary-foreground: #2c2b29;
+
+  /* Secondary */
+  --secondary:          #3b3a37;
+  --secondary-foreground: #e6e2d3;
+
+  /* Muted */
+  --muted:              #21201f;
+  --muted-foreground:   #a39f93;
+
+  /* Accent — amber-orange, slightly desaturated for dark */
+  --accent:             #e8682a;
+  --accent-foreground:  #ffffff;
+
+  /* Destructive */
+  --destructive:        #c0392b;
+  --destructive-foreground: #ffffff;
+
+  /* Borders & inputs */
+  --border:             #4a4843;
+  --input:              #21201f;
+  --ring:               #e8682a;
+
+  /* Sidebar */
+  --sidebar:            #2c2b29;
+  --sidebar-foreground: #e6e2d3;
+  --sidebar-primary:    #e6e2d3;
+  --sidebar-primary-foreground: #2c2b29;
+  --sidebar-accent:     #3b3a37;
+  --sidebar-accent-foreground: #e6e2d3;
+  --sidebar-border:     #4a4843;
+  --sidebar-ring:       #e8682a;
 }
 
+/* ─── Tailwind Theme Tokens ──────────────────────────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  /* Semantic surface/text */
+  --color-background:              var(--background);
+  --color-foreground:              var(--foreground);
+  --color-card:                    var(--card);
+  --color-card-foreground:         var(--card-foreground);
+  --color-popover:                 var(--popover);
+  --color-popover-foreground:      var(--popover-foreground);
+  --color-primary:                 var(--primary);
+  --color-primary-foreground:      var(--primary-foreground);
+  --color-secondary:               var(--secondary);
+  --color-secondary-foreground:    var(--secondary-foreground);
+  --color-muted:                   var(--muted);
+  --color-muted-foreground:        var(--muted-foreground);
+  --color-accent:                  var(--accent);
+  --color-accent-foreground:       var(--accent-foreground);
+  --color-destructive:             var(--destructive);
+  --color-destructive-foreground:  var(--destructive-foreground);
+  --color-border:                  var(--border);
+  --color-input:                   var(--input);
+  --color-ring:                    var(--ring);
+
+  /* Radii */
+  --radius-sm:  calc(var(--radius) - 4px);
+  --radius-md:  calc(var(--radius) - 2px);
+  --radius-lg:  var(--radius);
+  --radius-xl:  calc(var(--radius) + 4px);
+
+  /* Sidebar */
+  --color-sidebar:                       var(--sidebar);
+  --color-sidebar-foreground:            var(--sidebar-foreground);
+  --color-sidebar-primary:               var(--sidebar-primary);
+  --color-sidebar-primary-foreground:    var(--sidebar-primary-foreground);
+  --color-sidebar-accent:                var(--sidebar-accent);
+  --color-sidebar-accent-foreground:     var(--sidebar-accent-foreground);
+  --color-sidebar-border:                var(--sidebar-border);
+  --color-sidebar-ring:                  var(--sidebar-ring);
+
+  /* ── Retro Analog specific tokens ────────────────────────────────────────── */
+
+  /* LED indicators */
+  --color-led-on:         #ff4a3d; /* red — error / signal lost / destructive */
+  --color-led-off:        #592420; /* red dim */
+  --color-led-green:      #4ade80; /* green — connected / saved / ok */
+  --color-led-green-off:  #14532d; /* green dim */
+
+  /* Amber accent glow (used with shadow utilities) */
+  --color-accent-glow:    rgba(232, 104, 42, 0.35);
+
+  /* ── Easing curves (Emil-style — strong, intentional, never weak) ────────── */
+
+  /* Mechanical press — snappy, slightly bouncy settle */
+  --ease-mechanical:    cubic-bezier(0.1, 0.9, 0.2, 1);
+
+  /* Strong ease-out — UI entries, dropdowns, modals */
+  --ease-out:           cubic-bezier(0.23, 1, 0.32, 1);
+
+  /* Strong ease-in-out — on-screen movement, morphing */
+  --ease-in-out:        cubic-bezier(0.77, 0, 0.175, 1);
+
+  /* Drawer / slide — iOS-like, feels weighty */
+  --ease-drawer:        cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+/* ─── Base Layer ──────────────────────────────────────────────────────────── */
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+  }
+
+  /* Scrollbar — matches the retro panel inset aesthetic */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--popover);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+
+  /* Focus — accent-colored ring, never the browser default blue */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Selection */
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 25%, transparent);
+    color: var(--foreground);
+  }
+
+  /* Tabular figures for all mono counters/timers */
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ─── Retro Analog Utilities ──────────────────────────────────────────────── */
+@layer utilities {
+  /* Analog chassis card shadow — the defining inset highlight + drop shadow */
+  .chassis-shadow {
+    box-shadow:
+      inset 0 2px 5px rgba(255, 255, 255, 0.7),
+      0 10px 20px rgba(0, 0, 0, 0.15),
+      0 4px 0px var(--border);
+  }
+
+  .dark .chassis-shadow {
+    box-shadow:
+      inset 0 1px 2px rgba(255, 255, 255, 0.08),
+      0 10px 20px rgba(0, 0, 0, 0.4),
+      0 4px 0px var(--border);
+  }
+
+  /* Mechanical button — raised physical feel */
+  .btn-mechanical {
+    background: linear-gradient(180deg, var(--secondary) 0%, var(--muted) 100%);
+    border: 1px solid var(--border);
+    box-shadow:
+      0 4px 6px rgba(0, 0, 0, 0.18),
+      inset 0 1px 2px rgba(255, 255, 255, 0.8);
+    transition:
+      transform 150ms var(--ease-mechanical),
+      box-shadow 150ms var(--ease-mechanical),
+      filter 150ms ease;
+  }
+
+  .dark .btn-mechanical {
+    box-shadow:
+      0 4px 6px rgba(0, 0, 0, 0.4),
+      inset 0 1px 2px rgba(255, 255, 255, 0.08);
+  }
+
+  .btn-mechanical:hover {
+    filter: brightness(1.05);
+  }
+
+  .btn-mechanical:active {
+    transform: translateY(2px) scale(0.97);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.15),
+      inset 0 1px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  /* CRT scanline overlay — apply to video/display containers */
+  .scanlines {
+    position: relative;
+  }
+
+  .scanlines::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.12) 50%);
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.3;
+  }
+
+  /* LED glow utilities — uses color tokens, no hardcoding */
+  .led-red {
+    background-color: var(--color-led-on);
+    box-shadow: 0 0 10px var(--color-led-on), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+  }
+
+  .led-red-off {
+    background-color: var(--color-led-off);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+  }
+
+  .led-green {
+    background-color: var(--color-led-green);
+    box-shadow: 0 0 10px var(--color-led-green), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+  }
+
+  .led-green-off {
+    background-color: var(--color-led-green-off);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+  }
+
+  .led-amber {
+    background-color: var(--accent);
+    box-shadow: 0 0 10px var(--color-accent-glow), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  }
+
+  /* Noise texture — mechanical aged surface feel */
+  .noise-texture {
+    background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E');
+    opacity: 0.03;
   }
 }

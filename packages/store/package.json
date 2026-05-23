@@ -4,11 +4,11 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "db:generate": "bunx prisma generate",
-    "db:migrate": "bunx prisma migrate",
+    "db:generate": "bun run prisma generate",
+    "db:migrate": "bun run prisma migrate",
     "db:seed": "bun run src/scripts/seed.ts",
-    "db:studio": "bunx prisma studio",
-    "db:deploy": "bunx prisma deploy"
+    "db:studio": "bun run prisma studio",
+    "db:deploy": "bun run prisma deploy"
   },
   "exports": {
     ".": "./src/index.ts"
@@ -18,10 +18,10 @@
     "@types/bun": "latest"
   },
   "peerDependencies": {
-    "typescript": "^5.8.2"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@prisma/client": "^6.11.1",
-    "prisma": "^6.11.1"
+    "@prisma/client": "6.11.1",
+    "prisma": "6.11.1"
   }
 }

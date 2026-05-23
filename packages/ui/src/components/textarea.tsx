@@ -1,14 +1,16 @@
-import * as React from "react"
+import * as React from 'react'
 
-import { cn } from "@ototabi/ui/lib/utils"
+import { cn } from '@ototabi/ui/lib/utils'
 
-function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+function Textarea({ className, ...props }: React.ComponentProps<'textarea'>) {
   return (
     <textarea
       data-slot="textarea"
       className={cn(
-        "border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        className
+        'file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground flex min-h-20 w-full min-w-0 rounded-md border-2 border-border bg-[#111111] text-[#e0e0e0] font-mono tracking-wider px-3 py-2 text-base shadow-[inset_0_2px_6px_rgba(0,0,0,0.8)] transition-[color,box-shadow] outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
+        'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px]',
+        'aria-invalid:ring-destructive/20 aria-invalid:border-destructive',
+        className,
       )}
       {...props}
     />

@@ -15,7 +15,7 @@ datasource db {
 }
 
 model User {
-  id            String    @id
+  id            String           @id
   name          String
   email         String
   emailVerified Boolean
@@ -24,6 +24,9 @@ model User {
   updatedAt     DateTime
   sessions      Session[]
   accounts      Account[]
+  rooms         Room[]
+  tracks        RecordingTrack[]
+  roomParticipations RoomParticipant[]
 
   @@unique([email])
   @@map("user")
@@ -72,4 +75,61 @@ model Verification {
   updatedAt  DateTime?
 
   @@map("verification")
+}
+
+model Room {
+  id           String             @id @default(cuid())
+  name         String
+  code         String             @unique
+  creatorId    String
+  creator      User               @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  sessions     RecordingSession[]
+  participants RoomParticipant[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@map("room")
+}
+
+model RoomParticipant {
+  id       String @id @default(cuid())
+  roomId   String
+  room     Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt DateTime @default(now())
+
+  @@unique([roomId, userId])
+  @@map("room_participant")
+}
+
+model RecordingSession {
+  id        String           @id @default(cuid())
+  roomId    String
+  room      Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  status    String           // "RECORDING" | "COMPLETED"
+  tracks    RecordingTrack[]
+  startedAt DateTime         @default(now())
+  endedAt   DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@map("recording_session")
+}
+
+model RecordingTrack {
+  id        String           @id @default(cuid())
+  sessionId String
+  session   RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trackSid  String           // LiveKit track SID
+  type      String           // "CAMERA" | "SCREENSHARE" | "MICROPHONE"
+  status    String           // "PENDING" | "UPLOADING" | "COMPLETED" | "FAILED"
+  s3Key     String
+  s3Url     String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@map("recording_track")
 }
