@@ -2,7 +2,7 @@
 
 import { Label } from "@ototabi/ui/components/label";
 import { useQuery } from "@tanstack/react-query";
-import { Mic, ArrowRight, Info, AlertTriangle, RefreshCw, VideoOff, Tv } from "lucide-react";
+import { Mic, ArrowRight, Info, AlertTriangle, RefreshCw, VideoOff, Tv, User } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect, useRef, useCallback } from "react";
 
@@ -10,6 +10,7 @@ import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { LedInline } from "@/components/ui/led";
 import { MonoLabel, NoiseBackground, MechButton } from "@/components/ui/retro-primitives";
 import { useTRPC } from "@/trpc/client";
+import config from "@/utils/config";
 
 export default function RoomJoinPage() {
   const { roomId } = useParams() as { roomId: string };
@@ -28,9 +29,14 @@ export default function RoomJoinPage() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [audioLevel, setAudioLevel] = useState(0);
+  const [guestName, setGuestName] = useState("");
+  const [guestLoading, setGuestLoading] = useState(false);
+
+  const authState = useQuery(trpc.auth.getSession.queryOptions());
+  const isSignedIn = !!authState.data?.user;
 
   const roomInfo = useQuery(
-    trpc.rooms.getRoom.queryOptions({ code: roomId }, { enabled: !!roomId }),
+    trpc.rooms.getRoomByCode.queryOptions({ code: roomId }, { enabled: !!roomId }),
   );
 
   const enumerateDevices = useCallback(async () => {
@@ -108,7 +114,26 @@ export default function RoomJoinPage() {
     };
   }, [audioEnabled, videoEnabled, selectedMic, selectedCam]);
 
-  const joinRoom = useCallback(() => {
+  const joinRoom = useCallback(async () => {
+    if (!isSignedIn) {
+      if (!guestName.trim()) return;
+      setGuestLoading(true);
+      try {
+        const resp = await fetch(`${config.getConfig("apiBaseUrl")}/api/guest-auth`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ name: guestName.trim() }),
+        });
+        if (!resp.ok) throw new Error("Guest sign-in failed");
+      } catch {
+        setMicError("Failed to create guest session");
+        setGuestLoading(false);
+        return;
+      }
+      setGuestLoading(false);
+    }
+
     const params = new URLSearchParams({
       audioEnabled: String(audioEnabled),
       videoEnabled: String(videoEnabled),
@@ -117,7 +142,17 @@ export default function RoomJoinPage() {
       camId: selectedCam,
     });
     router.push(`/chat/${roomId}?${params.toString()}`);
-  }, [audioEnabled, videoEnabled, screenShareEnabled, selectedMic, selectedCam, roomId, router]);
+  }, [
+    audioEnabled,
+    videoEnabled,
+    screenShareEnabled,
+    selectedMic,
+    selectedCam,
+    roomId,
+    router,
+    isSignedIn,
+    guestName,
+  ]);
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (roomInfo.isLoading) {
@@ -352,9 +387,43 @@ export default function RoomJoinPage() {
 
             {/* Join Button */}
             <div className="border-border mt-6 space-y-4 border-t pt-6">
-              <MechButton onClick={joinRoom} className="h-12 w-full justify-center gap-3 text-sm">
-                <span>Connect Studio Deck</span>
-                <ArrowRight className="h-4 w-4" />
+              {!isSignedIn && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <User className="text-muted-foreground h-4 w-4" />
+                    <Label
+                      htmlFor="guest-name"
+                      className="text-foreground/80 font-mono text-xs font-bold tracking-wider uppercase"
+                    >
+                      Your Name
+                    </Label>
+                  </div>
+                  <input
+                    id="guest-name"
+                    type="text"
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    placeholder="Enter your name to join..."
+                    className="border-border bg-popover text-foreground placeholder:text-muted-foreground/40 focus:ring-accent/60 h-10 w-full rounded border px-3 font-mono text-sm shadow-inner focus:ring-1 focus:outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && guestName.trim()) joinRoom();
+                    }}
+                  />
+                </div>
+              )}
+              <MechButton
+                onClick={joinRoom}
+                disabled={!isSignedIn && (!guestName.trim() || guestLoading)}
+                className="h-12 w-full justify-center gap-3 text-sm disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {guestLoading ? (
+                  <span>Creating Guest Session...</span>
+                ) : (
+                  <>
+                    <span>{isSignedIn ? "Connect Studio Deck" : "Join as Guest"}</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
               </MechButton>
               <div className="text-muted-foreground flex items-start gap-2 font-mono text-[9px] leading-relaxed uppercase">
                 <Info className="text-accent mt-0.5 h-3.5 w-3.5 shrink-0" />

@@ -5,6 +5,7 @@ import express from "express";
 import helmet from "helmet";
 
 import { timingMiddleWare } from "@/middlewares/timing-middleware";
+import guestAuthRouter from "@/routes/guest-auth";
 import liveKitAuthRouter from "@/routes/live-kit-auth";
 import config from "@/utils/config";
 
@@ -51,6 +52,8 @@ app.use(helmet());
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
 app.use(express.json());
+
+app.use("/api/guest-auth", guestAuthRouter);
 
 app.use(timingMiddleWare);
 

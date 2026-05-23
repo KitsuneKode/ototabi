@@ -2,7 +2,7 @@ import type { TRPCRouterRecord } from "@trpc/server";
 
 import { z } from "zod";
 
-import { protectedProcedure } from "../../trpc";
+import { protectedProcedure, publicProcedure } from "../../trpc";
 import { roomsService } from "./rooms.service";
 
 export const roomsRouter = {
@@ -27,6 +27,10 @@ export const roomsRouter = {
   getRoom: protectedProcedure
     .input(z.object({ id: z.string().optional(), code: z.string().optional() }))
     .query(({ input }) => roomsService.getRoom(input)),
+
+  getRoomByCode: publicProcedure
+    .input(z.object({ code: z.string() }))
+    .query(({ input }) => roomsService.getRoom({ code: input.code })),
 
   listRooms: protectedProcedure.query(({ ctx }) => roomsService.listRooms(ctx.session.user.id)),
 
