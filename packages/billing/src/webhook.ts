@@ -1,8 +1,6 @@
-import type { WebhookEvent } from "@polar-sh/sdk";
-
 import { prisma } from "@ototabi/store";
 
-export async function handlePolarWebhook(event: WebhookEvent): Promise<void> {
+export async function handlePolarWebhook(event: any): Promise<void> {
   switch (event.type) {
     case "subscription.active": {
       const sub = event.data;

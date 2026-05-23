@@ -1,135 +1,111 @@
-# Turborepo starter
+# Ototabi Studio
 
-This Turborepo starter is maintained by the Turborepo core team.
+**Browser-based podcast recording platform — a Riverside.fm alternative you can self-host.**
 
-## Using this example
+Records high-quality audio/video locally per participant via LiveKit, uploads tracks to S3/MinIO via multipart upload, and provides browser-based post-production with FFmpeg.wasm. Free noise reduction, text-based editing, AI transcript pipeline. Retro analog dark mode UI.
 
-Run the following command:
+## Quick Start
 
-```sh
-npx create-turbo@latest
+```bash
+git clone <repo> ototabi
+cd ototabi
+cp .env.example .env        # edit with your LiveKit keys
+docker compose up -d        # PostgreSQL + MinIO + Redis
+bun install
+bun run db:migrate
+bun dev                     # Next.js :3000 + API :8080 + Worker
 ```
 
-## What's inside?
+See [`.docs/quick-start.md`](.docs/quick-start.md) for details.
 
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@ototabi/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@ototabi/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@ototabi/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
+## Architecture
 
 ```
-cd my-turborepo
+apps/
+├── client/         Next.js 16 (Turbopack) — pages, UI, recorder, S3 uploader
+├── api/            Express + Bun — tRPC, Better Auth, LiveKit tokens, webhooks
+└── worker/         BullMQ processor — Whisper transcript, LLM chapters
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+packages/
+├── trpc/           API boundary — module-first: router → service → repository → policy
+├── store/          Prisma ORM — 12 models, migrations, PostgreSQL
+├── auth/           Better Auth — email/password + guest sessions
+├── ui/             shadcn/ui — retro analog design tokens, globals.css
+├── jobs/           BullMQ queue definitions + job types
+├── billing/        Polar.sh — subscription checkout, webhook, plan gating
+├── common/         Zod schemas, ConfigLoader, Winston logger
+└── backend-common/ Backend config loader
 ```
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+## Features
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+| Feature | Details |
+|---------|---------|
+| **Local recording** | 720p / 1080p / 4K per participant, MediaRecorder + IndexedDB + OPFS |
+| **Separate tracks** | Each participant's camera + mic + screen share = discrete files |
+| **Guest join** | One-click join — no account needed, pre-flight device check |
+| **Pause / resume** | Pause during recording, resume seamlessly |
+| **Upload resilience** | Multipart S3/MinIO with auto-resume, dual IndexedDB + OPFS storage |
+| **Keyboard shortcuts** | `R` record, `M` mute, `Space` push-to-talk, `?` overlay |
+| **Noise reduction** | Free FFmpeg.wasm `afftdn` filter — Riverside charges $24/mo for this |
+| **Text-based editing** | Click transcript text → cuts video at those timestamps |
+| **AI transcript** | Whisper API → word-level timestamps, auto chapters, show notes |
+| **Clip export** | Merge, trim, re-encode (720p/1080p) with FFmpeg.wasm |
+| **Room sharing** | Invite collaborators by email — host / editor / viewer roles |
+| **Billing** | Polar.sh — trial → Creator ($15) → Pro ($29) → Studio ($59) |
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+## Quality Gates
 
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+```bash
+bun fmt:check     # oxfmt (0 deps, native speed)
+bun lint          # oxlint (0 errors enforced)
+bun typecheck     # TypeScript across all packages
+bun run test      # Vitest
+bun run build     # Next.js + API + worker
 ```
 
-### Remote Caching
+Zero eslint, zero prettier. Built on [oxc](https://oxc.rs).
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+## Environment Variables
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+See [`.env.example`](.env.example). Key vars:
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+| Var | Purpose |
+|-----|---------|
+| `DATABASE_URL` | PostgreSQL connection |
+| `LIVEKIT_URL / KEY / SECRET` | LiveKit Cloud (or self-hosted) |
+| `AWS_*` or `MINIO_*` | S3-compatible storage |
+| `REDIS_URL` | BullMQ worker queue |
+| `OPENAI_API_KEY` | Optional — enables transcript + LLM features |
+| `POLAR_ACCESS_TOKEN` | Optional — enables subscription billing |
+| `BETTER_AUTH_SECRET` | Session encryption |
 
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+## Docker Compose
 
 ```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+docker compose up -d
+├── postgres:16-alpine     → :5432
+├── minio/minio            → :9000 (API), :9001 (console)
+├── redis:7-alpine         → :6379
+└── createbuckets (init)   → auto-creates ototabi-recordings bucket
 ```
 
-## Useful Links
+## Architecture Docs
 
-Learn more about the power of Turborepo:
+- [`.docs/architecture.md`](.docs/architecture.md) — system overview, data flow, auth flow
+- [`.docs/encyclopedia.md`](.docs/encyclopedia.md) — glossary of all concepts
+- [`.docs/workspace-layout.md`](.docs/workspace-layout.md) — package map, import rules
+- [`.plans/`](.plans/) — 12 scoped engineering plans
+- [`AGENTS.md`](AGENTS.md) — AI coding conventions
 
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+## Self-Hostable, No Vendor Lock-in
+
+- **Bring your own S3**: MinIO (local), R2, AWS S3 — any S3-compatible endpoint
+- **Bring your own LiveKit**: Cloud or self-hosted
+- **Bring your own AI keys**: OpenAI Whisper + GPT-4o-mini (all AI features optional)
+- **Zero telemetry**: Your data stays in your infrastructure
+- **MIT licensed**: fork it, modify it, run your own instance
+
+## Tech Stack
+
+Next.js 16 · Express 5 · Bun · tRPC 11 · Prisma 6 · PostgreSQL 16 · Better Auth · LiveKit · BullMQ · Redis · MinIO · FFmpeg.wasm · Tailwind CSS 4 · shadcn/ui · oxlint/oxfmt · Turbo

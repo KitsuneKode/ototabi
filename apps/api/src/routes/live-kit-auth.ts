@@ -16,7 +16,7 @@ liveKitAuthRouter.get("/token", async (req: Request, res: Response) => {
   }
 
   // Verify caller is authenticated
-  const session = await auth.api.getSession({ headers: req.headers as HeadersInit });
+  const session = await auth.api.getSession({ headers: req.headers });
   if (!session?.user) {
     return res.status(401).json({ error: "Authentication required" });
   }
