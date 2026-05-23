@@ -246,6 +246,12 @@ export default function RoomSettingsPage() {
           </form>
         </AnalogCard>
 
+        {/* ── Members ────────────────────────────────────────────────────── */}
+        <AnalogCard className="space-y-4 p-6">
+          <PanelTitle label="Crew Roster" title="Room Members" className="mb-4" />
+          <MembersPanel roomId={data.id} />
+        </AnalogCard>
+
         {/* ── Recent Sessions ───────────────────────────────────────────── */}
         <AnalogCard className="p-6">
           <PanelTitle label="Reel Index" title="Recent Sessions" className="mb-4" />
@@ -381,6 +387,85 @@ export default function RoomSettingsPage() {
             </div>
           </AnalogCard>
         </div>
+      )}
+    </div>
+  );
+}
+
+function MembersPanel({ roomId }: { roomId: string }) {
+  const trpc = useTRPC();
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteError, setInviteError] = useState("");
+
+  const members = useQuery(
+    trpc.rooms.getRoomMembers.queryOptions({ roomId }, { enabled: !!roomId }),
+  );
+
+  const inviteMutation = useMutation(
+    trpc.rooms.inviteMember.mutationOptions({
+      onSuccess: () => {
+        setInviteEmail("");
+        setInviteError("");
+        members.refetch();
+      },
+      onError: (err) => setInviteError(err.message),
+    }),
+  );
+
+  const removeMutation = useMutation(
+    trpc.rooms.removeMember.mutationOptions({
+      onSuccess: () => members.refetch(),
+    }),
+  );
+
+  return (
+    <div className="space-y-4">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (inviteEmail.trim()) inviteMutation.mutate({ roomId, email: inviteEmail.trim() });
+        }}
+        className="flex gap-2"
+      >
+        <Input
+          type="email"
+          placeholder="Invite by email..."
+          value={inviteEmail}
+          onChange={(e) => setInviteEmail(e.target.value)}
+          className="border-border bg-popover text-foreground h-10 flex-1 rounded border font-mono text-xs shadow-inner"
+        />
+        <MechButton type="submit" disabled={inviteMutation.isPending} className="h-10 shrink-0">
+          {inviteMutation.isPending ? "..." : "Invite"}
+        </MechButton>
+      </form>
+      {inviteError && <MonoLabel className="text-led-on">{inviteError}</MonoLabel>}
+
+      {members.data?.length ? (
+        <div className="space-y-1.5">
+          {members.data.map((m) => (
+            <div
+              key={m.id}
+              className="border-border bg-popover flex items-center justify-between rounded border px-3 py-2"
+            >
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs">{m.user.name}</span>
+                <MonoLabel className="text-[9px]">{m.role.toUpperCase()}</MonoLabel>
+              </div>
+              {m.role !== "host" && (
+                <MechButton
+                  onClick={() => removeMutation.mutate({ roomId, targetUserId: m.userId })}
+                  className="h-7 px-2 text-[9px]"
+                >
+                  Remove
+                </MechButton>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <MonoLabel className="text-muted-foreground/60">
+          No members yet. Invite collaborators above.
+        </MonoLabel>
       )}
     </div>
   );

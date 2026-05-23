@@ -28,6 +28,7 @@ model User {
   rooms         Room[]
   tracks        RecordingTrack[]
   roomParticipations RoomParticipant[]
+  roomMemberships RoomMember[]
   chatMessages  ChatMessage[]
 
   @@unique([email])
@@ -87,11 +88,26 @@ model Room {
   creator      User               @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   sessions     RecordingSession[]
   participants RoomParticipant[]
+  members      RoomMember[]
   chatMessages ChatMessage[]
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
   @@map("room")
+}
+
+model RoomMember {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   @default("editor") // host | editor | viewer
+  invitedBy String?
+  joinedAt  DateTime @default(now())
+
+  @@unique([roomId, userId])
+  @@map("room_member")
 }
 
 model RoomParticipant {

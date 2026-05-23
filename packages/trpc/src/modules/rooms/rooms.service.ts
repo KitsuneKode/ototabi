@@ -1,4 +1,5 @@
 import { getTranscriptQueue } from "@ototabi/jobs/queues";
+import { prisma } from "@ototabi/store";
 import { TRPCError } from "@trpc/server";
 
 import { roomsPolicy } from "./rooms.policy";
@@ -43,6 +44,48 @@ export const roomsService = {
 
   async listRooms(userId: string) {
     return roomsRepository.listByCreator(userId);
+  },
+
+  async listSharedRooms(userId: string) {
+    return roomsRepository.listRoomsByMember(userId);
+  },
+
+  async inviteMember(params: { actorId: string; roomId: string; email: string; role?: string }) {
+    const room = await roomsRepository.findById(params.roomId);
+    if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
+
+    const actorMember = await roomsRepository.findMember(params.roomId, params.actorId);
+    if (!roomsPolicy.canInviteMember(actorMember, room, params.actorId))
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to invite members" });
+
+    const targetUser = await prisma.user.findUnique({ where: { email: params.email } });
+    if (!targetUser) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+
+    const existing = await roomsRepository.findMember(params.roomId, targetUser.id);
+    if (existing) throw new TRPCError({ code: "CONFLICT", message: "User is already a member" });
+
+    return roomsRepository.addMember({
+      roomId: params.roomId,
+      userId: targetUser.id,
+      role: params.role || "editor",
+      invitedBy: params.actorId,
+    });
+  },
+
+  async removeMember(params: { actorId: string; roomId: string; targetUserId: string }) {
+    const targetMember = await roomsRepository.findMember(params.roomId, params.targetUserId);
+    if (!targetMember) throw new TRPCError({ code: "NOT_FOUND", message: "Member not found" });
+
+    const actorMember = await roomsRepository.findMember(params.roomId, params.actorId);
+    if (!roomsPolicy.canRemoveMember(actorMember?.role, targetMember.role))
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to remove this member" });
+
+    await roomsRepository.removeMember(params.roomId, params.targetUserId);
+    return { success: true };
+  },
+
+  async getRoomMembers(roomId: string) {
+    return roomsRepository.listMembers(roomId);
   },
 
   async joinRoom(params: { userId: string; code: string }) {

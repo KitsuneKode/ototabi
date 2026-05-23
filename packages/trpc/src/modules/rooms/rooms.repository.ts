@@ -172,4 +172,38 @@ export const roomsRepository = {
       },
     });
   },
+
+  // Member methods
+  async findMember(roomId: string, userId: string) {
+    return prisma.roomMember.findUnique({
+      where: { roomId_userId: { roomId, userId } },
+    });
+  },
+
+  async addMember(data: { roomId: string; userId: string; role: string; invitedBy?: string }) {
+    return prisma.roomMember.create({ data });
+  },
+
+  async removeMember(roomId: string, userId: string) {
+    return prisma.roomMember.deleteMany({ where: { roomId, userId } });
+  },
+
+  async listMembers(roomId: string) {
+    return prisma.roomMember.findMany({
+      where: { roomId },
+      include: { user: { select: { id: true, name: true, image: true } } },
+    });
+  },
+
+  async listRoomsByMember(userId: string) {
+    return prisma.room.findMany({
+      where: { members: { some: { userId } } },
+      orderBy: { createdAt: "desc" },
+      include: {
+        creator: { select: { id: true, name: true } },
+        members: { include: { user: { select: { id: true, name: true } } } },
+        _count: { select: { sessions: true, participants: true } },
+      },
+    });
+  },
 };

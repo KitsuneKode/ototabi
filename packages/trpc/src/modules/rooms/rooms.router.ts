@@ -34,6 +34,35 @@ export const roomsRouter = {
 
   listRooms: protectedProcedure.query(({ ctx }) => roomsService.listRooms(ctx.session.user.id)),
 
+  listSharedRooms: protectedProcedure.query(({ ctx }) =>
+    roomsService.listSharedRooms(ctx.session.user.id),
+  ),
+
+  inviteMember: protectedProcedure
+    .input(z.object({ roomId: z.string(), email: z.string().email(), role: z.string().optional() }))
+    .mutation(({ input, ctx }) =>
+      roomsService.inviteMember({
+        actorId: ctx.session.user.id,
+        roomId: input.roomId,
+        email: input.email,
+        role: input.role,
+      }),
+    ),
+
+  removeMember: protectedProcedure
+    .input(z.object({ roomId: z.string(), targetUserId: z.string() }))
+    .mutation(({ input, ctx }) =>
+      roomsService.removeMember({
+        actorId: ctx.session.user.id,
+        roomId: input.roomId,
+        targetUserId: input.targetUserId,
+      }),
+    ),
+
+  getRoomMembers: protectedProcedure
+    .input(z.object({ roomId: z.string() }))
+    .query(({ input }) => roomsService.getRoomMembers(input.roomId)),
+
   joinRoom: protectedProcedure
     .input(z.object({ code: z.string() }))
     .mutation(({ input, ctx }) =>

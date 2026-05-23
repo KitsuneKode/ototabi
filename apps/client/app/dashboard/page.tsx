@@ -48,6 +48,7 @@ export default function DashboardPage() {
 
   const authState = useQuery(trpc.auth.getSession.queryOptions());
   const roomsList = useQuery(trpc.rooms.listRooms.queryOptions());
+  const sharedRooms = useQuery(trpc.rooms.listSharedRooms.queryOptions());
 
   const createRoomMutation = useMutation(
     trpc.rooms.createRoom.mutationOptions({
@@ -149,13 +150,18 @@ export default function DashboardPage() {
     );
   }
 
-  const selectedRoom = roomsList.data?.find((r) => r.id === selectedRoomId);
-  const filteredRooms =
-    roomsList.data?.filter(
-      (room) =>
-        room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.code.toLowerCase().includes(searchQuery.toLowerCase()),
-    ) ?? [];
+  const selectedRoom = [...(roomsList.data ?? []), ...(sharedRooms.data ?? [])].find(
+    (r) => r.id === selectedRoomId,
+  );
+  const allRooms = [
+    ...(roomsList.data?.map((r) => ({ ...r, _shared: false })) ?? []),
+    ...(sharedRooms.data?.map((r) => ({ ...r, _shared: true })) ?? []),
+  ];
+  const filteredRooms = allRooms.filter(
+    (room) =>
+      room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      room.code.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   return (
     <div className="bg-background text-foreground relative flex min-h-screen flex-col overflow-x-hidden p-4 font-sans md:p-8">
@@ -286,9 +292,16 @@ export default function DashboardPage() {
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-foreground truncate pr-2 text-sm font-bold uppercase">
-                          {room.name}
-                        </span>
+                        <div className="flex items-center gap-2 truncate pr-2">
+                          <span className="text-foreground text-sm font-bold uppercase">
+                            {room.name}
+                          </span>
+                          {room._shared && (
+                            <StatusBadge variant="warn" className="shrink-0 text-[8px]">
+                              SHARED
+                            </StatusBadge>
+                          )}
+                        </div>
                         <MonoLabel className="bg-popover border-border text-foreground shrink-0 rounded border px-2 py-0.5">
                           {room.code}
                         </MonoLabel>
