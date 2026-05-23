@@ -11,11 +11,11 @@ import {
   UploadPartCommand,
 } from '@aws-sdk/client-s3'
 
-const accessKeyId = process.env.AWS_ACCESS_KEY_ID
-const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
-const bucketName = process.env.AWS_S3_BUCKET_NAME || 'mock-bucket'
+const accessKeyId = process.env.AWS_ACCESS_KEY_ID || process.env.MINIO_ACCESS_KEY || process.env.MINIO_ROOT_USER
+const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || process.env.MINIO_SECRET_KEY || process.env.MINIO_ROOT_PASSWORD
+const bucketName = process.env.AWS_S3_BUCKET_NAME || process.env.MINIO_BUCKET_NAME || 'mock-bucket'
 const region = process.env.AWS_S3_REGION || 'us-east-1'
-const endpoint = process.env.AWS_S3_ENDPOINT || undefined
+const endpoint = process.env.AWS_S3_ENDPOINT || process.env.MINIO_ENDPOINT || undefined
 
 const isS3Configured = !!(accessKeyId && secretAccessKey && bucketName)
 
@@ -24,11 +24,11 @@ let s3Client: S3Client | null = null
 if (isS3Configured) {
   s3Client = new S3Client({
     region,
-    endpoint,
+    ...(endpoint ? { endpoint, forcePathStyle: true } : {}),
     credentials: { accessKeyId: accessKeyId!, secretAccessKey: secretAccessKey! },
   })
 } else {
-  console.warn('[Uploads] S3 not configured, using mock fallback')
+  console.warn('[Uploads] S3/MinIO not configured, using mock fallback')
 }
 
 export const uploadsRouter = {
@@ -162,7 +162,11 @@ export const uploadsRouter = {
       }
 
       const finalUrl = isS3Configured
-        ? `/${key}`
+        ? (process.env.S3_PUBLIC_URL
+          ? `${process.env.S3_PUBLIC_URL}/${key}`
+          : endpoint
+            ? `${endpoint}/${bucketName}/${key}`
+            : `https://${bucketName}.s3.${region}.amazonaws.com/${key}`)
         : `/mock-uploads/${key}`
 
       try {

@@ -184,4 +184,18 @@ export const roomsRouter = {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Recording session not found' })
       return session
     }),
+
+  listRecentSessions: protectedProcedure.query(async ({ ctx }) => {
+    return prisma.recordingSession.findMany({
+      where: {
+        room: { creatorId: ctx.session.user.id },
+      },
+      orderBy: { startedAt: 'desc' },
+      take: 10,
+      include: {
+        room: { select: { id: true, name: true, code: true } },
+        tracks: { select: { id: true, status: true, type: true } },
+      },
+    })
+  }),
 } satisfies TRPCRouterRecord
