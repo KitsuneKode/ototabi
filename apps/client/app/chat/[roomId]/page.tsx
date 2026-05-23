@@ -1,182 +1,504 @@
 'use client'
 
-import { start } from 'repl'
 import config from '@/utils/config'
 import '@livekit/components-styles'
-import { useParams } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useTRPC } from '@/trpc/client'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { Button } from '@ototabi/ui/components/button'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { RecorderManager } from '@/lib/recorder/recorder-manager'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useTimer, formatTimer } from '@/lib/hooks/use-timer'
 import {
-  LocalParticipant,
   Room,
-  RoomOptions,
+  RoomEvent,
   Track,
+  RoomOptions,
   VideoPresets,
 } from 'livekit-client'
-// import { RecorderManager } from '@/utils/recorder-manager'
+import {
+  ArrowLeft,
+  CheckCircle,
+  AlertTriangle,
+  Radio,
+} from 'lucide-react'
 import {
   ControlBar,
   GridLayout,
   ParticipantTile,
   RoomAudioRenderer,
   RoomContext,
-  useLocalParticipant,
-  usePersistentUserChoices,
-  useRoomContext,
   useTracks,
 } from '@livekit/components-react'
+import { AnalogCard, AnalogInset } from '@/components/ui/analog-card'
+import { Led, LedInline } from '@/components/ui/led'
+import {
+  MonoLabel,
+  PanelTitle,
+  StatusBadge,
+  NoiseBackground,
+  MechButton,
+} from '@/components/ui/retro-primitives'
 
-/**
- * Page-level React component that initializes and provides a LiveKit Room for a video conference.
- *
- * This component:
- * - Creates and configures a single LiveKit Room instance (adaptive streaming, dynacast, capture/publish defaults).
- * - Fetches an access token from the API (using the route `roomId`) and connects the Room to the LiveKit server.
- * - Registers local track lifecycle listeners and exposes the Room to children via RoomContext.Provider.
- * - Renders the main conference UI (MyVideoConference), room audio renderer, and control bar.
- *
- * Side effects:
- * - Performs an async network request to obtain a LiveKit token and calls `room.connect(...)`.
- * - On unmount, disconnects the Room and removes local participant listeners.
- *
- * Notes:
- * - The component currently uses a hard-coded room name (`quickstart-room`) and a TODO remains to obtain room/name from user input.
- */
-export default function Page() {
-  // TODO: get user input for room and name
-  const room = 'quickstart-room'
-  const { roomId } = useParams()
-  const [token, setToken] = useState('')
+export default function StudioPage() {
+  const { roomId } = useParams() as { roomId: string }
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const trpc = useTRPC()
+
+  const audioEnabled = searchParams.get('audioEnabled') === 'true'
+  const videoEnabled = searchParams.get('videoEnabled') === 'true'
+  const micId = searchParams.get('micId') || ''
+  const camId = searchParams.get('camId') || ''
+
+  const [token, setToken] = useState<string | null>(null)
+  const [tokenLoading, setTokenLoading] = useState(true)
+  const [tokenError, setTokenError] = useState('')
+  const [sessionUser, setSessionUser] = useState<any>(null)
+  const [roomDetails, setRoomDetails] = useState<any>(null)
   const [isRecording, setIsRecording] = useState(false)
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+  const [progressMap, setProgressMap] = useState<
+    Map<string, { name: string; progress: number; type: string }>
+  >(new Map())
+  const [connectionError, setConnectionError] = useState('')
   const [isConnected, setIsConnected] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [isUploading, setIsUploading] = useState(false)
+  const [connectionHealth, setConnectionHealth] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected')
 
-  const [roomInstance] = useState(
-    () =>
-      new Room({
-        // Optimize video quality for each participant's screen
-        adaptiveStream: true,
-        // Enable automatic audio/video quality optimization
-        dynacast: true,
-        videoCaptureDefaults: VideoPresets.h720,
-        screenShareDefaults: VideoPresets.h720,
-        // loggerName: 'LiveKit',
-        // videoCaptureDefaults: {
-        //   resolution: {
-        //     height: 720,
-        //     width: 1280,
-        //     frameRate: 30,
-        //   },
+  const recorderManager = useRef<RecorderManager | null>(null)
+  const roomInstance = useRef<Room | null>(null)
 
-        //   frameRate: 30,
-        // },
-        audioCaptureDefaults: {
-          sampleRate: 48_000,
-          channelCount: 2,
-        },
+  const recordingSeconds = useTimer(isRecording)
 
-        publishDefaults: {
-          videoEncoding: {
-            maxBitrate: 1000000,
-            maxFramerate: 30,
-          },
-          screenShareEncoding: {
-            maxFramerate: 30,
-            maxBitrate: 1000000,
-          },
-        },
-      } as RoomOptions),
+  const authState = useQuery(trpc.auth.getSession.queryOptions())
+
+  useEffect(() => {
+    if (authState.data?.user) setSessionUser(authState.data.user)
+  }, [authState.data])
+
+  const roomInfo = useQuery(
+    trpc.rooms.getRoom.queryOptions(
+      { code: roomId },
+      { enabled: !!roomId }
+    )
   )
 
   useEffect(() => {
-    let mounted = true
+    if (roomInfo.data) setRoomDetails(roomInfo.data)
+  }, [roomInfo.data])
+
+  const startSessionMutation = useMutation(
+    trpc.rooms.startRecordingSession.mutationOptions(),
+  )
+  const stopSessionMutation = useMutation(
+    trpc.rooms.stopRecordingSession.mutationOptions(),
+  )
+
+  const room = useRef(
+    new Room({
+      adaptiveStream: true,
+      dynacast: true,
+      videoCaptureDefaults: {
+        deviceId: camId || undefined,
+        resolution: VideoPresets.h720.resolution,
+      },
+      audioCaptureDefaults: {
+        deviceId: micId || undefined,
+      },
+      publishDefaults: {
+        videoEncoding: {
+          maxBitrate: 1_200_000,
+          maxFramerate: 30,
+        },
+      },
+    } as RoomOptions),
+  ).current
+
+  roomInstance.current = room
+
+  const handleDataReceived = useCallback(
+    (payload: Uint8Array, participant?: any) => {
+      try {
+        const data = JSON.parse(new TextDecoder().decode(payload))
+        if (data.type === 'start_recording') {
+          setActiveSessionId(data.sessionId)
+          setIsRecording(true)
+          recorderManager.current?.startRecording(data.sessionId)
+        } else if (data.type === 'stop_recording') {
+          setIsRecording(false)
+          recorderManager.current?.stopRecording()
+        } else if (data.type === 'upload_progress') {
+          setProgressMap((prev) => {
+            const next = new Map(prev)
+            next.set(data.trackSid, {
+              name: participant?.identity || 'Guest',
+              progress: data.progress,
+              type: data.trackSid.includes('video') ? 'VIDEO' : 'AUDIO',
+            })
+            return next
+          })
+        }
+      } catch {
+        // ignore malformed payloads
+      }
+    },
+    [],
+  )
+
+  useEffect(() => {
+    if (!sessionUser || !roomId || !roomDetails) return
+
+    let cancelled = false
+
     ;(async () => {
       try {
+        setTokenLoading(true)
         const resp = await fetch(
-          `${config.getConfig('apiBaseUrl')}/api/token?room=${room}&username=${roomId}`,
+          `${config.getConfig('apiBaseUrl')}/api/token?room=${roomId}&username=${encodeURIComponent(sessionUser.name || sessionUser.email)}`,
         )
+        if (!resp.ok) throw new Error(`Token request failed: ${resp.status}`)
         const data = await resp.json()
-        if (!mounted) return
-        if (data.token) {
-          setToken(data.token)
-          await roomInstance.connect(config.getConfig('liveKitUrl'), data.token)
+        if (cancelled) return
+
+        if (!data.token) throw new Error('No token returned from server')
+
+        setToken(data.token)
+
+        room.on(RoomEvent.DataReceived, handleDataReceived)
+        room.on(RoomEvent.Disconnected, () => {
+          setIsConnected(false)
+          setConnectionHealth('disconnected')
+          setConnectionError('Disconnected from studio')
+        })
+        room.on(RoomEvent.Reconnecting, () => {
+          setConnectionHealth('reconnecting')
+          setConnectionError('Reconnecting...')
+        })
+        room.on(RoomEvent.Reconnected, () => {
+          setConnectionError('')
+          setIsConnected(true)
+          setConnectionHealth('connected')
+        })
+
+        await room.connect(config.getConfig('liveKitUrl'), data.token)
+        if (cancelled) return
+
+        setIsConnected(true)
+        setConnectionHealth('connected')
+        setTokenLoading(false)
+
+        if (videoEnabled) await room.localParticipant.setCameraEnabled(true)
+        if (audioEnabled) await room.localParticipant.setMicrophoneEnabled(true)
+
+        recorderManager.current = new RecorderManager({ room })
+      } catch (err: any) {
+        if (!cancelled) {
+          setTokenError(err.message || 'Failed to connect to studio')
+          setTokenLoading(false)
         }
-      } catch (e) {
-        console.error(e)
       }
     })()
 
     return () => {
-      mounted = false
-      roomInstance.disconnect()
-      roomInstance.localParticipant.off('localTrackPublished', () => {
-        console.log('closed')
-      })
-      roomInstance.localParticipant.off('localTrackUnpublished', () => {
-        console.log('closed')
-      })
+      cancelled = true
+      room.off(RoomEvent.DataReceived, handleDataReceived)
+      recorderManager.current?.cleanup()
+      room.disconnect()
     }
-  }, [roomInstance, roomId])
+  }, [sessionUser, roomId, roomDetails, handleDataReceived, room, audioEnabled, videoEnabled])
 
-  if (token === '') {
-    return <div>Getting token...</div>
+  const handleStartRecording = async () => {
+    if (!roomDetails) return
+    try {
+      const session = await startSessionMutation.mutateAsync({
+        roomId: roomDetails.id,
+      })
+      setActiveSessionId(session.id)
+      setIsRecording(true)
+      await recorderManager.current?.startRecording(session.id)
+
+      const data = new TextEncoder().encode(
+        JSON.stringify({ type: 'start_recording', sessionId: session.id }),
+      )
+      await room.localParticipant.publishData(data, { reliable: true })
+    } catch (e) {
+      console.error('Failed starting recording:', e)
+    }
   }
-  roomInstance.on('localTrackPublished', (e) => {
-    console.log('published', e)
-    if (e.track) {
-      console.log('camera published')
-      e.track.on('videoPlaybackStarted', () => {
-        console.log('videoPlaybackStarted')
-      })
-      e.track.on('muted', () => {
-        if (e.source === Track.Source.Camera) console.log('camera disabled')
-        if (e.source === Track.Source.Microphone)
-          console.log('microphone disabled')
-        if (e.source === Track.Source.ScreenShare)
-          console.log('screen share disabled')
-      })
-      e.track.on('unmuted', () => {
-        if (e.source === Track.Source.Camera) console.log('camera enabled')
-        if (e.source === Track.Source.Microphone)
-          console.log('microphone enabled')
-        if (e.source === Track.Source.ScreenShare)
-          console.log('screen share enabled')
-      })
-    }
-  })
-  roomInstance.on('localTrackUnpublished', (e) => {
-    console.log('unpublished', e)
-  })
 
+  const handleStopRecording = async () => {
+    if (!activeSessionId) return
+    try {
+      await stopSessionMutation.mutateAsync({ sessionId: activeSessionId })
+      setIsRecording(false)
+      await recorderManager.current?.stopRecording()
+
+      const data = new TextEncoder().encode(
+        JSON.stringify({ type: 'stop_recording' }),
+      )
+      await room.localParticipant.publishData(data, { reliable: true })
+    } catch (e) {
+      console.error('Failed stopping recording:', e)
+    }
+  }
+
+  const isHost = roomDetails && sessionUser && roomDetails.creatorId === sessionUser.id
+
+  // ─── Error State ────────────────────────────────────────────────────────────
+  if (tokenError) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 font-sans">
+        <AnalogCard className="p-8 text-center max-w-sm w-full">
+          <div className="w-12 h-12 rounded-full bg-led-on/10 border border-led-on/30 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="h-6 w-6 text-led-on" />
+          </div>
+          <p className="font-bold uppercase text-led-on tracking-wider text-sm mb-2">Connection Fault</p>
+          <p className="font-mono text-xs text-muted-foreground leading-normal mb-6">{tokenError}</p>
+          <MechButton onClick={() => router.push('/dashboard')} className="w-full justify-center">
+            Return to Dashboard
+          </MechButton>
+        </AnalogCard>
+      </div>
+    )
+  }
+
+  // ─── Loading State ───────────────────────────────────────────────────────────
+  if (tokenLoading || !roomDetails) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background font-sans text-foreground">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 rounded-full border-2 border-border border-t-accent animate-spin" />
+          <div className="space-y-1 text-center">
+            <span className="font-mono text-xs uppercase font-bold tracking-widest animate-pulse block">
+              Synchronizing Studio Link...
+            </span>
+            <AnalogInset className="mx-auto h-1.5 w-48">
+              <div className="h-full w-2/3 bg-accent/60 animate-pulse rounded" />
+            </AnalogInset>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ─── Studio Main UI ──────────────────────────────────────────────────────────
   return (
-    <RoomContext.Provider value={roomInstance}>
-      <div data-lk-theme="default" style={{ height: '100dvh' }}>
-        {/* Your custom component with basic video conferencing functionality. */}
-        <MyVideoConference />
-        {/* The RoomAudioRenderer takes care of room-wide audio for you. */}
-        <RoomAudioRenderer />
-        {/* Controls for the user to start/stop audio, video, and screen share tracks */}
-        <ControlBar />
+    <RoomContext.Provider value={room}>
+      <NoiseBackground />
+
+      <div className="flex h-screen flex-col overflow-hidden bg-background font-sans text-foreground relative z-10">
+
+        {/* ── Header ─────────────────────────────────────────────────────────── */}
+        <header className="z-10 flex shrink-0 items-center justify-between border-b-2 border-border bg-card px-5 py-3 shadow-[0_4px_0_0_var(--color-border)]">
+          <div className="flex items-center gap-4">
+            <MechButton onClick={() => router.push('/dashboard')} className="h-9 w-9" title="Return to Dashboard">
+              <ArrowLeft className="h-4 w-4" />
+            </MechButton>
+            <div>
+              <h1 className="text-sm font-bold uppercase tracking-wide text-foreground leading-none">
+                Studio:{' '}
+                <span className="text-muted-foreground">{roomDetails.name}</span>
+              </h1>
+              <div className="mt-0.5 flex items-center gap-1.5">
+                <MonoLabel>
+                  Join Code: <span className="text-foreground">{roomDetails.code}</span>
+                  {' | '}Op: {sessionUser?.name}
+                </MonoLabel>
+                {isHost && (
+                  <StatusBadge variant="ok" className="text-[8px]">
+                    <LedInline color="green" size="sm" />
+                    HOST
+                  </StatusBadge>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Connection health LED */}
+            <AnalogInset className="flex items-center gap-2 px-3 py-1.5">
+              <Led
+                color={connectionHealth === 'connected' ? 'green' : connectionHealth === 'reconnecting' ? 'amber' : 'red'}
+                size="sm"
+                pulse={connectionHealth === 'reconnecting'}
+              />
+              <MonoLabel>
+                {connectionHealth === 'connected' ? 'LIVE'
+                  : connectionHealth === 'reconnecting' ? 'SYNC'
+                  : 'LOST'}
+              </MonoLabel>
+            </AnalogInset>
+
+            {connectionError && (
+              <div className="flex items-center gap-1.5 border border-yellow-600/40 bg-yellow-400/10 px-3 py-1.5 rounded">
+                <MonoLabel className="text-yellow-600 dark:text-yellow-400">{connectionError}</MonoLabel>
+              </div>
+            )}
+
+            {isRecording && (
+              <AnalogInset className="flex items-center gap-2 px-3 py-1.5">
+                <Led color="red" size="sm" pulse />
+                <MonoLabel className="text-led-on tabular-nums">
+                  REC // {formatTimer(recordingSeconds)}
+                </MonoLabel>
+              </AnalogInset>
+            )}
+
+            {isHost && (
+              <div className="flex items-center">
+                {!isRecording ? (
+                  <Button
+                    onClick={handleStartRecording}
+                    className="btn-mechanical h-9 rounded text-[10px] font-bold uppercase tracking-widest text-secondary-foreground px-5"
+                  >
+                    Start Recording
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleStopRecording}
+                    className="h-9 bg-led-on/90 hover:bg-led-on border border-led-on/60 text-white shadow-[0_3px_5px_rgba(0,0,0,0.2),0_0_10px_var(--color-led-on)] rounded text-[10px] font-bold uppercase tracking-widest active:translate-y-[2px] transition-[transform,box-shadow] ease-[var(--ease-mechanical)] duration-150 px-5"
+                  >
+                    Stop Recording
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* ── Main Layout ─────────────────────────────────────────────────────── */}
+        <div className="flex flex-1 overflow-hidden">
+
+          {/* Video feed area */}
+          <main className="relative flex min-w-0 flex-1 flex-col bg-[#111] overflow-hidden">
+            {/* CRT scanline overlay on the entire video area */}
+            <div
+              className="pointer-events-none absolute inset-0 z-10 opacity-20"
+              style={{
+                background: 'linear-gradient(rgba(255,255,255,0) 50%, rgba(0,0,0,0.15) 50%)',
+                backgroundSize: '100% 4px',
+              }}
+            />
+
+            {/* Corner label */}
+            <div className="absolute top-3 left-3 z-20 font-mono text-[9px] text-[#888] uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded border border-white/10">
+              CH 1 : Studio Feed
+            </div>
+
+            <div className="flex min-h-0 w-full flex-1 items-center justify-center p-4">
+              <StudioVideoConference />
+            </div>
+            <RoomAudioRenderer />
+          </main>
+
+          {/* ── Sidebar: Upload Monitor (host only) or Guest Progress ─────────── */}
+          {isHost ? (
+            <aside className="hidden w-72 flex-col overflow-y-auto border-l-2 border-border bg-card p-4 shadow-[-4px_0_0_0_var(--color-border)] lg:flex">
+              <PanelTitle label="Track Upload Queues" title="Upload Monitor" className="mb-4 pb-3 border-b border-border" />
+
+              {progressMap.size === 0 ? (
+                <AnalogInset className="flex flex-1 flex-col items-center justify-center gap-3 border-dashed p-6 text-center">
+                  <Radio className="h-8 w-8 animate-pulse text-muted-foreground/30" />
+                  <div className="space-y-1">
+                    <MonoLabel className="block">Standby Mode</MonoLabel>
+                    <p className="max-w-[160px] font-mono text-[8px] text-muted-foreground/60 leading-normal uppercase">
+                      Upload feeds populate once recorders activate.
+                    </p>
+                  </div>
+                </AnalogInset>
+              ) : (
+                <div className="space-y-3.5">
+                  {Array.from(progressMap.entries()).map(([trackSid, data]) => (
+                    <AnalogInset key={trackSid} className="p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="max-w-[120px] truncate text-xs font-bold text-foreground uppercase">
+                          {data.name}
+                        </span>
+                        <StatusBadge className="text-[8px]">
+                          {data.type}
+                        </StatusBadge>
+                      </div>
+
+                      <div className="flex items-center gap-2.5">
+                        <AnalogInset className="h-2 flex-1 p-0">
+                          <div
+                            className={`h-full transition-[width] duration-300 rounded-sm ${
+                              data.progress === 100
+                                ? 'bg-led-green shadow-[0_0_5px_var(--color-led-green)]'
+                                : 'bg-accent shadow-[0_0_5px_var(--color-accent-glow)]'
+                            }`}
+                            style={{ width: `${data.progress}%` }}
+                          />
+                        </AnalogInset>
+                        <span className="min-w-[32px] text-right font-mono text-[10px] font-bold tabular-nums text-foreground">
+                          {data.progress}%
+                        </span>
+                      </div>
+
+                      <div className="mt-2 flex items-center justify-between font-mono text-[8px] text-muted-foreground/60">
+                        <span className="max-w-[140px] truncate uppercase">
+                          SID: {trackSid.slice(-10)}
+                        </span>
+                        {data.progress === 100 && (
+                          <span className="flex items-center gap-0.5 text-led-green font-bold">
+                            <CheckCircle className="h-3 w-3 shrink-0" />
+                            <span>SAVED</span>
+                          </span>
+                        )}
+                      </div>
+                    </AnalogInset>
+                  ))}
+                </div>
+              )}
+            </aside>
+          ) : (
+            /* Guest upload sidebar — own tracks only */
+            progressMap.size > 0 && (
+              <aside className="hidden w-64 flex-col overflow-y-auto border-l-2 border-border bg-card p-4 shadow-[-4px_0_0_0_var(--color-border)] lg:flex">
+                <PanelTitle label="Your Tracks" title="Upload Status" className="mb-4 pb-3 border-b border-border" />
+                <div className="space-y-3.5">
+                  {Array.from(progressMap.entries())
+                    .filter(([, d]) => d.name === sessionUser?.name)
+                    .map(([trackSid, data]) => (
+                      <AnalogInset key={trackSid} className="p-3">
+                        <div className="mb-2 flex items-center justify-between">
+                          <MonoLabel className="text-[8px]">{data.type}</MonoLabel>
+                          {data.progress === 100 && (
+                            <span className="flex items-center gap-0.5 text-led-green font-mono font-bold text-[8px]">
+                              <CheckCircle className="h-3 w-3" />
+                              <span>DONE</span>
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <AnalogInset className="h-2 flex-1 p-0">
+                            <div
+                              className={`h-full transition-[width] duration-300 rounded-sm ${
+                                data.progress === 100 ? 'bg-led-green' : 'bg-accent'
+                              }`}
+                              style={{ width: `${data.progress}%` }}
+                            />
+                          </AnalogInset>
+                          <span className="font-mono text-[10px] font-bold tabular-nums">{data.progress}%</span>
+                        </div>
+                      </AnalogInset>
+                    ))}
+                </div>
+              </aside>
+            )
+          )}
+        </div>
+
+        {/* ── Control Footer ──────────────────────────────────────────────────── */}
+        <footer className="z-10 flex h-16 shrink-0 items-center justify-center border-t-2 border-border bg-card shadow-[0_-4px_0_0_var(--color-border)]">
+          <ControlBar variation="minimal" />
+        </footer>
       </div>
     </RoomContext.Provider>
   )
 }
-/**
- * Renders the local video conference UI including camera/screen-share tiles and simple recording controls.
- *
- * Initializes a RecorderManager wired to the current LiveKit room and exposes Start/Stop recording actions.
- * - Subscribes to Camera and ScreenShare tracks (placeholders disabled) and renders them in a GridLayout.
- * - Manages local UI state: recording, upload flag, and upload progress.
- * - Creates a RecorderManager when mounted and calls its cleanup on unmount.
- * - startRecording/stopRecording delegate to the RecorderManager and update local recording state.
- *
- * Note: Upload functionality is scaffolded in commented code but not active in this component.
- *
- * @returns JSX element containing the recording controls, optional upload progress bar, and the track grid.
- */
-function MyVideoConference() {
+
+function StudioVideoConference() {
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: false },
@@ -184,281 +506,20 @@ function MyVideoConference() {
     ],
     { onlySubscribed: false },
   )
-  const room = useRoomContext()
-  const { localParticipant } = useLocalParticipant()
-
-  const isActive = localParticipant.isCameraEnabled
-  const isMicrophoneEnabled = localParticipant.isMicrophoneEnabled
-  // State management
-  const [isRecording, setIsRecording] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
-
-  // // Use useRef for RecorderManager to prevent recreation
-
-  const recorderManager = useRef<RecorderManager | null>(null)
-
-  // // Initialize RecorderManager when component mounts
-  useEffect(() => {
-    recorderManager.current = new RecorderManager({ room })
-
-    // Cleanup on unmount
-    return () => {
-      if (recorderManager.current) {
-        recorderManager.current.cleanup()
-      }
-    }
-  }, [room])
-
-  // const stopAndUpload = async () => {
-  //   if (!recorderManager.current) return
-
-  //   try {
-  //     setIsUploading(true)
-  //     setUploadProgress(0)
-
-  //     // Stop recording first
-  //     await recorderManager.current.stopRecording()
-  //     setIsRecording(false)
-
-  //     // Get the most recent session
-  //     const sessions = recorderManager.current.getRecordingSessions()
-  //     if (sessions.length === 0) {
-  //       throw new Error('No recording session found')
-  //     }
-
-  //     const latestSession = sessions[sessions.length - 1]
-
-  //     if (!latestSession) {
-  //       throw new Error('No recording session found')
-  //     }
-
-  //     // Upload to S3 with progress tracking
-  //     const s3Url = await recorderManager.current.uploadToS3(
-  //       latestSession.id,
-  //       (progress) => setUploadProgress(progress),
-  //     )
-
-  //     console.log('Successfully uploaded to S3:', s3Url)
-  //     // Here you can save the s3Url to your database or state
-  //   } catch (error) {
-  //     console.error('Upload failed:', error)
-  //   } finally {
-  //     setIsUploading(false)
-  //   }
-  // }
-
-  const stopRecording = async () => {
-    if (!recorderManager.current) return
-
-    try {
-      await recorderManager.current.stopRecording()
-      // const sessions = recorderManager.current.getRecordingSessions()
-      // console.log('Recording stopped. Sessions:', sessions)
-      setIsRecording(false)
-    } catch (error) {
-      console.error('Error stopping recording:', error)
-    }
-  }
-
-  const startRecording = () => {
-    if (!recorderManager.current) return
-
-    try {
-      recorderManager.current.startRecording()
-      setIsRecording(true)
-    } catch (error) {
-      console.error('Error starting recording:', error)
-    }
-  }
-
-  // // Clean up local tracks
-  // const localTracks = tracks.filter((track) => track.participant.isLocal)
-
-  // localParticipant.on('localTrackUnpublished', (e) => {
-  //   console.log('track unpublished', e.trackInfo)
-  // })
 
   return (
-    <>
-      <div className="mb-4 flex gap-2">
-        <Button onClick={startRecording}>Start Recording</Button>
-        <Button onClick={stopRecording}>Stop Recording</Button>
-        {isActive && 'Is Active'}
-        {/* <Button
-          onClick={startRecording}
-          disabled={isRecording || isUploading}
-          variant={isRecording ? 'destructive' : 'default'}
-        >
-          {isRecording ? 'Recording...' : 'Start Recording'}
-        </Button>
-        <Button
-          onClick={stopAndUpload}
-          disabled={!isRecording || isUploading}
-          variant="outline"
-        >
-          {isUploading ? 'Uploading...' : 'Stop & Upload'}
-        </Button>
-        <Button
-          onClick={stopRecording}
-          disabled={!isRecording || isUploading}
-          variant="outline"
-        >
-          Stop Without Saving
-        </Button> */}
-      </div>
-
-      {isUploading && (
-        <div className="mb-4 h-2.5 w-full rounded-full bg-gray-200">
-          <div
-            className="h-2.5 rounded-full bg-blue-600 transition-all duration-300"
-            style={{ width: `${uploadProgress}%` }}
-          />
-          <p className="mt-1 text-sm text-gray-600">
-            Uploading... {Math.round(uploadProgress)}%
-          </p>
-        </div>
-      )}
-      <GridLayout
-        tracks={tracks}
-        style={{ height: 'calc(100vh - var(--lk-control-bar-height))' }}
-      >
-        <ParticipantTile />
-      </GridLayout>
-    </>
+    <GridLayout
+      tracks={tracks}
+      className="h-full w-full"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gap: '16px',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <ParticipantTile className="overflow-hidden rounded border-2 border-border/60 bg-card shadow-[0_4px_12px_rgba(0,0,0,0.4)]" />
+    </GridLayout>
   )
 }
-// function MyVideoConference() {
-//   // `useTracks` returns all camera and screen share tracks. If a user
-//   // joins without a published camera track, a placeholder track is returned.
-//   const tracks = useTracks(
-//     [
-//       { source: Track.Source.Camera, withPlaceholder: false },
-//       { source: Track.Source.ScreenShare, withPlaceholder: false },
-//     ],
-//     { onlySubscribed: false },
-//   )
-//   const room = useRoomContext()
-//   const recorderManager = new RecorderManager({ room })
-//   const { localParticipant } = useLocalParticipant()
-//   let med: MediaStream | null = null
-
-//   localParticipant.videoTrackPublications.forEach((track) => {
-//     console.log(track.source)
-//     console.log(track.track?.mediaStreamTrack.getSettings())
-//   })
-//   localParticipant.trackPublications.forEach((trackRef) => {
-//     console.log(trackRef.source, trackRef.isMuted)
-//     if (
-//       !trackRef.track?.mediaStreamTrack ||
-//       trackRef.source !== Track.Source.ScreenShare
-//     )
-//       return
-//     console.log(trackRef.track?.mediaStreamTrack.getSettings())
-
-//     med = new MediaStream([trackRef.track?.mediaStreamTrack])
-//     // console.log(med)
-//   })
-//   const chunks: Blob[] = []
-//   const stopAndUpload = async () => {
-//     try {
-//       setIsUploading(true)
-//       setUploadProgress(0)
-
-//       // Stop recording first
-//       await recorderManager.stopRecording()
-
-//       // Get the most recent session
-//       const sessions = recorderManager.getRecordingSessions()
-//       if (sessions.length === 0) {
-//         throw new Error('No recording session found')
-//       }
-
-//       const latestSession = sessions[sessions.length - 1]
-
-//       // Upload to S3 with progress tracking
-//       const s3Url = await recorderManager.uploadToS3(
-//         latestSession.id,
-//         (progress) => setUploadProgress(progress)
-//       )
-
-//       console.log('Successfully uploaded to S3:', s3Url)
-//       // Here you can save the s3Url to your database or state
-
-//     } catch (error) {
-//       console.error('Upload failed:', error)
-//     } finally {
-//       setIsUploading(false)
-//     }
-//   }
-
-//   const stopRecording = async () => {
-//     try {
-//       await recorderManager.stopRecording()
-//       const sessions = recorderManager.getRecordingSessions()
-//       console.log('Recording stopped. Sessions:', sessions)
-//     } catch (error) {
-//       console.error('Error stopping recording:', error)
-//     }
-//   }
-
-//   const startRecording = () => {
-//     recorderManager.startRecording()
-//     setIsRecording(true)
-//   }
-
-//   const localTracks = tracks.filter((track) => track.participant.isLocal)
-
-//   localTracks.map((track) => {
-//     console.log('Tracks', track.publication)
-//   })
-
-//   return (
-//     <>
-//       <div className="flex gap-2 mb-4">
-//         <Button
-//           onClick={startRecording}
-//           disabled={isRecording || isUploading}
-//           variant={isRecording ? 'destructive' : 'default'}
-//         >
-//           {isRecording ? 'Recording...' : 'Start Recording'}
-//         </Button>
-//         <Button
-//           onClick={stopAndUpload}
-//           disabled={!isRecording || isUploading}
-//           variant="outline"
-//         >
-//           {isUploading ? 'Uploading...' : 'Stop & Upload'}
-//         </Button>
-//         <Button
-//           onClick={stopRecording}
-//           disabled={!isRecording || isUploading}
-//           variant="outline"
-//         >
-//           Stop Without Saving
-//         </Button>
-//       </div>
-
-//       {isUploading && (
-//         <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
-//           <div
-//             className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-//             style={{ width: `${uploadProgress}%` }}
-//           />
-//           <p className="text-sm text-gray-600 mt-1">
-//             Uploading... {uploadProgress}%
-//           </p>
-//         </div>
-//       )}
-//       <GridLayout
-//         tracks={tracks}
-//         style={{ height: 'calc(100vh - var(--lk-control-bar-height))' }}
-//       >
-//         {/* The GridLayout accepts zero or one child. The child is used
-//       as a template to render all passed in tracks. */}
-
-//         <ParticipantTile />
-//       </GridLayout>
-//     </>
-//   )
-// }

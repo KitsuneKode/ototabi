@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ototabi Mockup // Design 14: Bold Brutalist</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ease-bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background-color: #d8b4e2; /* Lavender */
+      color: #000;
+    }
+    
+    .brut-box {
+      background: #fff;
+      border: 3px solid #000;
+      border-radius: 24px;
+      box-shadow: 8px 8px 0 #000;
+      transition: transform 150ms var(--ease-bouncy), box-shadow 150ms var(--ease-bouncy);
+    }
+    
+    .brut-btn {
+      background: #ffeb3b; /* Yellow */
+      border: 3px solid #000;
+      border-radius: 100px;
+      box-shadow: 4px 4px 0 #000;
+      transition: transform 100ms ease-out, box-shadow 100ms ease-out;
+      cursor: pointer;
+    }
+    
+    .brut-btn:active {
+      transform: translate(4px, 4px);
+      box-shadow: 0px 0px 0 #000;
+    }
+
+    .brut-card {
+      background: #fff;
+      border: 3px solid #000;
+      border-radius: 16px;
+      box-shadow: 4px 4px 0 #000;
+      cursor: pointer;
+      transition: transform 100ms ease-out, box-shadow 100ms ease-out, background-color 200ms ease;
+    }
+    .brut-card:active {
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0 #000;
+    }
+    .brut-card.selected {
+      background: #a8e6cf; /* Mint */
+    }
+
+    .enter-anim {
+      opacity: 0;
+      transform: rotate(-2deg) translateY(20px);
+      animation: swingIn 500ms var(--ease-bouncy) forwards;
+    }
+    .delay-1 { animation-delay: 100ms; }
+    .delay-2 { animation-delay: 200ms; }
+
+    @keyframes swingIn {
+      to { opacity: 1; transform: rotate(0deg) translateY(0); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6">
+  
+  <div class="w-full max-w-4xl flex flex-col md:flex-row gap-8 items-stretch">
+    
+    <!-- Left Panel -->
+    <div class="brut-box flex-1 flex flex-col p-8 enter-anim">
+      <div class="inline-block bg-[#000] text-white px-4 py-1 rounded-full text-sm font-bold w-max mb-6 transform -rotate-2">
+        OTOTABI / MOCKUP 14
+      </div>
+      
+      <h1 class="text-4xl font-bold mb-2">GET READY</h1>
+      <p class="text-lg mb-8 font-medium">Check your hair. Check your mic.</p>
+
+      <div class="w-full bg-[#eee] border-3 border-black rounded-xl aspect-video flex items-center justify-center mb-auto relative overflow-hidden">
+        <div class="absolute w-full h-full bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]"></div>
+        <span class="font-bold text-2xl text-black/20 z-10">NO VIDEO</span>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="flex flex-col gap-6 w-full md:w-80 enter-anim delay-1">
+      <div class="brut-card selected p-5 flex flex-col gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider bg-black text-white px-2 py-0.5 rounded w-max">Mic</span>
+        <span class="font-bold text-lg">Studio Setup</span>
+      </div>
+      
+      <div class="brut-card p-5 flex flex-col gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider border-2 border-black px-2 py-0.5 rounded w-max">Cam</span>
+        <span class="font-bold text-lg">FaceTime HD</span>
+      </div>
+
+      <button class="brut-btn mt-auto w-full py-5 text-xl font-bold uppercase enter-anim delay-2">
+        Join Studio ->
+      </button>
+    </div>
+
+  </div>
+</body>
+</html>

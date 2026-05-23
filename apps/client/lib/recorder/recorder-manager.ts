@@ -1,6 +1,5 @@
 import { db } from '@/lib/localDB'
 import config from '@/utils/config'
-import { randomBytes } from 'crypto'
 import { S3Uploader } from '@/lib/uploader/s3-uploader'
 import {
   LocalParticipant,
@@ -13,11 +12,7 @@ import {
 
 type RecordingState = 'idle' | 'recording' | 'stopped'
 
-/**
- * The central orchestrator for the local recording feature.
- */
 export class RecorderManager {
-  // State management properties
   private room: Room
   private localParticipant: LocalParticipant
   private recorders: Map<string, MediaRecorder> = new Map()
@@ -25,34 +20,44 @@ export class RecorderManager {
   private trackPartCounters: Map<string, number> = new Map()
   private state: RecordingState = 'idle'
   private chunkInterval: number = 4000 // Slice video every 4 seconds
-  private queueIntervalId: number | null = null // ID for the setInterval that runs the upload queue
+  private queueIntervalId: number | null = null
 
-  constructor({ room }: { room: Room }) {
+  // Active session and byte tracking for progress calculation
+  private sessionId: string | null = null
+  private trackTotalBytes: Map<string, number> = new Map()
+  private trackUploadedPartsProgress: Map<string, Map<number, number>> =
+    new Map()
+  private trackPartSizes: Map<string, Map<number, number>> = new Map()
+  private onLocalProgress?: (trackSid: string, progress: number) => void
+
+  constructor({ room, onLocalProgress }: { room: Room; onLocalProgress?: (trackSid: string, progress: number) => void }) {
     this.room = room
     this.localParticipant = room.localParticipant
+    this.onLocalProgress = onLocalProgress
 
-    // Bind event handlers to ensure `this` is correctly scoped.
     this.handleTrackPublished = this.handleTrackPublished.bind(this)
     this.handleTrackUnpublished = this.handleTrackUnpublished.bind(this)
     this.handleDisconnect = this.handleDisconnect.bind(this)
 
-    // On initialization, immediately check for and recover any incomplete uploads from previous sessions.
+    // Recover incomplete uploads from previous sessions
     this.recoverOrphanedUploads().then(() => {
-      // Start the background queue processor only after recovery is complete.
+      // Start the background queue processor
       this.queueIntervalId = window.setInterval(
         () => this.processUploadQueue(),
-        2000,
+        1500,
       )
     })
   }
 
   /**
-   * Starts the recording process. It begins listening for LiveKit events
-   * and starts recording any tracks that are already published.
+   * Starts the recording process for a given database session ID.
+   * @param sessionId The database ID of the active RecordingSession.
    */
-  public async startRecording() {
+  public async startRecording(sessionId: string) {
     if (this.state === 'recording') return
     this.state = 'recording'
+    this.sessionId = sessionId
+
     this.localParticipant.on(
       RoomEvent.LocalTrackPublished,
       this.handleTrackPublished,
@@ -62,9 +67,11 @@ export class RecorderManager {
       this.handleTrackUnpublished,
     )
     this.room.on(RoomEvent.Disconnected, this.handleDisconnect)
-    this.localParticipant.trackPublications.forEach(({ track }) =>
-      this.startTrackRecorder(track as LocalTrack),
-    )
+
+    // Start recording already published local tracks
+    this.localParticipant.trackPublications.forEach(({ track }) => {
+      if (track) this.startTrackRecorder(track as LocalTrack)
+    })
   }
 
   /**
@@ -73,8 +80,10 @@ export class RecorderManager {
   public async stopRecording() {
     if (this.state === 'idle' || this.state === 'stopped') return
     this.state = 'stopped'
+
     if (this.queueIntervalId) clearInterval(this.queueIntervalId)
     this.queueIntervalId = null
+
     this.localParticipant.off(
       RoomEvent.LocalTrackPublished,
       this.handleTrackPublished,
@@ -84,9 +93,12 @@ export class RecorderManager {
       this.handleTrackUnpublished,
     )
     this.room.off(RoomEvent.Disconnected, this.handleDisconnect)
-    Array.from(this.recorders.keys()).forEach((trackSid) =>
-      this.stopTrackRecorder(trackSid),
-    )
+
+    // Stop all active recorders
+    const trackSids = Array.from(this.recorders.keys())
+    for (const trackSid of trackSids) {
+      await this.stopTrackRecorder(trackSid)
+    }
   }
 
   /**
@@ -94,52 +106,66 @@ export class RecorderManager {
    * and re-initializes their S3Uploaders to resume uploading.
    */
   private async recoverOrphanedUploads() {
-    const orphanedSessions = await db.uploadSessions.toArray()
-
-    for (const session of orphanedSessions) {
-      try {
-        if (config.getConfig('nodeEnv') === 'development') {
-          console.log(`Recovering session for track ${session.trackSid}`)
-          break
+    try {
+      const orphanedSessions = await db.uploadSessions.toArray()
+      for (const session of orphanedSessions) {
+        try {
+          const uploader = new S3Uploader(
+            session.trackSid,
+            session.sessionId,
+            session.type,
+            session,
+          )
+          await uploader.recoverExistingParts()
+          this.uploaders.set(session.trackSid, uploader)
+        } catch (error) {
+          console.error(
+            `Failed to recover session for track ${session.trackSid}:`,
+            error,
+          )
         }
-        const uploader = new S3Uploader(session.trackSid, session)
-        await uploader.recoverExistingParts()
-        this.uploaders.set(session.trackSid, uploader)
-      } catch (error) {
-        console.error(
-          `Failed to recover session for track ${session.trackSid}`,
-          error,
-        )
       }
+    } catch (dbErr) {
+      console.error('Failed to read orphaned sessions from Dexie:', dbErr)
     }
   }
 
   /**
    * Initializes and starts a MediaRecorder for a given media track.
-   * It also kicks off the S3 multipart upload and persists the session for recovery.
    * @param track The LocalTrack to record.
    */
   private async startTrackRecorder(track: LocalTrack) {
     const trackSid = track.sid
-    if (!trackSid || !track.mediaStreamTrack || this.recorders.has(trackSid))
+    if (
+      !trackSid ||
+      !track.mediaStreamTrack ||
+      this.recorders.has(trackSid) ||
+      !this.sessionId
+    )
       return
+
+    // Identify track type
+    let type: 'CAMERA' | 'MICROPHONE' | 'SCREENSHARE' = 'CAMERA'
+    if (track.source === Track.Source.Microphone) {
+      type = 'MICROPHONE'
+    } else if (track.source === Track.Source.ScreenShare) {
+      type = 'SCREENSHARE'
+    }
+
     try {
       // 1. Initialize and start the S3 uploader
-      let uploader
-      if (config.getConfig('nodeEnv') === 'development') {
-        console.log(`Starting recorder for track ${trackSid}`)
-      } else {
-        uploader = new S3Uploader(trackSid)
-        await uploader.start()
-        this.uploaders.set(trackSid, uploader)
-        this.trackPartCounters.set(trackSid, 0)
-      }
+      const uploader = new S3Uploader(trackSid, this.sessionId, type)
+      await uploader.start()
+      this.uploaders.set(trackSid, uploader)
+      this.trackPartCounters.set(trackSid, 0)
 
       // 2. Save session to DB for crash recovery
       await db.uploadSessions.put({
         trackSid: trackSid,
-        uploadId: uploader?.getUploadId() ?? randomBytes(16).toString('hex'),
-        s3Key: uploader?.getS3Key() ?? randomBytes(16).toString('hex'),
+        uploadId: uploader.getUploadId()!,
+        s3Key: uploader.getS3Key()!,
+        sessionId: this.sessionId,
+        type,
       })
 
       // 3. Setup the browser's MediaRecorder
@@ -148,18 +174,33 @@ export class RecorderManager {
         track.kind === Track.Kind.Video
           ? 'video/webm;codecs=vp9,opus'
           : 'audio/webm;codecs=opus'
-      if (!MediaRecorder.isTypeSupported(mimeType))
+
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
         throw new Error(`MimeType ${mimeType} not supported.`)
+      }
 
       const recorder = new MediaRecorder(mediaStream, { mimeType })
 
-      // 4. This is the core capture loop. When MediaRecorder provides a chunk of data...
+      // Initialize trackers
+      this.trackTotalBytes.set(trackSid, 0)
+      this.trackPartSizes.set(trackSid, new Map())
+      this.trackUploadedPartsProgress.set(trackSid, new Map())
+
+      // 4. Capture loop
       recorder.ondataavailable = async (e: BlobEvent) => {
         if (e.data.size === 0) return
         const partNumber = (this.trackPartCounters.get(trackSid) ?? 0) + 1
         this.trackPartCounters.set(trackSid, partNumber)
-        // ...its ONLY job is to save it to IndexedDB. This is fast and non-blocking.
-        // The actual upload happens in the background queue.
+
+        // Store part size
+        const sizes = this.trackPartSizes.get(trackSid)
+        if (sizes) sizes.set(partNumber, e.data.size)
+
+        // Add to total track size
+        const total = this.trackTotalBytes.get(trackSid) ?? 0
+        this.trackTotalBytes.set(trackSid, total + e.data.size)
+
+        // Save chunk locally
         await db.chunks.put({
           id: `${trackSid}-${partNumber}`,
           trackSid,
@@ -169,12 +210,11 @@ export class RecorderManager {
         })
       }
 
-      // 5. Start recording, slicing data into chunks at the specified interval.
+      // 5. Start slicing data
       recorder.start(this.chunkInterval)
       this.recorders.set(trackSid, recorder)
     } catch (error) {
       console.error(`Failed to start recorder for ${trackSid}:`, error)
-      // Clean up if setup fails
       this.uploaders.delete(trackSid)
     }
   }
@@ -189,102 +229,186 @@ export class RecorderManager {
       if (recorder.state !== 'inactive') recorder.stop()
       this.recorders.delete(trackSid)
     }
-    // Ensure any final chunks for this track are uploaded before completing.
+
+    // Force run queue to process remaining chunks for this track
     await this.processUploadQueue(trackSid)
+
     const uploader = this.uploaders.get(trackSid)
     if (uploader) {
-      await uploader
-        .complete()
-        .catch((err) =>
-          console.error(`Finalization failed for ${trackSid}`, err),
-        )
-      // Clean up the session from the DB and memory after successful completion.
-      await db.uploadSessions.delete(trackSid)
+      try {
+        await uploader.complete()
+        // Broadcast final 100% progress
+        this.broadcastUploadProgress(trackSid, 100)
+        // Clean up session in DB
+        await db.uploadSessions.delete(trackSid)
+      } catch (err) {
+        console.error(`Finalization failed for ${trackSid}:`, err)
+      }
       this.uploaders.delete(trackSid)
     }
   }
 
   /**
-   * The background worker. It periodically queries the DB for pending chunks
-   * and attempts to upload them.
-   * @param specificTrackSid If provided, only process chunks for this track.
+   * Periodic queue processor. Picks up pending chunks and uploads them.
    */
   private async processUploadQueue(specificTrackSid?: string) {
-    // Find one chunk that is 'pending' or 'failed'.
     const query = specificTrackSid
       ? db.chunks.where({ trackSid: specificTrackSid, status: 'pending' })
       : db.chunks.where('status').anyOf('pending', 'failed')
 
     const chunkToUpload = await query.first()
-    if (!chunkToUpload) return // No work to do.
-
-    // Faking upload for testing purposes
-    console.log(
-      `[TESTING] Faking upload for chunk ${chunkToUpload.id} part ${chunkToUpload.partNumber}`,
-    )
-    await db.chunks.update(chunkToUpload.id, { status: 'uploading' })
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    await db.chunks.update(chunkToUpload.id, { status: 'uploaded' })
+    if (!chunkToUpload) return // Nothing pending
 
     const uploader = this.uploaders.get(chunkToUpload.trackSid)
-    if (!uploader) {
-      // This can happen if recovery failed but chunks still exist.
-      return
-    }
+    if (!uploader) return
 
     try {
-      // Mark the chunk as 'uploading' to prevent other queue cycles from picking it up.
+      // Mark as uploading to lock the row
       await db.chunks.update(chunkToUpload.id, { status: 'uploading' })
-      await uploader.uploadChunk(chunkToUpload.data, chunkToUpload.partNumber)
-      // After successful upload, mark it as 'uploaded'.
-      // You could also delete it here to save space: await db.chunks.delete(chunkToUpload.id);
-      await db.chunks.update(chunkToUpload.id, { status: 'uploaded' })
+
+      // Upload the chunk with progress callback
+      await uploader.uploadChunk(
+        chunkToUpload.data,
+        chunkToUpload.partNumber,
+        3,
+        (sentBytes) => {
+          this.handleChunkProgress(
+            chunkToUpload.trackSid,
+            chunkToUpload.partNumber,
+            sentBytes,
+          )
+        },
+      )
+
+      // Delete completed chunk from IndexedDB to optimize disk space
+      await db.chunks.delete(chunkToUpload.id)
     } catch (error) {
-      // If upload fails after all retries, mark it as 'failed' so we can try again later.
       await db.chunks.update(chunkToUpload.id, { status: 'failed' })
-      console.error(`Failed to upload chunk ${chunkToUpload.id}`, error)
+      console.error(`Failed to upload chunk ${chunkToUpload.id}:`, error)
+    }
+  }
+
+  /**
+   * Updates upload progress locally and triggers the LiveKit Data Channel broadcast.
+   */
+  private handleChunkProgress(
+    trackSid: string,
+    partNumber: number,
+    sentBytes: number,
+  ) {
+    let uploadedParts = this.trackUploadedPartsProgress.get(trackSid)
+    if (!uploadedParts) {
+      uploadedParts = new Map()
+      this.trackUploadedPartsProgress.set(trackSid, uploadedParts)
+    }
+    uploadedParts.set(partNumber, sentBytes)
+
+    // Sum all uploaded bytes
+    let totalUploaded = 0
+    uploadedParts.forEach((bytes) => {
+      totalUploaded += bytes
+    })
+
+    const totalBytes = this.trackTotalBytes.get(trackSid) || 1
+    const percentage = Math.min(
+      Math.round((totalUploaded / totalBytes) * 100),
+      100,
+    )
+
+    this.broadcastUploadProgress(trackSid, percentage)
+  }
+
+  /**
+   * Broadcasts the progress over the LiveKit Room's reliable data channel.
+   */
+  private broadcastUploadProgress(trackSid: string, progress: number) {
+    try {
+      const payload = JSON.stringify({
+        type: 'upload_progress',
+        trackSid,
+        progress,
+      })
+      const encoder = new TextEncoder()
+      const data = encoder.encode(payload)
+      this.room.localParticipant.publishData(data, {
+        reliable: true,
+      })
+    } catch (err) {
+      console.warn('Failed to broadcast upload progress:', err)
     }
   }
 
   // --- LiveKit Event Handlers ---
 
   private handleTrackPublished = (pub: LocalTrackPublication) => {
-    // If a user shares their screen after recording has started, start recording it.
     if (this.state === 'recording' && pub.track)
       this.startTrackRecorder(pub.track)
   }
 
   private handleTrackUnpublished = (pub: LocalTrackPublication) => {
-    // If a user stops sharing a track, stop its specific recorder and finalize its upload.
     this.stopTrackRecorder(pub.trackSid)
   }
 
   private handleDisconnect = () => {
-    // If the user disconnects from the room, stop everything gracefully.
     if (this.state === 'recording') this.stopRecording()
   }
 
   /**
-   * Cleans up all resources, stops recording, and removes all event listeners.
-   * This should be called when the component managing the recorder is unmounted.
+   * Cleans up all resources.
    */
-  public async cleanup() {
-    console.log('🧹 Cleaning up RecorderManager...')
+  public async completeProcessing(onProgress?: (uploaded: number, total: number) => void): Promise<void> {
+    // Drain remaining chunks from DB and wait for all uploaders to finish
+    const remaining = await db.chunks
+      .where('status')
+      .anyOf('pending', 'uploading', 'failed')
+      .count()
+    const total = remaining + this.uploaders.size
 
-    // 1. Stop the recording if it's currently active. This will also
-    //    handle finalizing any pending uploads for the last session.
+    let done = 0
+    if (onProgress) onProgress(done, total)
+
+    // Flush the upload queue repeatedly until all chunks are processed
+    for (let i = 0; i < 50; i++) {
+      const pending = await db.chunks
+        .where('status')
+        .anyOf('pending', 'failed')
+        .first()
+      if (!pending) break
+      await this.processUploadQueue(pending.trackSid)
+      done++
+      if (onProgress) onProgress(done, total)
+      // Small delay to let async operations settle
+      await new Promise((r) => setTimeout(r, 200))
+    }
+
+    // Finalise all uploaders
+    const trackSids = Array.from(this.uploaders.keys())
+    for (const trackSid of trackSids) {
+      try {
+        const uploader = this.uploaders.get(trackSid)
+        if (uploader) {
+          await uploader.complete()
+          this.broadcastUploadProgress(trackSid, 100)
+          await db.uploadSessions.delete(trackSid)
+        }
+      } catch (err) {
+        console.error(`Finalisation failed for ${trackSid}:`, err)
+      }
+      done++
+      if (onProgress) onProgress(done, total)
+    }
+  }
+
+  public async cleanup() {
     if (this.state === 'recording') {
       await this.stopRecording()
     }
 
-    // 2. Ensure the background upload queue is stopped.
     if (this.queueIntervalId) {
       clearInterval(this.queueIntervalId)
       this.queueIntervalId = null
     }
 
-    // 3. Remove any remaining event listeners to prevent memory leaks.
     this.localParticipant.off(
       RoomEvent.LocalTrackPublished,
       this.handleTrackPublished,
@@ -295,10 +419,13 @@ export class RecorderManager {
     )
     this.room.off(RoomEvent.Disconnected, this.handleDisconnect)
 
-    // 4. Clear all internal state.
     this.recorders.clear()
     this.uploaders.clear()
     this.trackPartCounters.clear()
+    this.trackTotalBytes.clear()
+    this.trackUploadedPartsProgress.clear()
+    this.trackPartSizes.clear()
     this.state = 'idle'
+    this.sessionId = null
   }
 }

@@ -22,6 +22,8 @@ export interface UploadSession {
   trackSid: string // The track this upload belongs to (this is the Primary Key)
   uploadId: string // The unique ID from S3 for this multipart upload
   s3Key: string // The final filename/key in the S3 bucket
+  sessionId: string // The RecordingSession ID this belongs to
+  type: 'CAMERA' | 'MICROPHONE' | 'SCREENSHARE' // The source track type
 }
 
 /**
