@@ -1,18 +1,20 @@
-import { ConfigLoader } from '@ototabi/common/config-loader'
+import { env } from '../env'
 
-const clientConfigSchema = {
-  frontendUrl: () => process.env.NEXT_PUBLIC_APP_URL || '',
-  apiBaseUrl: () => process.env.NEXT_PUBLIC_API_URL || '',
-  databaseUrl: () => process.env.DATABASE_URL || '',
-  nodeEnv: () => process.env.NODE_ENV || 'development',
-  liveKitUrl: () => process.env.NEXT_PUBLIC_LIVEKIT_URL || '',
+const configMap = {
+  frontendUrl: env.NEXT_PUBLIC_APP_URL,
+  apiBaseUrl: env.NEXT_PUBLIC_API_URL,
+  liveKitUrl: env.NEXT_PUBLIC_LIVEKIT_URL,
+  nodeEnv: env.NODE_ENV,
+} as const
+
+type ConfigKey = keyof typeof configMap
+
+const config = {
+  getConfig: <K extends ConfigKey>(key: K): (typeof configMap)[K] => configMap[key],
 }
 
-const config = ConfigLoader.getInstance(clientConfigSchema, 'client')
-
-config.validate(['frontendUrl', 'apiBaseUrl', 'nodeEnv', 'liveKitUrl'])
-
-if (config.getConfig('nodeEnv') === 'development') {
-  console.log('Configuration loaded:', config.getConfig('liveKitUrl'))
+if (typeof window !== 'undefined' && env.NODE_ENV === 'development') {
+  console.log('Config:', config.getConfig('liveKitUrl'))
 }
+
 export default config

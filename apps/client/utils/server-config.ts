@@ -1,4 +1,4 @@
-'use server-only'
+'server-only'
 
 import { ConfigLoader } from '@ototabi/common/config-loader'
 

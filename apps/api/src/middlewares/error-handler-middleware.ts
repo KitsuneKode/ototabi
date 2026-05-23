@@ -1,18 +1,26 @@
 import { logger } from '@/utils/logger'
-import type {
-  ErrorRequestHandler,
-  NextFunction,
-  Request,
-  Response,
-} from 'express'
+import type { NextFunction, Request, Response } from 'express'
 
 export const errorHandler = (
-  error: ErrorRequestHandler,
-  req: Request,
+  error: Error,
+  _req: Request,
   res: Response,
-  next: NextFunction,
+  _next: NextFunction,
 ) => {
-  logger.error('Error occurred in path', req.path, ':', error)
+  logger.error(`Error occurred in path ${_req.path}:`, {
+    message: error.message,
+    stack: error.stack,
+  })
 
-  res.status(500).json({ error: 'Internal Server Error' })
+  const status =
+    'status' in error && typeof error.status === 'number'
+      ? error.status
+      : 'statusCode' in error && typeof (error as any).statusCode === 'number'
+        ? (error as any).statusCode
+        : 500
+
+  res.status(status).json({
+    error: error.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
+  })
 }
