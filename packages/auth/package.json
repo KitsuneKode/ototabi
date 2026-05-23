@@ -1,11 +1,15 @@
 {
   "name": "@ototabi/auth",
-  "module": "src/index.ts",
-  "type": "module",
   "private": true,
+  "type": "module",
+  "module": "src/index.ts",
   "exports": {
     "./server": "./src/index.ts",
     "./client": "./src/client.ts"
+  },
+  "dependencies": {
+    "@ototabi/store": "*",
+    "better-auth": "^1.2.12"
   },
   "devDependencies": {
     "@ototabi/typescript-config": "*",
@@ -13,9 +17,5 @@
   },
   "peerDependencies": {
     "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "@ototabi/store": "*",
-    "better-auth": "^1.2.12"
   }
 }

@@ -1,18 +1,18 @@
 {
   "name": "@ototabi/tests",
-  "module": "src/index.ts",
-  "type": "module",
   "private": true,
+  "type": "module",
+  "module": "src/index.ts",
   "scripts": {
     "test:watch": "bun test --watch",
     "test": "bun test",
     "test:coverage": "bun test --coverage"
   },
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
   "dependencies": {
     "@ototabi/common": "*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"

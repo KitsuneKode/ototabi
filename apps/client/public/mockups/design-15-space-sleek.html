@@ -1,88 +1,161 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ototabi Mockup // Design 15: Space Sleek</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
-      --ease-button: cubic-bezier(0.25, 1, 0.5, 1);
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background-color: #000000;
-      color: #ffffff;
-      -webkit-font-smoothing: antialiased;
-    }
-    
-    .sleek-panel {
-      background: rgba(28, 28, 30, 0.6);
-      backdrop-filter: blur(40px);
-      -webkit-backdrop-filter: blur(40px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 20px;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ototabi Mockup // Design 15: Space Sleek</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+        --ease-button: cubic-bezier(0.25, 1, 0.5, 1);
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #000000;
+        color: #ffffff;
+        -webkit-font-smoothing: antialiased;
+      }
 
-    .sleek-btn {
-      transition: transform 150ms var(--ease-button), background-color 200ms ease;
-    }
-    .sleek-btn:active {
-      transform: scale(0.97);
-    }
-    
-    .sleek-btn-primary {
-      background: linear-gradient(180deg, #007AFF 0%, #0056B3 100%);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    }
+      .sleek-panel {
+        background: rgba(28, 28, 30, 0.6);
+        backdrop-filter: blur(40px);
+        -webkit-backdrop-filter: blur(40px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+      }
 
-    .fade-enter {
-      opacity: 0;
-      transform: scale(0.98);
-      animation: fadeEnter 400ms var(--ease-ios) forwards;
-    }
-    .delay-1 { animation-delay: 100ms; }
+      .sleek-btn {
+        transition:
+          transform 150ms var(--ease-button),
+          background-color 200ms ease;
+      }
+      .sleek-btn:active {
+        transform: scale(0.97);
+      }
 
-    @keyframes fadeEnter {
-      to { opacity: 1; transform: scale(1); }
-    }
-  </style>
-</head>
-<body class="min-h-screen flex items-center justify-center p-4">
-  <div class="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-800/40 via-black to-black pointer-events-none"></div>
+      .sleek-btn-primary {
+        background: linear-gradient(180deg, #007aff 0%, #0056b3 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
 
-  <div class="w-full max-w-2xl sleek-panel p-8 relative z-10 flex flex-col items-center fade-enter shadow-2xl">
-    
-    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 flex items-center justify-center mb-6 shadow-inner">
-      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
-    </div>
+      .fade-enter {
+        opacity: 0;
+        transform: scale(0.98);
+        animation: fadeEnter 400ms var(--ease-ios) forwards;
+      }
+      .delay-1 {
+        animation-delay: 100ms;
+      }
 
-    <h1 class="text-2xl font-semibold mb-2">Ototabi Studio</h1>
-    <p class="text-gray-400 mb-8 text-center text-sm">Join the session "Weekly Sync". Your camera is currently off.</p>
+      @keyframes fadeEnter {
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+    </style>
+  </head>
+  <body class="flex min-h-screen items-center justify-center p-4">
+    <div
+      class="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-800/40 via-black to-black"
+    ></div>
 
-    <div class="w-full bg-black/50 border border-white/10 rounded-xl aspect-video flex flex-col items-center justify-center mb-8 relative">
-      <div class="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center mb-3">
-        <span class="text-gray-500 font-medium text-xs">OFF</span>
+    <div
+      class="sleek-panel fade-enter relative z-10 flex w-full max-w-2xl flex-col items-center p-8 shadow-2xl"
+    >
+      <div
+        class="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-gray-700 to-gray-900 shadow-inner"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="text-blue-500"
+        >
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="22"></line>
+        </svg>
+      </div>
+
+      <h1 class="mb-2 text-2xl font-semibold">Ototabi Studio</h1>
+      <p class="mb-8 text-center text-sm text-gray-400">
+        Join the session "Weekly Sync". Your camera is currently off.
+      </p>
+
+      <div
+        class="relative mb-8 flex aspect-video w-full flex-col items-center justify-center rounded-xl border border-white/10 bg-black/50"
+      >
+        <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-800">
+          <span class="text-xs font-medium text-gray-500">OFF</span>
+        </div>
+      </div>
+
+      <div class="fade-enter mb-8 flex w-full flex-col gap-3 delay-1">
+        <button
+          class="sleek-panel sleek-btn flex w-full items-center justify-between p-4 hover:bg-white/5"
+        >
+          <span class="text-sm font-medium">Microphone</span>
+          <span class="flex items-center gap-2 text-sm text-gray-400"
+            >Built-in
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m6 9 6 6 6-6" /></svg
+          ></span>
+        </button>
+        <button
+          class="sleek-panel sleek-btn flex w-full items-center justify-between p-4 hover:bg-white/5"
+        >
+          <span class="text-sm font-medium">Camera</span>
+          <span class="flex items-center gap-2 text-sm text-gray-400"
+            >FaceTime HD
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m6 9 6 6 6-6" /></svg
+          ></span>
+        </button>
+      </div>
+
+      <div class="fade-enter flex w-full gap-4 delay-1">
+        <button
+          class="sleek-btn flex-1 rounded-xl bg-white/10 py-3.5 text-sm font-semibold hover:bg-white/15"
+        >
+          Cancel
+        </button>
+        <button class="sleek-btn-primary sleek-btn flex-1 rounded-xl py-3.5 text-sm font-semibold">
+          Join
+        </button>
       </div>
     </div>
-
-    <div class="flex flex-col w-full gap-3 mb-8 fade-enter delay-1">
-      <button class="sleek-panel w-full p-4 flex justify-between items-center sleek-btn hover:bg-white/5">
-        <span class="font-medium text-sm">Microphone</span>
-        <span class="text-gray-400 text-sm flex items-center gap-2">Built-in <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
-      </button>
-      <button class="sleek-panel w-full p-4 flex justify-between items-center sleek-btn hover:bg-white/5">
-        <span class="font-medium text-sm">Camera</span>
-        <span class="text-gray-400 text-sm flex items-center gap-2">FaceTime HD <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
-      </button>
-    </div>
-
-    <div class="flex gap-4 w-full fade-enter delay-1">
-      <button class="flex-1 py-3.5 rounded-xl bg-white/10 hover:bg-white/15 font-semibold text-sm sleek-btn">Cancel</button>
-      <button class="flex-1 py-3.5 rounded-xl sleek-btn-primary font-semibold text-sm sleek-btn">Join</button>
-    </div>
-  </div>
-</body>
+  </body>
 </html>

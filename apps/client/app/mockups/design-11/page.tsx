@@ -1,10 +1,10 @@
 "use client";
 
-import { Video } from 'lucide-react';
+import { Video } from "lucide-react";
 
 export default function ClayBentoMockup() {
   return (
-    <div className="min-h-screen flex flex-col p-6 bg-[#FDF8F5] text-[#3D3D3D] font-sans">
+    <div className="flex min-h-screen flex-col bg-[#FDF8F5] p-6 font-sans text-[#3D3D3D]">
       <style>{`
         :root {
           --spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -35,37 +35,39 @@ export default function ClayBentoMockup() {
         .pop-in:nth-child(3) { animation-delay: 150ms; }
         @keyframes popIn { 0% { opacity: 0; transform: scale(0.8) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
       `}</style>
-      <header className="flex justify-between items-center mb-8 pop-in">
-        <div className="clay-card px-6 py-3 font-bold text-xl text-[#FF8B66] flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-[#FF8B66] animate-pulse" />
+      <header className="pop-in mb-8 flex items-center justify-between">
+        <div className="clay-card flex items-center gap-2 px-6 py-3 text-xl font-bold text-[#FF8B66]">
+          <div className="h-3 w-3 animate-pulse rounded-full bg-[#FF8B66]" />
           Ototabi
         </div>
         <div className="clay-card px-4 py-2 text-sm font-semibold text-gray-400">Mockup 11</div>
       </header>
-      <main className="flex-1 flex flex-col items-center justify-center max-w-5xl mx-auto w-full">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 w-full">
-          <div className="clay-card col-span-12 md:col-span-8 p-4 flex flex-col pop-in h-[400px]">
-            <div className="flex justify-between items-center mb-4 px-2">
-              <h2 className="font-bold text-lg">Studio Preview</h2>
-              <span className="bg-gray-100 text-gray-500 text-xs font-bold px-3 py-1 rounded-full">Offline</span>
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center">
+        <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-12">
+          <div className="clay-card pop-in col-span-12 flex h-[400px] flex-col p-4 md:col-span-8">
+            <div className="mb-4 flex items-center justify-between px-2">
+              <h2 className="text-lg font-bold">Studio Preview</h2>
+              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-500">
+                Offline
+              </span>
             </div>
-            <div className="clay-inner flex-1 flex flex-col items-center justify-center">
-              <Video className="w-12 h-12 text-[#D6CCC4] mb-4" />
-              <span className="text-gray-400 font-semibold text-sm">Waiting for camera...</span>
+            <div className="clay-inner flex flex-1 flex-col items-center justify-center">
+              <Video className="mb-4 h-12 w-12 text-[#D6CCC4]" />
+              <span className="text-sm font-semibold text-gray-400">Waiting for camera...</span>
             </div>
           </div>
-          <div className="col-span-12 md:col-span-4 flex flex-col gap-6 pop-in">
-            <div className="clay-card p-6 flex flex-col gap-4 h-full">
-              <div className="font-bold text-lg mb-2">Devices</div>
-              <div className="clay-inner p-4 hover:scale-[1.02] transition-transform cursor-pointer">
-                <div className="text-xs font-bold text-[#FF8B66] mb-1">Microphone</div>
-                <div className="font-semibold text-sm text-gray-700">Default Audio Input</div>
+          <div className="pop-in col-span-12 flex flex-col gap-6 md:col-span-4">
+            <div className="clay-card flex h-full flex-col gap-4 p-6">
+              <div className="mb-2 text-lg font-bold">Devices</div>
+              <div className="clay-inner cursor-pointer p-4 transition-transform hover:scale-[1.02]">
+                <div className="mb-1 text-xs font-bold text-[#FF8B66]">Microphone</div>
+                <div className="text-sm font-semibold text-gray-700">Default Audio Input</div>
               </div>
-              <div className="clay-inner p-4 hover:scale-[1.02] transition-transform cursor-pointer">
-                <div className="text-xs font-bold text-gray-400 mb-1">Speaker</div>
-                <div className="font-semibold text-sm text-gray-700">System Audio Output</div>
+              <div className="clay-inner cursor-pointer p-4 transition-transform hover:scale-[1.02]">
+                <div className="mb-1 text-xs font-bold text-gray-400">Speaker</div>
+                <div className="text-sm font-semibold text-gray-700">System Audio Output</div>
               </div>
-              <button className="clay-btn w-full py-5 text-lg font-bold mt-auto">Join Room</button>
+              <button className="clay-btn mt-auto w-full py-5 text-lg font-bold">Join Room</button>
             </div>
           </div>
         </div>

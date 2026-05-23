@@ -1,25 +1,23 @@
-import superjson from 'superjson'
-import { z, ZodError } from 'zod/v4'
-import { prisma as db } from '@ototabi/store'
-import { initTRPC, TRPCError } from '@trpc/server'
-import { auth, fromNodeHeaders } from '@ototabi/auth/server'
-import * as trpcExpress from '@trpc/server/adapters/express'
+import { auth, fromNodeHeaders } from "@ototabi/auth/server";
+import { prisma as db } from "@ototabi/store";
+import { initTRPC, TRPCError } from "@trpc/server";
+import * as trpcExpress from "@trpc/server/adapters/express";
+import superjson from "superjson";
+import { z, ZodError } from "zod/v4";
 
-export const createTRPCContext = async ({
-  req,
-}: trpcExpress.CreateExpressContextOptions) => {
-  const headers = fromNodeHeaders(req.headers)
+export const createTRPCContext = async ({ req }: trpcExpress.CreateExpressContextOptions) => {
+  const headers = fromNodeHeaders(req.headers);
 
   const session = await auth.api.getSession({
     headers,
-  })
+  });
   return {
     session,
     db,
-  }
-}
+  };
+};
 
-type Context = Awaited<ReturnType<typeof createTRPCContext>>
+type Context = Awaited<ReturnType<typeof createTRPCContext>>;
 
 const t = initTRPC.context<Context>().create({
   transformer: superjson,
@@ -33,41 +31,39 @@ const t = initTRPC.context<Context>().create({
           : null,
     },
   }),
-})
+});
 
-export const createTRPCRouter = t.router
-export const createCallerFactory = t.createCallerFactory
-export const mergeTRPCRouters = t.mergeRouters
+export const createTRPCRouter = t.router;
+export const createCallerFactory = t.createCallerFactory;
+export const mergeTRPCRouters = t.mergeRouters;
 
 const timingMiddleware = t.middleware(async ({ next, path }) => {
-  const start = Date.now()
+  const start = Date.now();
 
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === "development") {
     // artificial delay in dev 100-500ms
-    const waitMs = Math.floor(Math.random() * 400) + 100
-    await new Promise((resolve) => setTimeout(resolve, waitMs))
+    const waitMs = Math.floor(Math.random() * 400) + 100;
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
   }
 
-  const result = await next()
+  const result = await next();
 
-  const end = Date.now()
-  console.log(`[TRPC] ${path} took ${end - start}ms to execute`)
+  const end = Date.now();
+  console.log(`[TRPC] ${path} took ${end - start}ms to execute`);
 
-  return result
-})
+  return result;
+});
 
-export const publicProcedure = t.procedure.use(timingMiddleware)
+export const publicProcedure = t.procedure.use(timingMiddleware);
 
-export const protectedProcedure = t.procedure
-  .use(timingMiddleware)
-  .use(({ ctx, next }) => {
-    if (!ctx.session?.user) {
-      throw new TRPCError({ code: 'UNAUTHORIZED' })
-    }
-    return next({
-      ctx: {
-        // infers the `session` as non-nullable
-        session: { ...ctx.session, user: ctx.session.user },
-      },
-    })
-  })
+export const protectedProcedure = t.procedure.use(timingMiddleware).use(({ ctx, next }) => {
+  if (!ctx.session?.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  return next({
+    ctx: {
+      // infers the `session` as non-nullable
+      session: { ...ctx.session, user: ctx.session.user },
+    },
+  });
+});

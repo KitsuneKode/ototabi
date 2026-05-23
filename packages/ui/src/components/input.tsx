@@ -1,21 +1,20 @@
-import * as React from 'react'
+import { cn } from "@ototabi/ui/lib/utils";
+import * as React from "react";
 
-import { cn } from '@ototabi/ui/lib/utils'
-
-function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
+function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
     <input
       type={type}
       data-slot="input"
       className={cn(
-        'file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground flex h-10 w-full min-w-0 rounded-md border-2 border-border bg-[#111111] text-[#e0e0e0] font-mono tracking-wider px-3 py-1 text-base shadow-[inset_0_2px_6px_rgba(0,0,0,0.8)] transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
-        'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px]',
-        'aria-invalid:ring-destructive/20 aria-invalid:border-destructive',
+        "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground border-border flex h-10 w-full min-w-0 rounded-md border-2 bg-[#111111] px-3 py-1 font-mono text-base tracking-wider text-[#e0e0e0] shadow-[inset_0_2px_6px_rgba(0,0,0,0.8)] transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[2px]",
+        "aria-invalid:ring-destructive/20 aria-invalid:border-destructive",
         className,
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { Input }
+export { Input };

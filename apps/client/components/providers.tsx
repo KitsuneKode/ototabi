@@ -1,8 +1,9 @@
-'use client'
+"use client";
 
-import * as React from 'react'
-import { TRPCReactProvider } from '@/trpc/client'
-import { ThemeProvider as NextThemesProvider } from 'next-themes'
+import { ThemeProvider as NextThemesProvider } from "next-themes";
+import * as React from "react";
+
+import { TRPCReactProvider } from "@/trpc/client";
 
 /**
  * Wraps child components with theme and TRPC context providers.
@@ -22,5 +23,5 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <TRPCReactProvider>{children}</TRPCReactProvider>
     </NextThemesProvider>
-  )
+  );
 }

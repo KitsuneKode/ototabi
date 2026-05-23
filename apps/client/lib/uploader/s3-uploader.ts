@@ -1,17 +1,18 @@
-import type { Part } from '@aws-sdk/client-s3'
-import { trpcClient } from '../../trpc/vanilla'
+import type { Part } from "@aws-sdk/client-s3";
+
+import { trpcClient } from "../../trpc/vanilla";
 
 /**
  * Manages the S3/R2 multipart upload process for a single track by
  * communicating with the application's tRPC backend.
  */
 export class S3Uploader {
-  private readonly trackSid: string
-  private readonly sessionId: string
-  private readonly type: 'CAMERA' | 'MICROPHONE' | 'SCREENSHARE'
-  private uploadId: string | null = null
-  private s3Key: string | null = null
-  private parts: Map<number, { ETag: string }> = new Map()
+  private readonly trackSid: string;
+  private readonly sessionId: string;
+  private readonly type: "CAMERA" | "MICROPHONE" | "SCREENSHARE";
+  private uploadId: string | null = null;
+  private s3Key: string | null = null;
+  private parts: Map<number, { ETag: string }> = new Map();
 
   /**
    * Initializes the uploader. If an existing session is provided,
@@ -24,21 +25,21 @@ export class S3Uploader {
   constructor(
     trackSid: string,
     sessionId: string,
-    type: 'CAMERA' | 'MICROPHONE' | 'SCREENSHARE',
+    type: "CAMERA" | "MICROPHONE" | "SCREENSHARE",
     existingSession?: { uploadId: string; s3Key: string },
   ) {
-    this.trackSid = trackSid
-    this.sessionId = sessionId
-    this.type = type
+    this.trackSid = trackSid;
+    this.sessionId = sessionId;
+    this.type = type;
     if (existingSession) {
-      this.uploadId = existingSession.uploadId
-      this.s3Key = existingSession.s3Key
+      this.uploadId = existingSession.uploadId;
+      this.s3Key = existingSession.s3Key;
     }
   }
 
   // Getters to safely access internal state
-  getUploadId = (): string | null => this.uploadId
-  getS3Key = (): string | null => this.s3Key
+  getUploadId = (): string | null => this.uploadId;
+  getS3Key = (): string | null => this.s3Key;
 
   /**
    * Calls the backend to start a new multipart upload, receiving an uploadId and a final S3 key.
@@ -49,13 +50,13 @@ export class S3Uploader {
         trackSid: this.trackSid,
         sessionId: this.sessionId,
         type: this.type,
-      })
+      });
 
-      this.uploadId = response.uploadId
-      this.s3Key = response.key
+      this.uploadId = response.uploadId;
+      this.s3Key = response.key;
     } catch (err) {
-      console.error('Failed to start multipart upload via tRPC:', err)
-      throw new Error('Failed to start multipart upload.')
+      console.error("Failed to start multipart upload via tRPC:", err);
+      throw new Error("Failed to start multipart upload.");
     }
   }
 
@@ -64,22 +65,22 @@ export class S3Uploader {
    * successfully uploaded, preventing wasteful re-uploads.
    */
   async recoverExistingParts(): Promise<void> {
-    if (!this.uploadId || !this.s3Key) return
+    if (!this.uploadId || !this.s3Key) return;
     try {
       const response = await trpcClient.uploads.listParts.mutate({
         key: this.s3Key,
         uploadId: this.uploadId,
-      })
+      });
 
-      const partsList = response.parts as Part[]
+      const partsList = response.parts as Part[];
       for (const part of partsList) {
         if (part.PartNumber && part.ETag) {
-          this.parts.set(part.PartNumber, { ETag: part.ETag })
+          this.parts.set(part.PartNumber, { ETag: part.ETag });
         }
       }
     } catch (err) {
-      console.error('Failed to recover existing parts via tRPC:', err)
-      throw new Error('Failed to list existing parts.')
+      console.error("Failed to recover existing parts via tRPC:", err);
+      throw new Error("Failed to list existing parts.");
     }
   }
 
@@ -97,13 +98,12 @@ export class S3Uploader {
     maxRetries = 3,
     onProgress?: (sentBytes: number) => void,
   ): Promise<void> {
-    if (!this.uploadId || !this.s3Key)
-      throw new Error('Upload has not been started.')
+    if (!this.uploadId || !this.s3Key) throw new Error("Upload has not been started.");
 
     // Skip if already uploaded
     if (this.parts.has(partNumber)) {
-      if (onProgress) onProgress(chunk.size)
-      return
+      if (onProgress) onProgress(chunk.size);
+      return;
     }
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -113,51 +113,43 @@ export class S3Uploader {
           key: this.s3Key,
           uploadId: this.uploadId,
           partNumber,
-        })
+        });
 
-        let etag = 'mock-etag'
+        let etag = "mock-etag";
 
         // 2. Perform direct upload to S3/R2 or mock upload local bypass
-        if (
-          url.startsWith('/api/mock-upload') ||
-          this.uploadId.startsWith('mock-upload-id')
-        ) {
+        if (url.startsWith("/api/mock-upload") || this.uploadId.startsWith("mock-upload-id")) {
           // Simulate latency of a network request
-          await new Promise((resolve) => setTimeout(resolve, 300))
-          if (onProgress) onProgress(chunk.size)
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          if (onProgress) onProgress(chunk.size);
         } else {
           // Real HTTP PUT request to AWS S3 / Cloudflare R2
           // Wrap in XMLHttpRequest to track progress if needed, or use simple fetch
           const uploadResponse = await fetch(url, {
-            method: 'PUT',
+            method: "PUT",
             body: chunk,
-          })
+          });
 
           if (!uploadResponse.ok) {
-            throw new Error(
-              `S3 PUT failed with status ${uploadResponse.status}`,
-            )
+            throw new Error(`S3 PUT failed with status ${uploadResponse.status}`);
           }
 
-          const responseEtag = uploadResponse.headers.get('ETag')
+          const responseEtag = uploadResponse.headers.get("ETag");
           if (!responseEtag) {
-            throw new Error('ETag not found in S3 response.')
+            throw new Error("ETag not found in S3 response.");
           }
-          etag = responseEtag
-          if (onProgress) onProgress(chunk.size)
+          etag = responseEtag;
+          if (onProgress) onProgress(chunk.size);
         }
 
         // 3. Store ETag for complete multipart upload
-        this.parts.set(partNumber, { ETag: etag.replace(/"/g, '') })
-        return
+        this.parts.set(partNumber, { ETag: etag.replace(/"/g, "") });
+        return;
       } catch (error) {
-        console.warn(
-          `Attempt ${attempt} failed for part #${partNumber}:`,
-          error,
-        )
-        if (attempt === maxRetries) throw error
-        const delay = Math.pow(2, attempt) * 500
-        await new Promise((resolve) => setTimeout(resolve, delay))
+        console.warn(`Attempt ${attempt} failed for part #${partNumber}:`, error);
+        if (attempt === maxRetries) throw error;
+        const delay = Math.pow(2, attempt) * 500;
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
@@ -167,20 +159,20 @@ export class S3Uploader {
    * the uploaded parts into a single file.
    */
   async complete(): Promise<void> {
-    if (!this.uploadId || !this.s3Key || this.parts.size === 0) return
+    if (!this.uploadId || !this.s3Key || this.parts.size === 0) return;
     const sortedParts = Array.from(this.parts.entries())
       .sort(([numA], [numB]) => numA - numB)
-      .map(([PartNumber, { ETag }]) => ({ ETag, PartNumber }))
+      .map(([PartNumber, { ETag }]) => ({ ETag, PartNumber }));
 
     try {
       await trpcClient.uploads.complete.mutate({
         key: this.s3Key,
         uploadId: this.uploadId,
         parts: sortedParts,
-      })
+      });
     } catch (err) {
-      console.error('Failed to complete upload via tRPC:', err)
-      throw new Error('Failed to finalize upload.')
+      console.error("Failed to complete upload via tRPC:", err);
+      throw new Error("Failed to finalize upload.");
     }
   }
 }

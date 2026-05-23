@@ -1,170 +1,188 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ototabi Mockup // Design 16: Retro Analog</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg-color: #d1ccbd;
-      --panel-dark: #2c2b29;
-      --led-on: #ff4a3d;
-      --led-off: #592420;
-      --ease-mechanical: cubic-bezier(0.1, 0.9, 0.2, 1);
-    }
-    body {
-      font-family: 'Oswald', sans-serif;
-      background-color: #a8a396;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-      padding: 20px;
-    }
-    
-    .analog-chassis {
-      background: var(--bg-color);
-      border-radius: 8px;
-      box-shadow: 
-        inset 0 2px 5px rgba(255,255,255,0.7),
-        0 20px 30px rgba(0,0,0,0.4),
-        0 4px 0px #8f8a7e;
-      border: 1px solid #706b60;
-      padding: 30px;
-      width: 100%;
-      max-w: 900px;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ototabi Mockup // Design 16: Retro Analog</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Oswald:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-color: #d1ccbd;
+        --panel-dark: #2c2b29;
+        --led-on: #ff4a3d;
+        --led-off: #592420;
+        --ease-mechanical: cubic-bezier(0.1, 0.9, 0.2, 1);
+      }
+      body {
+        font-family: "Oswald", sans-serif;
+        background-color: #a8a396;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 20px;
+      }
 
-    .display-screen {
-      background: #111;
-      border: 4px solid #1a1a1a;
-      border-radius: 8px;
-      box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
-      position: relative;
-    }
-    
-    .display-screen::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%);
-      background-size: 100% 4px;
-      pointer-events: none;
-    }
+      .analog-chassis {
+        background: var(--bg-color);
+        border-radius: 8px;
+        box-shadow:
+          inset 0 2px 5px rgba(255, 255, 255, 0.7),
+          0 20px 30px rgba(0, 0, 0, 0.4),
+          0 4px 0px #8f8a7e;
+        border: 1px solid #706b60;
+        padding: 30px;
+        width: 100%;
+        max-w: 900px;
+      }
 
-    .analog-btn {
-      background: linear-gradient(180deg, #e6e2d3 0%, #b8b3a3 100%);
-      border: 1px solid #827e71;
-      border-radius: 4px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.2), inset 0 1px 2px rgba(255,255,255,0.8);
-      color: #333;
-      font-family: 'Oswald', sans-serif;
-      text-transform: uppercase;
-      font-weight: 600;
-      letter-spacing: 1px;
-      transition: transform 100ms var(--ease-mechanical), box-shadow 100ms var(--ease-mechanical);
-      cursor: pointer;
-    }
-    .analog-btn:active {
-      transform: translateY(3px);
-      box-shadow: 0 1px 2px rgba(0,0,0,0.2), inset 0 1px 4px rgba(0,0,0,0.3);
-    }
+      .display-screen {
+        background: #111;
+        border: 4px solid #1a1a1a;
+        border-radius: 8px;
+        box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+        position: relative;
+      }
 
-    .led {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: var(--led-off);
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
-      transition: background-color 200ms ease, box-shadow 200ms ease;
-    }
-    .led.active {
-      background: var(--led-on);
-      box-shadow: 0 0 10px var(--led-on), inset 0 2px 4px rgba(255,255,255,0.4);
-    }
+      .display-screen::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+        background-size: 100% 4px;
+        pointer-events: none;
+      }
 
-    .label {
-      font-family: 'Courier Prime', monospace;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      color: #4a4843;
-      text-transform: uppercase;
-    }
+      .analog-btn {
+        background: linear-gradient(180deg, #e6e2d3 0%, #b8b3a3 100%);
+        border: 1px solid #827e71;
+        border-radius: 4px;
+        box-shadow:
+          0 4px 6px rgba(0, 0, 0, 0.2),
+          inset 0 1px 2px rgba(255, 255, 255, 0.8);
+        color: #333;
+        font-family: "Oswald", sans-serif;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 1px;
+        transition:
+          transform 100ms var(--ease-mechanical),
+          box-shadow 100ms var(--ease-mechanical);
+        cursor: pointer;
+      }
+      .analog-btn:active {
+        transform: translateY(3px);
+        box-shadow:
+          0 1px 2px rgba(0, 0, 0, 0.2),
+          inset 0 1px 4px rgba(0, 0, 0, 0.3);
+      }
 
-    .slide-in {
-      animation: slideIn 500ms var(--ease-mechanical) forwards;
-    }
-    @keyframes slideIn {
-      from { transform: translateY(-20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-  </style>
-</head>
-<body>
+      .led {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--led-off);
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+        transition:
+          background-color 200ms ease,
+          box-shadow 200ms ease;
+      }
+      .led.active {
+        background: var(--led-on);
+        box-shadow:
+          0 0 10px var(--led-on),
+          inset 0 2px 4px rgba(255, 255, 255, 0.4);
+      }
 
-  <div class="analog-chassis slide-in max-w-4xl w-full">
-    
-    <div class="flex justify-between items-end border-b-2 border-[#a39f93] pb-4 mb-8">
-      <div>
-        <h1 class="text-4xl font-bold text-[#2c2b29] m-0 leading-none tracking-tight">OTOTABI</h1>
-        <span class="label block mt-1">Model 16-A // Studio Controller</span>
-      </div>
-      <div class="flex gap-4">
-        <div class="flex flex-col items-center gap-2">
-          <div class="led active"></div>
-          <span class="label">PWR</span>
+      .label {
+        font-family: "Courier Prime", monospace;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        color: #4a4843;
+        text-transform: uppercase;
+      }
+
+      .slide-in {
+        animation: slideIn 500ms var(--ease-mechanical) forwards;
+      }
+      @keyframes slideIn {
+        from {
+          transform: translateY(-20px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="analog-chassis slide-in w-full max-w-4xl">
+      <div class="mb-8 flex items-end justify-between border-b-2 border-[#a39f93] pb-4">
+        <div>
+          <h1 class="m-0 text-4xl leading-none font-bold tracking-tight text-[#2c2b29]">OTOTABI</h1>
+          <span class="label mt-1 block">Model 16-A // Studio Controller</span>
         </div>
-        <div class="flex flex-col items-center gap-2">
-          <div class="led active animate-pulse"></div>
-          <span class="label">RDY</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
-      
-      <!-- Screen -->
-      <div class="md:col-span-8 display-screen aspect-video flex flex-col items-center justify-center p-4">
-        <div class="text-[#888] font-mono text-sm tracking-widest text-center">
-          [ SIGNAL LOST ]<br><br>
-          CHECK VIDEO INPUT
-        </div>
-      </div>
-
-      <!-- Controls -->
-      <div class="md:col-span-4 flex flex-col gap-6 bg-[#b5b0a1] p-6 rounded-lg shadow-inner border border-[#969285]">
-        
-        <div class="flex flex-col gap-2">
-          <span class="label">INPUT 1: AUDIO</span>
-          <div class="flex items-center gap-3 bg-[#a39f93] p-2 rounded border border-[#8a867b] shadow-inner">
+        <div class="flex gap-4">
+          <div class="flex flex-col items-center gap-2">
             <div class="led active"></div>
-            <span class="font-bold text-sm text-[#2c2b29]">MAIN MIC</span>
+            <span class="label">PWR</span>
           </div>
-        </div>
-
-        <div class="flex flex-col gap-2">
-          <span class="label">INPUT 2: VIDEO</span>
-          <div class="flex items-center gap-3 bg-[#a39f93] p-2 rounded border border-[#8a867b] shadow-inner">
-            <div class="led"></div>
-            <span class="font-bold text-sm text-[#555]">OFFLINE</span>
+          <div class="flex flex-col items-center gap-2">
+            <div class="led active animate-pulse"></div>
+            <span class="label">RDY</span>
           </div>
-        </div>
-
-        <div class="mt-auto pt-6 border-t-2 border-[#a39f93]">
-          <span class="label block text-center mb-3">ENGAGE SEQUENCE</span>
-          <button class="analog-btn w-full py-4 text-lg">
-            Connect
-          </button>
         </div>
       </div>
 
+      <div class="grid grid-cols-1 gap-8 md:grid-cols-12">
+        <!-- Screen -->
+        <div
+          class="display-screen flex aspect-video flex-col items-center justify-center p-4 md:col-span-8"
+        >
+          <div class="text-center font-mono text-sm tracking-widest text-[#888]">
+            [ SIGNAL LOST ]<br /><br />
+            CHECK VIDEO INPUT
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div
+          class="flex flex-col gap-6 rounded-lg border border-[#969285] bg-[#b5b0a1] p-6 shadow-inner md:col-span-4"
+        >
+          <div class="flex flex-col gap-2">
+            <span class="label">INPUT 1: AUDIO</span>
+            <div
+              class="flex items-center gap-3 rounded border border-[#8a867b] bg-[#a39f93] p-2 shadow-inner"
+            >
+              <div class="led active"></div>
+              <span class="text-sm font-bold text-[#2c2b29]">MAIN MIC</span>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <span class="label">INPUT 2: VIDEO</span>
+            <div
+              class="flex items-center gap-3 rounded border border-[#8a867b] bg-[#a39f93] p-2 shadow-inner"
+            >
+              <div class="led"></div>
+              <span class="text-sm font-bold text-[#555]">OFFLINE</span>
+            </div>
+          </div>
+
+          <div class="mt-auto border-t-2 border-[#a39f93] pt-6">
+            <span class="label mb-3 block text-center">ENGAGE SEQUENCE</span>
+            <button class="analog-btn w-full py-4 text-lg">Connect</button>
+          </div>
+        </div>
+      </div>
     </div>
-
-  </div>
-
-</body>
+  </body>
 </html>

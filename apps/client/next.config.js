@@ -1,11 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['@ototabi/ui', '@ototabi/auth', '@ototabi/trpc', '@ototabi/store'],
+  transpilePackages: ["@ototabi/ui", "@ototabi/auth", "@ototabi/trpc", "@ototabi/store"],
   logging: {
-    level: 'verbose',
+    level: "verbose",
     fullUrl: true,
   },
-  serverExternalPackages: ['@prisma/client'],
-}
+  serverExternalPackages: ["@prisma/client"],
+};
 
-export default nextConfig
+export default nextConfig;

@@ -1,10 +1,10 @@
 "use client";
 
-import { Mic, VideoOff } from 'lucide-react';
+import { Mic, VideoOff } from "lucide-react";
 
 export default function SoftNeumorphicMockup() {
   return (
-    <div className="min-h-screen flex flex-col p-8 items-center justify-center relative bg-[#e0e5ec] text-[#4a5568] font-sans">
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-[#e0e5ec] p-8 font-sans text-[#4a5568]">
       <style>{`
         :root { --bg-color: #e0e5ec; --shadow-light: #ffffff; --shadow-dark: #a3b1c6; --ease-out: cubic-bezier(0.23, 1, 0.32, 1); }
         .neu-flat { background: var(--bg-color); box-shadow: 9px 9px 16px var(--shadow-dark), -9px -9px 16px var(--shadow-light); border-radius: 20px; }
@@ -19,37 +19,37 @@ export default function SoftNeumorphicMockup() {
         .delay-2 { animation-delay: 300ms; }
         @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
       `}</style>
-      <header className="absolute top-8 left-8 right-8 flex justify-between items-center fade-up">
-        <div className="text-xl font-semibold tracking-wide text-teal-600 flex items-center gap-2">
-          <div className="neu-pressed w-8 h-8 rounded-full flex items-center justify-center">
-            <div className="w-3 h-3 bg-teal-500 rounded-full" />
+      <header className="fade-up absolute top-8 right-8 left-8 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xl font-semibold tracking-wide text-teal-600">
+          <div className="neu-pressed flex h-8 w-8 items-center justify-center rounded-full">
+            <div className="h-3 w-3 rounded-full bg-teal-500" />
           </div>
           Ototabi
         </div>
         <div className="text-sm font-medium opacity-60">Design 13: Neumorphic</div>
       </header>
-      <main className="w-full max-w-3xl neu-flat p-10 flex flex-col gap-8 fade-up delay-1 mt-12">
+      <main className="neu-flat fade-up mt-12 flex w-full max-w-3xl flex-col gap-8 p-10 delay-1">
         <div className="text-center">
-          <h2 className="text-2xl font-semibold mb-2">Configure Setup</h2>
+          <h2 className="mb-2 text-2xl font-semibold">Configure Setup</h2>
           <p className="text-sm opacity-70">Adjust your peripherals before you start.</p>
         </div>
-        <div className="neu-pressed w-full aspect-video flex flex-col items-center justify-center relative overflow-hidden">
-          <VideoOff className="w-12 h-12 text-teal-500/50 mb-3" />
+        <div className="neu-pressed relative flex aspect-video w-full flex-col items-center justify-center overflow-hidden">
+          <VideoOff className="mb-3 h-12 w-12 text-teal-500/50" />
           <span className="text-sm font-medium">Camera Disabled</span>
         </div>
-        <div className="flex flex-col sm:flex-row gap-6">
-          <div className="neu-btn p-6 flex-1 flex items-center gap-4 active">
-            <div className="w-10 h-10 neu-pressed rounded-full flex items-center justify-center text-teal-500">
-              <Mic className="w-5 h-5" />
+        <div className="flex flex-col gap-6 sm:flex-row">
+          <div className="neu-btn active flex flex-1 items-center gap-4 p-6">
+            <div className="neu-pressed flex h-10 w-10 items-center justify-center rounded-full text-teal-500">
+              <Mic className="h-5 w-5" />
             </div>
             <div>
               <div className="text-xs font-semibold opacity-60">MIC</div>
               <div className="text-sm font-semibold">Realtek Audio</div>
             </div>
           </div>
-          <div className="neu-btn p-6 flex-1 flex items-center gap-4">
-            <div className="w-10 h-10 neu-flat rounded-full flex items-center justify-center text-gray-400">
-              <VideoOff className="w-5 h-5" />
+          <div className="neu-btn flex flex-1 items-center gap-4 p-6">
+            <div className="neu-flat flex h-10 w-10 items-center justify-center rounded-full text-gray-400">
+              <VideoOff className="h-5 w-5" />
             </div>
             <div>
               <div className="text-xs font-semibold opacity-60">CAM</div>
@@ -57,8 +57,8 @@ export default function SoftNeumorphicMockup() {
             </div>
           </div>
         </div>
-        <div className="flex justify-center mt-4">
-          <button className="neu-btn px-12 py-4 text-teal-600 font-bold tracking-wide hover:text-teal-500">
+        <div className="mt-4 flex justify-center">
+          <button className="neu-btn px-12 py-4 font-bold tracking-wide text-teal-600 hover:text-teal-500">
             JOIN ROOM
           </button>
         </div>

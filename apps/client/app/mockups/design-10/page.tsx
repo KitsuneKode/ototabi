@@ -1,10 +1,10 @@
 "use client";
 
-import { Mic, VideoOff } from 'lucide-react';
+import { Mic, VideoOff } from "lucide-react";
 
 export default function MinimalEditorialMockup() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAFAFA] text-[#111111] font-sans">
+    <div className="flex min-h-screen flex-col bg-[#FAFAFA] font-sans text-[#111111]">
       <style>{`
         :root { --ease-out: cubic-bezier(0.23, 1, 0.32, 1); }
         .stagger-enter > * {
@@ -22,42 +22,49 @@ export default function MinimalEditorialMockup() {
         .fine-border { border: 1px solid #E5E5E5; }
         .serif { font-family: 'Times New Roman', Times, serif; }
       `}</style>
-      <header className="border-b border-gray-200 px-8 py-6 flex justify-between items-center bg-white">
-        <div className="text-2xl font-medium serif tracking-tight">Ototabi</div>
-        <span className="text-xs uppercase tracking-widest text-gray-400 font-medium">Design 10 / Editorial</span>
+      <header className="flex items-center justify-between border-b border-gray-200 bg-white px-8 py-6">
+        <div className="serif text-2xl font-medium tracking-tight">Ototabi</div>
+        <span className="text-xs font-medium tracking-widest text-gray-400 uppercase">
+          Design 10 / Editorial
+        </span>
       </header>
-      <main className="flex-1 flex flex-col items-center p-8 max-w-4xl mx-auto w-full mt-10">
-        <div className="w-full flex flex-col gap-10 stagger-enter">
-          <div className="text-center max-w-lg mx-auto">
-            <h2 className="text-4xl serif font-medium mb-4">Lobby Calibration</h2>
-            <p className="text-sm text-gray-500 font-light leading-relaxed">
-              Please confirm your audio and visual inputs before proceeding into the studio recording session. Quality begins with clarity.
+      <main className="mx-auto mt-10 flex w-full max-w-4xl flex-1 flex-col items-center p-8">
+        <div className="stagger-enter flex w-full flex-col gap-10">
+          <div className="mx-auto max-w-lg text-center">
+            <h2 className="serif mb-4 text-4xl font-medium">Lobby Calibration</h2>
+            <p className="text-sm leading-relaxed font-light text-gray-500">
+              Please confirm your audio and visual inputs before proceeding into the studio
+              recording session. Quality begins with clarity.
             </p>
           </div>
-          <div className="w-full aspect-[21/9] bg-gray-100 fine-border flex items-center justify-center relative overflow-hidden group btn-press cursor-pointer">
-            <div className="absolute inset-0 bg-white/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-            <span className="serif italic text-gray-400 text-lg flex items-center gap-3">
-              <VideoOff className="w-5 h-5" /> Visual feed pending...
+          <div className="fine-border group btn-press relative flex aspect-[21/9] w-full cursor-pointer items-center justify-center overflow-hidden bg-gray-100">
+            <div className="pointer-events-none absolute inset-0 bg-white/50 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <span className="serif flex items-center gap-3 text-lg text-gray-400 italic">
+              <VideoOff className="h-5 w-5" /> Visual feed pending...
             </span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl mx-auto">
-            <div className="fine-border p-6 hover:border-gray-400 transition-colors cursor-pointer btn-press bg-white">
-              <div className="flex justify-between items-end mb-4">
-                <span className="text-[10px] uppercase tracking-widest text-gray-400 flex items-center gap-1.5"><Mic className="w-3 h-3" /> Source / Audio</span>
-                <span className="w-2 h-2 rounded-full bg-green-500" />
+          <div className="mx-auto grid w-full max-w-2xl grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="fine-border btn-press cursor-pointer bg-white p-6 transition-colors hover:border-gray-400">
+              <div className="mb-4 flex items-end justify-between">
+                <span className="flex items-center gap-1.5 text-[10px] tracking-widest text-gray-400 uppercase">
+                  <Mic className="h-3 w-3" /> Source / Audio
+                </span>
+                <span className="h-2 w-2 rounded-full bg-green-500" />
               </div>
               <p className="text-sm font-medium">Studio Microphone A</p>
             </div>
-            <div className="fine-border p-6 hover:border-gray-400 transition-colors cursor-pointer btn-press bg-white">
-              <div className="flex justify-between items-end mb-4">
-                <span className="text-[10px] uppercase tracking-widest text-gray-400 flex items-center gap-1.5"><VideoOff className="w-3 h-3" /> Source / Video</span>
-                <span className="w-2 h-2 rounded-full bg-gray-300" />
+            <div className="fine-border btn-press cursor-pointer bg-white p-6 transition-colors hover:border-gray-400">
+              <div className="mb-4 flex items-end justify-between">
+                <span className="flex items-center gap-1.5 text-[10px] tracking-widest text-gray-400 uppercase">
+                  <VideoOff className="h-3 w-3" /> Source / Video
+                </span>
+                <span className="h-2 w-2 rounded-full bg-gray-300" />
               </div>
               <p className="text-sm font-medium">Camera off</p>
             </div>
           </div>
-          <div className="flex justify-center mt-6">
-            <button className="btn-press bg-[#111] text-white px-10 py-4 text-sm tracking-wide hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black">
+          <div className="mt-6 flex justify-center">
+            <button className="btn-press bg-[#111] px-10 py-4 text-sm tracking-wide text-white hover:bg-gray-800 focus:ring-2 focus:ring-black focus:ring-offset-2 focus:outline-none">
               ENTER STUDIO
             </button>
           </div>

@@ -1,9 +1,9 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 @source "../../../apps/**/*.{ts,tsx}";
 @source "../../../components/**/*.{ts,tsx}";
 @source "../../../**/*.{ts,tsx}";
 
-@import 'tw-animate-css';
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -21,164 +21,164 @@
 
 :root {
   /* Surfaces */
-  --background:         #a8a396; /* outer chassis body — warm grey-beige */
-  --card:               #d1ccbd; /* analog chassis panel */
-  --popover:            #b5b0a1; /* inset / recessed panel */
+  --background: #a8a396; /* outer chassis body — warm grey-beige */
+  --card: #d1ccbd; /* analog chassis panel */
+  --popover: #b5b0a1; /* inset / recessed panel */
 
   /* Text */
-  --foreground:         #2c2b29; /* charcoal */
-  --card-foreground:    #2c2b29;
+  --foreground: #2c2b29; /* charcoal */
+  --card-foreground: #2c2b29;
   --popover-foreground: #2c2b29;
 
   /* Primary — inverted chassis for strong CTAs */
-  --primary:            #2c2b29;
+  --primary: #2c2b29;
   --primary-foreground: #f0ede6;
 
   /* Secondary — raised button base */
-  --secondary:          #e6e2d3;
+  --secondary: #e6e2d3;
   --secondary-foreground: #2c2b29;
 
   /* Muted */
-  --muted:              #b5b0a1;
-  --muted-foreground:   #5c5952;
+  --muted: #b5b0a1;
+  --muted-foreground: #5c5952;
 
   /* Accent — warm amber-orange signal color */
-  --accent:             #e8682a;
-  --accent-foreground:  #ffffff;
+  --accent: #e8682a;
+  --accent-foreground: #ffffff;
 
   /* Destructive */
-  --destructive:        #c0392b;
+  --destructive: #c0392b;
   --destructive-foreground: #ffffff;
 
   /* Borders & inputs */
-  --border:             #706b60;
-  --input:              #b5b0a1;
-  --ring:               #e8682a; /* accent focus ring */
+  --border: #706b60;
+  --input: #b5b0a1;
+  --ring: #e8682a; /* accent focus ring */
 
   /* Radius */
-  --radius:             6px;
+  --radius: 6px;
 
   /* Sidebar */
-  --sidebar:            #d1ccbd;
+  --sidebar: #d1ccbd;
   --sidebar-foreground: #2c2b29;
-  --sidebar-primary:    #2c2b29;
+  --sidebar-primary: #2c2b29;
   --sidebar-primary-foreground: #f0ede6;
-  --sidebar-accent:     #e6e2d3;
+  --sidebar-accent: #e6e2d3;
   --sidebar-accent-foreground: #2c2b29;
-  --sidebar-border:     #706b60;
-  --sidebar-ring:       #e8682a;
+  --sidebar-border: #706b60;
+  --sidebar-ring: #e8682a;
 }
 
 .dark {
   /* Surfaces */
-  --background:         #1a1918; /* deep warm brown-charcoal */
-  --card:               #2c2b29; /* warm charcoal panel */
-  --popover:            #21201f; /* deep inset panel */
+  --background: #1a1918; /* deep warm brown-charcoal */
+  --card: #2c2b29; /* warm charcoal panel */
+  --popover: #21201f; /* deep inset panel */
 
   /* Text */
-  --foreground:         #e6e2d3; /* warm bone-white */
-  --card-foreground:    #e6e2d3;
+  --foreground: #e6e2d3; /* warm bone-white */
+  --card-foreground: #e6e2d3;
   --popover-foreground: #e6e2d3;
 
   /* Primary */
-  --primary:            #e6e2d3;
+  --primary: #e6e2d3;
   --primary-foreground: #2c2b29;
 
   /* Secondary */
-  --secondary:          #3b3a37;
+  --secondary: #3b3a37;
   --secondary-foreground: #e6e2d3;
 
   /* Muted */
-  --muted:              #21201f;
-  --muted-foreground:   #a39f93;
+  --muted: #21201f;
+  --muted-foreground: #a39f93;
 
   /* Accent — amber-orange, slightly desaturated for dark */
-  --accent:             #e8682a;
-  --accent-foreground:  #ffffff;
+  --accent: #e8682a;
+  --accent-foreground: #ffffff;
 
   /* Destructive */
-  --destructive:        #c0392b;
+  --destructive: #c0392b;
   --destructive-foreground: #ffffff;
 
   /* Borders & inputs */
-  --border:             #4a4843;
-  --input:              #21201f;
-  --ring:               #e8682a;
+  --border: #4a4843;
+  --input: #21201f;
+  --ring: #e8682a;
 
   /* Sidebar */
-  --sidebar:            #2c2b29;
+  --sidebar: #2c2b29;
   --sidebar-foreground: #e6e2d3;
-  --sidebar-primary:    #e6e2d3;
+  --sidebar-primary: #e6e2d3;
   --sidebar-primary-foreground: #2c2b29;
-  --sidebar-accent:     #3b3a37;
+  --sidebar-accent: #3b3a37;
   --sidebar-accent-foreground: #e6e2d3;
-  --sidebar-border:     #4a4843;
-  --sidebar-ring:       #e8682a;
+  --sidebar-border: #4a4843;
+  --sidebar-ring: #e8682a;
 }
 
 /* ─── Tailwind Theme Tokens ──────────────────────────────────────────────── */
 @theme inline {
   /* Semantic surface/text */
-  --color-background:              var(--background);
-  --color-foreground:              var(--foreground);
-  --color-card:                    var(--card);
-  --color-card-foreground:         var(--card-foreground);
-  --color-popover:                 var(--popover);
-  --color-popover-foreground:      var(--popover-foreground);
-  --color-primary:                 var(--primary);
-  --color-primary-foreground:      var(--primary-foreground);
-  --color-secondary:               var(--secondary);
-  --color-secondary-foreground:    var(--secondary-foreground);
-  --color-muted:                   var(--muted);
-  --color-muted-foreground:        var(--muted-foreground);
-  --color-accent:                  var(--accent);
-  --color-accent-foreground:       var(--accent-foreground);
-  --color-destructive:             var(--destructive);
-  --color-destructive-foreground:  var(--destructive-foreground);
-  --color-border:                  var(--border);
-  --color-input:                   var(--input);
-  --color-ring:                    var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
   /* Radii */
-  --radius-sm:  calc(var(--radius) - 4px);
-  --radius-md:  calc(var(--radius) - 2px);
-  --radius-lg:  var(--radius);
-  --radius-xl:  calc(var(--radius) + 4px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 
   /* Sidebar */
-  --color-sidebar:                       var(--sidebar);
-  --color-sidebar-foreground:            var(--sidebar-foreground);
-  --color-sidebar-primary:               var(--sidebar-primary);
-  --color-sidebar-primary-foreground:    var(--sidebar-primary-foreground);
-  --color-sidebar-accent:                var(--sidebar-accent);
-  --color-sidebar-accent-foreground:     var(--sidebar-accent-foreground);
-  --color-sidebar-border:                var(--sidebar-border);
-  --color-sidebar-ring:                  var(--sidebar-ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 
   /* ── Retro Analog specific tokens ────────────────────────────────────────── */
 
   /* LED indicators */
-  --color-led-on:         #ff4a3d; /* red — error / signal lost / destructive */
-  --color-led-off:        #592420; /* red dim */
-  --color-led-green:      #4ade80; /* green — connected / saved / ok */
-  --color-led-green-off:  #14532d; /* green dim */
+  --color-led-on: #ff4a3d; /* red — error / signal lost / destructive */
+  --color-led-off: #592420; /* red dim */
+  --color-led-green: #4ade80; /* green — connected / saved / ok */
+  --color-led-green-off: #14532d; /* green dim */
 
   /* Amber accent glow (used with shadow utilities) */
-  --color-accent-glow:    rgba(232, 104, 42, 0.35);
+  --color-accent-glow: rgba(232, 104, 42, 0.35);
 
   /* ── Easing curves (Emil-style — strong, intentional, never weak) ────────── */
 
   /* Mechanical press — snappy, slightly bouncy settle */
-  --ease-mechanical:    cubic-bezier(0.1, 0.9, 0.2, 1);
+  --ease-mechanical: cubic-bezier(0.1, 0.9, 0.2, 1);
 
   /* Strong ease-out — UI entries, dropdowns, modals */
-  --ease-out:           cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 
   /* Strong ease-in-out — on-screen movement, morphing */
-  --ease-in-out:        cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 
   /* Drawer / slide — iOS-like, feels weighty */
-  --ease-drawer:        cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 /* ─── Base Layer ──────────────────────────────────────────────────────────── */
@@ -193,7 +193,10 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     text-wrap: balance;
   }
 
@@ -295,11 +298,10 @@
   }
 
   .scanlines::after {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
-    background:
-      linear-gradient(rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.12) 50%);
+    background: linear-gradient(rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.12) 50%);
     background-size: 100% 4px;
     pointer-events: none;
     z-index: 1;
@@ -309,7 +311,9 @@
   /* LED glow utilities — uses color tokens, no hardcoding */
   .led-red {
     background-color: var(--color-led-on);
-    box-shadow: 0 0 10px var(--color-led-on), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+    box-shadow:
+      0 0 10px var(--color-led-on),
+      inset 0 2px 4px rgba(255, 255, 255, 0.4);
   }
 
   .led-red-off {
@@ -319,7 +323,9 @@
 
   .led-green {
     background-color: var(--color-led-green);
-    box-shadow: 0 0 10px var(--color-led-green), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+    box-shadow:
+      0 0 10px var(--color-led-green),
+      inset 0 2px 4px rgba(255, 255, 255, 0.4);
   }
 
   .led-green-off {
@@ -329,12 +335,14 @@
 
   .led-amber {
     background-color: var(--accent);
-    box-shadow: 0 0 10px var(--color-accent-glow), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+    box-shadow:
+      0 0 10px var(--color-accent-glow),
+      inset 0 2px 4px rgba(255, 255, 255, 0.3);
   }
 
   /* Noise texture — mechanical aged surface feel */
   .noise-texture {
-    background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E');
+    background-image: url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E");
     opacity: 0.03;
   }
 }

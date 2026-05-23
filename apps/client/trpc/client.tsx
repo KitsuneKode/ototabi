@@ -1,16 +1,19 @@
-'use client'
+"use client";
+import type { AppRouter } from "@ototabi/trpc";
+import type { QueryClient } from "@tanstack/react-query";
+
+import { QueryClientProvider } from "@tanstack/react-query";
+import { createTRPCClient, httpBatchLink, loggerLink } from "@trpc/client";
+import { createTRPCContext } from "@trpc/tanstack-react-query";
 // ^-- to make sure we can mount the Provider from a server component
-import { useState } from 'react'
-import config from '@/utils/config'
-import { SuperJSON } from 'superjson'
-import type { AppRouter } from '@ototabi/trpc'
-import { makeQueryClient } from './query-client'
-import type { QueryClient } from '@tanstack/react-query'
-import { QueryClientProvider } from '@tanstack/react-query'
-import { createTRPCContext } from '@trpc/tanstack-react-query'
-import { createTRPCClient, httpBatchLink, loggerLink } from '@trpc/client'
-export const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>()
-let browserQueryClient: QueryClient
+import { useState } from "react";
+import { SuperJSON } from "superjson";
+
+import config from "@/utils/config";
+
+import { makeQueryClient } from "./query-client";
+export const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>();
+let browserQueryClient: QueryClient;
 /**
  * Returns a React Query client instance, creating a new one per request on the server or reusing a singleton on the browser.
  *
@@ -20,16 +23,16 @@ let browserQueryClient: QueryClient
  * @returns The React Query client instance
  */
 function getQueryClient() {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     // Server: always make a new query client
-    return makeQueryClient()
+    return makeQueryClient();
   }
   // Browser: make a new query client if we don't already have one
   // This is very important, so we don't re-make a new client if React
   // suspends during the initial render. This may not be needed if we
   // have a suspense boundary BELOW the creation of the query client
-  if (!browserQueryClient) browserQueryClient = makeQueryClient()
-  return browserQueryClient
+  if (!browserQueryClient) browserQueryClient = makeQueryClient();
+  return browserQueryClient;
 }
 /**
  * Constructs the full tRPC API endpoint URL using the configured API base URL.
@@ -39,12 +42,12 @@ function getQueryClient() {
 function getUrl() {
   const base = (() => {
     // if (typeof window !== 'undefined') return ''
-    return config.getConfig('apiBaseUrl')
-  })()
-  return `${base}/api/trpc`
+    return config.getConfig("apiBaseUrl");
+  })();
+  return `${base}/api/trpc`;
 }
 
-console.log(getUrl())
+console.log(getUrl());
 
 /**
  * Provides tRPC and React Query contexts to descendant components.
@@ -57,46 +60,46 @@ console.log(getUrl())
  */
 export function TRPCReactProvider(
   props: Readonly<{
-    children: React.ReactNode
+    children: React.ReactNode;
   }>,
 ) {
   // NOTE: Avoid useState when initializing the query client if you don't
   //       have a suspense boundary between this and the code that may
   //       suspend because React will throw away the client on the initial
   //       render if it suspends and there is no boundary
-  const queryClient = getQueryClient()
+  const queryClient = getQueryClient();
   const [trpcClient] = useState(() =>
     createTRPCClient<AppRouter>({
       links: [
         loggerLink({
           enabled: (op) =>
-            config.getConfig('nodeEnv') === 'development' ||
-            (op.direction === 'down' && op.result instanceof Error),
+            config.getConfig("nodeEnv") === "development" ||
+            (op.direction === "down" && op.result instanceof Error),
         }),
         httpBatchLink({
           transformer: SuperJSON, //<-- if you use a data transformer
           url: getUrl(),
           headers: () => {
-            const headers = new Headers()
-            headers.set('x-trpc-source', 'react-next')
-            return headers
+            const headers = new Headers();
+            headers.set("x-trpc-source", "react-next");
+            return headers;
           },
 
           fetch: (url, options) => {
             return fetch(url, {
               ...options,
-              credentials: 'include',
-            })
+              credentials: "include",
+            });
           },
         }),
       ],
     }),
-  )
+  );
   return (
     <QueryClientProvider client={queryClient}>
       <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
         {props.children}
       </TRPCProvider>
     </QueryClientProvider>
-  )
+  );
 }

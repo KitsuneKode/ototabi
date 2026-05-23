@@ -2,7 +2,7 @@
 
 export default function RetroAnalogMockup() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-5 bg-[#a8a396] font-sans">
+    <div className="flex min-h-screen items-center justify-center bg-[#a8a396] p-5 font-sans">
       <style>{`
         :root { --bg-color: #d1ccbd; --panel-dark: #2c2b29; --led-on: #ff4a3d; --led-off: #592420; --ease-mechanical: cubic-bezier(0.1, 0.9, 0.2, 1); }
         .analog-chassis {
@@ -33,11 +33,13 @@ export default function RetroAnalogMockup() {
         .slide-in { animation: slideIn 500ms var(--ease-mechanical) forwards; }
         @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
       `}</style>
-      <div className="analog-chassis slide-in max-w-4xl w-full">
-        <div className="flex justify-between items-end border-b-2 border-[#a39f93] pb-4 mb-8">
+      <div className="analog-chassis slide-in w-full max-w-4xl">
+        <div className="mb-8 flex items-end justify-between border-b-2 border-[#a39f93] pb-4">
           <div>
-            <h1 className="text-4xl font-bold text-[#2c2b29] m-0 leading-none tracking-tight">OTOTABI</h1>
-            <span className="label block mt-1">Model 16-A // Studio Controller</span>
+            <h1 className="m-0 text-4xl leading-none font-bold tracking-tight text-[#2c2b29]">
+              OTOTABI
+            </h1>
+            <span className="label mt-1 block">Model 16-A // Studio Controller</span>
           </div>
           <div className="flex gap-4">
             <div className="flex flex-col items-center gap-2">
@@ -50,32 +52,32 @@ export default function RetroAnalogMockup() {
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-          <div className="md:col-span-8 display-screen aspect-video flex flex-col items-center justify-center p-4">
-            <div className="text-[#888] font-mono text-sm tracking-widest text-center">
-              [ SIGNAL LOST ]<br /><br />CHECK VIDEO INPUT
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
+          <div className="display-screen flex aspect-video flex-col items-center justify-center p-4 md:col-span-8">
+            <div className="text-center font-mono text-sm tracking-widest text-[#888]">
+              [ SIGNAL LOST ]<br />
+              <br />
+              CHECK VIDEO INPUT
             </div>
           </div>
-          <div className="md:col-span-4 flex flex-col gap-6 bg-[#b5b0a1] p-6 rounded-lg shadow-inner border border-[#969285]">
+          <div className="flex flex-col gap-6 rounded-lg border border-[#969285] bg-[#b5b0a1] p-6 shadow-inner md:col-span-4">
             <div className="flex flex-col gap-2">
               <span className="label">INPUT 1: AUDIO</span>
-              <div className="flex items-center gap-3 bg-[#a39f93] p-2 rounded border border-[#8a867b] shadow-inner">
+              <div className="flex items-center gap-3 rounded border border-[#8a867b] bg-[#a39f93] p-2 shadow-inner">
                 <div className="led active" />
-                <span className="font-bold text-sm text-[#2c2b29]">MAIN MIC</span>
+                <span className="text-sm font-bold text-[#2c2b29]">MAIN MIC</span>
               </div>
             </div>
             <div className="flex flex-col gap-2">
               <span className="label">INPUT 2: VIDEO</span>
-              <div className="flex items-center gap-3 bg-[#a39f93] p-2 rounded border border-[#8a867b] shadow-inner">
+              <div className="flex items-center gap-3 rounded border border-[#8a867b] bg-[#a39f93] p-2 shadow-inner">
                 <div className="led" />
-                <span className="font-bold text-sm text-[#555]">OFFLINE</span>
+                <span className="text-sm font-bold text-[#555]">OFFLINE</span>
               </div>
             </div>
-            <div className="mt-auto pt-6 border-t-2 border-[#a39f93]">
-              <span className="label block text-center mb-3">ENGAGE SEQUENCE</span>
-              <button className="analog-btn w-full py-4 text-lg">
-                Connect
-              </button>
+            <div className="mt-auto border-t-2 border-[#a39f93] pt-6">
+              <span className="label mb-3 block text-center">ENGAGE SEQUENCE</span>
+              <button className="analog-btn w-full py-4 text-lg">Connect</button>
             </div>
           </div>
         </div>

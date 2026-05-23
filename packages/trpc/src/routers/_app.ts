@@ -1,9 +1,9 @@
-import { authRouter } from './auth'
-import { userRouter } from './user'
-import { roomsRouter } from './rooms'
-import { uploadsRouter } from './uploads'
-import { chatRouter } from './chat'
-import { createTRPCRouter } from '../trpc'
+import { createTRPCRouter } from "../trpc";
+import { authRouter } from "./auth";
+import { chatRouter } from "./chat";
+import { roomsRouter } from "./rooms";
+import { uploadsRouter } from "./uploads";
+import { userRouter } from "./user";
 
 export const appRouter = createTRPCRouter({
   auth: authRouter,
@@ -11,6 +11,6 @@ export const appRouter = createTRPCRouter({
   rooms: roomsRouter,
   uploads: uploadsRouter,
   chat: chatRouter,
-})
+});
 
-export type AppRouter = typeof appRouter
+export type AppRouter = typeof appRouter;

@@ -10,19 +10,8 @@
     "./postcss.config": "./postcss.config.mjs"
   },
   "scripts": {
-    "lint": "eslint . --max-warnings 0",
     "generate:component": "turbo gen react-component",
-    "check-types": "tsc --noEmit"
-  },
-  "devDependencies": {
-    "@ototabi/eslint-config": "*",
-    "@ototabi/typescript-config": "*",
-    "@turbo/gen": "^2.5.4",
-    "@types/node": "^25.9.1",
-    "@types/react": "19.2.15",
-    "@types/react-dom": "19.2.3",
-    "eslint": "^10.4.0",
-    "typescript": "6.0.3"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
@@ -41,5 +30,13 @@
     "tailwindcss": "^4.1.8",
     "tw-animate-css": "^1.3.4",
     "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@ototabi/typescript-config": "*",
+    "@turbo/gen": "^2.5.4",
+    "@types/node": "^25.9.1",
+    "@types/react": "19.2.15",
+    "@types/react-dom": "19.2.3",
+    "typescript": "6.0.3"
   }
 }

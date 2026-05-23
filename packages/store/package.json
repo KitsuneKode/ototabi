@@ -1,8 +1,11 @@
 {
   "name": "@ototabi/store",
-  "module": "src/index.ts",
-  "type": "module",
   "private": true,
+  "type": "module",
+  "module": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "db:generate": "bun run prisma generate",
     "db:migrate": "bun run prisma migrate",
@@ -10,8 +13,9 @@
     "db:studio": "bun run prisma studio",
     "db:deploy": "bun run prisma deploy"
   },
-  "exports": {
-    ".": "./src/index.ts"
+  "dependencies": {
+    "@prisma/client": "6.11.1",
+    "prisma": "6.11.1"
   },
   "devDependencies": {
     "@ototabi/typescript-config": "*",
@@ -19,9 +23,5 @@
   },
   "peerDependencies": {
     "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "@prisma/client": "6.11.1",
-    "prisma": "6.11.1"
   }
 }

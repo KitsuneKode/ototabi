@@ -1,16 +1,19 @@
-import { createTRPCContext } from './trpc'
-import { appRouter } from './routers/_app'
-import { createCallerFactory } from './trpc'
-import type { AppRouter } from './routers/_app'
-import { createExpressMiddleware } from '@trpc/server/adapters/express'
-import type { inferRouterInputs, inferRouterOutputs } from '@trpc/server'
+import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
+
+import { createExpressMiddleware } from "@trpc/server/adapters/express";
+
+import type { AppRouter } from "./routers/_app";
+
+import { appRouter } from "./routers/_app";
+import { createTRPCContext } from "./trpc";
+import { createCallerFactory } from "./trpc";
 /**
  * Inference helpers for input types
  * @example
  * type PostByIdInput = RouterInputs['post']['byId']
  *      ^? { id: number }
  **/
-type RouterInputs = inferRouterInputs<AppRouter>
+type RouterInputs = inferRouterInputs<AppRouter>;
 
 /**
  * Inference helpers for output types
@@ -18,14 +21,14 @@ type RouterInputs = inferRouterInputs<AppRouter>
  * type AllPostsOutput = RouterOutputs['post']['all']
  *      ^? Post[]
  **/
-type RouterOutputs = inferRouterOutputs<AppRouter>
+type RouterOutputs = inferRouterOutputs<AppRouter>;
 
 const expressMiddleWare = createExpressMiddleware({
   router: appRouter,
   createContext: createTRPCContext,
-})
+});
 
-const createCaller = createCallerFactory(appRouter)
+const createCaller = createCallerFactory(appRouter);
 
-export { appRouter, expressMiddleWare, createTRPCContext, createCaller }
-export type { AppRouter, RouterInputs, RouterOutputs }
+export { appRouter, expressMiddleWare, createTRPCContext, createCaller };
+export type { AppRouter, RouterInputs, RouterOutputs };

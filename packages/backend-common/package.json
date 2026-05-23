@@ -1,9 +1,12 @@
 {
   "name": "@ototabi/backend-common",
   "version": "1.0.0",
-  "description": "",
-  "main": "./src/index.ts",
   "private": true,
+  "description": "",
+  "keywords": [],
+  "license": "ISC",
+  "author": "",
+  "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
     "./config": "./src/config.ts"
@@ -11,15 +14,12 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "dependencies": {
+    "@ototabi/common": "*"
+  },
   "devDependencies": {
     "@ototabi/typescript-config": "*",
     "@types/bun": "latest"
-  },
-  "dependencies": {
-    "@ototabi/common": "*"
   },
   "peerDependencies": {
     "typescript": "^5.9.3"

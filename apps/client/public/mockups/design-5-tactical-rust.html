@@ -1,130 +1,169 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ototabi Mockup // Design 5: Tactical Rust</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Space Grotesk', sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
-    .tech-font {
-      font-family: 'Share Tech Mono', monospace;
-    }
-    .hazard-stripes {
-      background: repeating-linear-gradient(
-        -45deg,
-        #FF5500,
-        #FF5500 10px,
-        #1A1817 10px,
-        #1A1817 20px
-      );
-    }
-  </style>
-</head>
-<body class="bg-[#141312] text-[#E0DDD8] min-h-screen flex flex-col justify-between overflow-x-hidden relative p-6">
-  
-  <!-- Top hazard stripe accent -->
-  <div class="h-2 hazard-stripes w-full absolute top-0 left-0"></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ototabi Mockup // Design 5: Tactical Rust</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Space+Grotesk:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Space Grotesk", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .tech-font {
+        font-family: "Share Tech Mono", monospace;
+      }
+      .hazard-stripes {
+        background: repeating-linear-gradient(
+          -45deg,
+          #ff5500,
+          #ff5500 10px,
+          #1a1817 10px,
+          #1a1817 20px
+        );
+      }
+    </style>
+  </head>
+  <body
+    class="relative flex min-h-screen flex-col justify-between overflow-x-hidden bg-[#141312] p-6 text-[#E0DDD8]"
+  >
+    <!-- Top hazard stripe accent -->
+    <div class="hazard-stripes absolute top-0 left-0 h-2 w-full"></div>
 
-  <!-- Header -->
-  <header class="w-full max-w-4xl mx-auto flex justify-between items-center border-b border-[#302D2A] pb-4 pt-4 mt-2">
-    <div class="flex items-center gap-2">
-      <span class="size-2 bg-[#FF5500]"></span>
-      <span class="text-sm font-bold uppercase tracking-[0.2em] text-[#FF5500] tech-font">
-        OTOTABI // CAPTURE_UNIT
-      </span>
-    </div>
-    <span class="text-[10px] text-zinc-500 font-mono">SPEC: TAC_RUST // SYS_05</span>
-  </header>
+    <!-- Header -->
+    <header
+      class="mx-auto mt-2 flex w-full max-w-4xl items-center justify-between border-b border-[#302D2A] pt-4 pb-4"
+    >
+      <div class="flex items-center gap-2">
+        <span class="size-2 bg-[#FF5500]"></span>
+        <span class="tech-font text-sm font-bold tracking-[0.2em] text-[#FF5500] uppercase">
+          OTOTABI // CAPTURE_UNIT
+        </span>
+      </div>
+      <span class="font-mono text-[10px] text-zinc-500">SPEC: TAC_RUST // SYS_05</span>
+    </header>
 
-  <!-- Main Container -->
-  <main class="w-full max-w-3xl mx-auto flex-1 flex flex-col justify-center py-10">
-    <div class="border-2 border-[#302D2A] bg-[#1A1918] p-6 relative">
-      <!-- Decorative crosshairs at corners -->
-      <div class="absolute top-2 left-2 text-[9px] text-zinc-600 font-mono select-none pointer-events-none">+ L_TOP</div>
-      <div class="absolute top-2 right-2 text-[9px] text-zinc-600 font-mono select-none pointer-events-none">+ R_TOP</div>
-      <div class="absolute bottom-2 left-2 text-[9px] text-zinc-600 font-mono select-none pointer-events-none">+ L_BOT</div>
-      <div class="absolute bottom-2 right-2 text-[9px] text-zinc-600 font-mono select-none pointer-events-none">+ R_BOT</div>
-
-      <div class="space-y-6 pt-4">
-        <!-- Title and coordinates -->
-        <div class="flex justify-between items-start border-b border-[#302D2A] pb-4">
-          <div>
-            <h2 class="text-lg font-black uppercase text-[#FF5500] tracking-wider tech-font">
-              INITIALIZE_REC_SESSION
-            </h2>
-            <p class="text-[10px] text-zinc-500 uppercase mt-0.5 font-bold">
-              Unit state: Operational / Online
-            </p>
-          </div>
-          <span class="text-[9px] text-zinc-600 font-mono uppercase text-right leading-none">
-            LOC: 45.109.80.12<br />
-            PORT: SEC_8080
-          </span>
+    <!-- Main Container -->
+    <main class="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center py-10">
+      <div class="relative border-2 border-[#302D2A] bg-[#1A1918] p-6">
+        <!-- Decorative crosshairs at corners -->
+        <div
+          class="pointer-events-none absolute top-2 left-2 font-mono text-[9px] text-zinc-600 select-none"
+        >
+          + L_TOP
+        </div>
+        <div
+          class="pointer-events-none absolute top-2 right-2 font-mono text-[9px] text-zinc-600 select-none"
+        >
+          + R_TOP
+        </div>
+        <div
+          class="pointer-events-none absolute bottom-2 left-2 font-mono text-[9px] text-zinc-600 select-none"
+        >
+          + L_BOT
+        </div>
+        <div
+          class="pointer-events-none absolute right-2 bottom-2 font-mono text-[9px] text-zinc-600 select-none"
+        >
+          + R_BOT
         </div>
 
-        <!-- Video Frame -->
-        <div class="relative w-full aspect-video border border-[#FF5500]/40 bg-[#0F0E0D] flex flex-col items-center justify-center">
-          <div class="absolute top-3 right-3 flex items-center gap-1.5 border border-[#FF5500]/30 bg-[#FF5500]/10 px-2 py-0.5 text-[8px] text-[#FF5500] font-mono">
-            <span class="size-1 bg-[#FF5500] rounded-full animate-ping"></span>
-            LIVE FEED
+        <div class="space-y-6 pt-4">
+          <!-- Title and coordinates -->
+          <div class="flex items-start justify-between border-b border-[#302D2A] pb-4">
+            <div>
+              <h2 class="tech-font text-lg font-black tracking-wider text-[#FF5500] uppercase">
+                INITIALIZE_REC_SESSION
+              </h2>
+              <p class="mt-0.5 text-[10px] font-bold text-zinc-500 uppercase">
+                Unit state: Operational / Online
+              </p>
+            </div>
+            <span class="text-right font-mono text-[9px] leading-none text-zinc-600 uppercase">
+              LOC: 45.109.80.12<br />
+              PORT: SEC_8080
+            </span>
           </div>
-          
-          <span class="text-[10px] font-mono text-[#FF5500]/40 uppercase tracking-widest tech-font">
-            [ CAMERA_STREAM_STANDBY ]
-          </span>
-        </div>
 
-        <!-- Controls grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="border border-[#302D2A] bg-[#121110] p-3">
-            <span class="text-[9px] text-zinc-500 uppercase font-mono block">AUDIO_LEVEL</span>
-            <div class="mt-2 flex items-center gap-2">
-              <div class="flex-1 h-3 border border-[#302D2A] bg-zinc-950 flex items-stretch overflow-hidden">
-                <div class="w-[70%] bg-[#FF5500]"></div>
+          <!-- Video Frame -->
+          <div
+            class="relative flex aspect-video w-full flex-col items-center justify-center border border-[#FF5500]/40 bg-[#0F0E0D]"
+          >
+            <div
+              class="absolute top-3 right-3 flex items-center gap-1.5 border border-[#FF5500]/30 bg-[#FF5500]/10 px-2 py-0.5 font-mono text-[8px] text-[#FF5500]"
+            >
+              <span class="size-1 animate-ping rounded-full bg-[#FF5500]"></span>
+              LIVE FEED
+            </div>
+
+            <span
+              class="tech-font font-mono text-[10px] tracking-widest text-[#FF5500]/40 uppercase"
+            >
+              [ CAMERA_STREAM_STANDBY ]
+            </span>
+          </div>
+
+          <!-- Controls grid -->
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div class="border border-[#302D2A] bg-[#121110] p-3">
+              <span class="block font-mono text-[9px] text-zinc-500 uppercase">AUDIO_LEVEL</span>
+              <div class="mt-2 flex items-center gap-2">
+                <div
+                  class="flex h-3 flex-1 items-stretch overflow-hidden border border-[#302D2A] bg-zinc-950"
+                >
+                  <div class="w-[70%] bg-[#FF5500]"></div>
+                </div>
+                <span class="font-mono text-[9px] text-zinc-400">70%</span>
               </div>
-              <span class="text-[9px] text-zinc-400 font-mono">70%</span>
+            </div>
+
+            <div class="flex flex-col justify-between border border-[#302D2A] bg-[#121110] p-3">
+              <span class="block font-mono text-[9px] text-zinc-500 uppercase">CAP_MODE</span>
+              <span class="tech-font text-xs font-bold text-zinc-300 uppercase"
+                >LOCAL_BUFFER (DEXIE)</span
+              >
+            </div>
+
+            <div class="flex flex-col justify-between border border-[#302D2A] bg-[#121110] p-3">
+              <span class="block font-mono text-[9px] text-zinc-500 uppercase">UNIT_KEY</span>
+              <span class="tech-font text-xs font-bold tracking-wider text-[#FF5500] uppercase"
+                >OT-X92-RST</span
+              >
             </div>
           </div>
 
-          <div class="border border-[#302D2A] bg-[#121110] p-3 flex flex-col justify-between">
-            <span class="text-[9px] text-zinc-500 uppercase font-mono block">CAP_MODE</span>
-            <span class="text-xs text-zinc-300 font-bold uppercase tech-font">LOCAL_BUFFER (DEXIE)</span>
+          <!-- Warning block -->
+          <div
+            class="flex items-start gap-2.5 border border-[#FF5500]/20 bg-[#FF5500]/5 p-3 text-[10px] text-[#FF5500]/80"
+          >
+            <span class="tech-font font-bold">[!]</span>
+            <p class="leading-normal uppercase">
+              WARNING: Lossless stream buffer requires at least 4GB of free local disk workspace
+              before session initialization.
+            </p>
           </div>
 
-          <div class="border border-[#302D2A] bg-[#121110] p-3 flex flex-col justify-between">
-            <span class="text-[9px] text-zinc-500 uppercase font-mono block">UNIT_KEY</span>
-            <span class="text-xs text-[#FF5500] font-bold uppercase tracking-wider tech-font">OT-X92-RST</span>
-          </div>
+          <!-- CTA -->
+          <button
+            onclick="alert('Capture Initialized (Mockup Mode)')"
+            class="tech-font h-12 w-full bg-[#FF5500] text-xs font-bold tracking-wider text-black uppercase transition-all duration-100 hover:bg-[#ff6e24] active:scale-[0.98]"
+          >
+            INITIATE_CAPTURE_STREAM
+          </button>
         </div>
-
-        <!-- Warning block -->
-        <div class="border border-[#FF5500]/20 bg-[#FF5500]/5 p-3 flex items-start gap-2.5 text-[10px] text-[#FF5500]/80">
-          <span class="font-bold tech-font">[!]</span>
-          <p class="leading-normal uppercase">
-            WARNING: Lossless stream buffer requires at least 4GB of free local disk workspace before session initialization.
-          </p>
-        </div>
-
-        <!-- CTA -->
-        <button 
-          onclick="alert('Capture Initialized (Mockup Mode)')"
-          class="w-full h-12 bg-[#FF5500] text-black font-bold uppercase tracking-wider text-xs hover:bg-[#ff6e24] active:scale-[0.98] transition-all duration-100 tech-font"
-        >
-          INITIATE_CAPTURE_STREAM
-        </button>
       </div>
-    </div>
-  </main>
+    </main>
 
-  <!-- Footer -->
-  <footer class="w-full max-w-4xl mx-auto border-t border-[#302D2A] pt-4 mt-6 flex justify-between items-center text-[9px] text-zinc-500 font-mono uppercase">
-    <span>Industrial Terminal Utilitarian Layout</span>
-    <span>v1.0.5</span>
-  </footer>
-</body>
+    <!-- Footer -->
+    <footer
+      class="mx-auto mt-6 flex w-full max-w-4xl items-center justify-between border-t border-[#302D2A] pt-4 font-mono text-[9px] text-zinc-500 uppercase"
+    >
+      <span>Industrial Terminal Utilitarian Layout</span>
+      <span>v1.0.5</span>
+    </footer>
+  </body>
 </html>

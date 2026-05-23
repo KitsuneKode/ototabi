@@ -1,10 +1,10 @@
 "use client";
 
-import { Mic, Video, VideoOff } from 'lucide-react';
+import { Mic, Video, VideoOff } from "lucide-react";
 
 export default function GlassAuroraMockup() {
   return (
-    <div className="min-h-screen bg-[#050505] text-zinc-100 flex flex-col relative overflow-x-hidden font-sans">
+    <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-[#050505] font-sans text-zinc-100">
       <style>{`
         :root {
           --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -44,40 +44,50 @@ export default function GlassAuroraMockup() {
       `}</style>
       <div className="orb-1" />
       <div className="orb-2" />
-      <header className="relative z-10 glass-panel px-6 py-4 flex justify-between items-center m-4 rounded-2xl animate-enter">
+      <header className="glass-panel animate-enter relative z-10 m-4 flex items-center justify-between rounded-2xl px-6 py-4">
         <div className="flex items-center gap-3">
           <div className="size-2.5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]" />
           <h1 className="text-sm font-semibold tracking-wide">
-            Ototabi <span className="text-zinc-500 ml-1">Studio</span>
+            Ototabi <span className="ml-1 text-zinc-500">Studio</span>
           </h1>
         </div>
-        <span className="text-xs text-zinc-500 font-medium px-3 py-1 bg-white/5 rounded-full border border-white/10">Design 09 // Glass Aurora</span>
+        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-zinc-500">
+          Design 09 // Glass Aurora
+        </span>
       </header>
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 max-w-5xl mx-auto w-full">
-        <div className="w-full glass-panel rounded-[2rem] p-10 flex flex-col gap-8 animate-enter delay-1">
+      <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center p-6">
+        <div className="glass-panel animate-enter flex w-full flex-col gap-8 rounded-[2rem] p-10 delay-1">
           <div className="flex flex-col gap-2">
-            <h2 className="text-3xl font-medium tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-white to-zinc-500">
+            <h2 className="bg-gradient-to-br from-white to-zinc-500 bg-clip-text text-3xl font-medium tracking-tight text-transparent">
               Ready to join?
             </h2>
-            <p className="text-sm text-zinc-400">Configure your devices before entering the workspace.</p>
+            <p className="text-sm text-zinc-400">
+              Configure your devices before entering the workspace.
+            </p>
           </div>
-          <div className="relative w-full aspect-video rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center overflow-hidden animate-enter delay-2">
-            <VideoOff className="w-12 h-12 text-zinc-600 mb-4" />
+          <div className="animate-enter relative flex aspect-video w-full flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] delay-2">
+            <VideoOff className="mb-4 h-12 w-12 text-zinc-600" />
             <span className="text-sm font-medium text-zinc-500">Camera preview inactive</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-enter delay-3">
-            <div className="glass-panel rounded-2xl p-5 flex flex-col gap-2 hover:bg-white/[0.04] cursor-pointer btn-polished">
-              <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider flex items-center gap-2"><Mic className="w-3 h-3" /> Audio Input</span>
+          <div className="animate-enter grid grid-cols-1 gap-4 delay-3 md:grid-cols-2">
+            <div className="glass-panel btn-polished flex cursor-pointer flex-col gap-2 rounded-2xl p-5 hover:bg-white/[0.04]">
+              <span className="flex items-center gap-2 text-xs font-medium tracking-wider text-zinc-500 uppercase">
+                <Mic className="h-3 w-3" /> Audio Input
+              </span>
               <p className="text-sm text-zinc-200">Default Microphone</p>
             </div>
-            <div className="glass-panel rounded-2xl p-5 flex flex-col gap-2 hover:bg-white/[0.04] cursor-pointer btn-polished">
-              <span className="text-xs text-zinc-500 font-medium uppercase tracking-wider flex items-center gap-2"><Video className="w-3 h-3" /> Video Input</span>
+            <div className="glass-panel btn-polished flex cursor-pointer flex-col gap-2 rounded-2xl p-5 hover:bg-white/[0.04]">
+              <span className="flex items-center gap-2 text-xs font-medium tracking-wider text-zinc-500 uppercase">
+                <Video className="h-3 w-3" /> Video Input
+              </span>
               <p className="text-sm text-zinc-200">FaceTime HD Camera</p>
             </div>
           </div>
-          <div className="flex justify-between items-center pt-4 animate-enter delay-3">
-            <button className="btn-polished text-zinc-400 hover:text-white px-4 py-2 text-sm font-medium">Cancel</button>
-            <button className="btn-polished bg-white text-black px-8 py-3 rounded-full text-sm font-semibold hover:bg-zinc-200 shadow-[0_0_20px_rgba(255,255,255,0.15)]">
+          <div className="animate-enter flex items-center justify-between pt-4 delay-3">
+            <button className="btn-polished px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white">
+              Cancel
+            </button>
+            <button className="btn-polished rounded-full bg-white px-8 py-3 text-sm font-semibold text-black shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:bg-zinc-200">
               Join Session
             </button>
           </div>

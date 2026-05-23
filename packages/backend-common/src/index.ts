@@ -1,0 +1,1 @@
+export { backendConfigSchema } from "./config";
