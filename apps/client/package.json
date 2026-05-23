@@ -1,18 +1,15 @@
 {
   "name": "@ototabi/client",
   "version": "0.1.0",
-  "type": "module",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --turbopack --port 3000",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@t3-oss/env-nextjs": "^0.13.11",
     "@aws-sdk/client-s3": "^3.864.0",
     "@livekit/components-react": "^2.9.13",
     "@livekit/components-styles": "^1.1.6",
@@ -21,6 +18,7 @@
     "@ototabi/store": "*",
     "@ototabi/trpc": "*",
     "@ototabi/ui": "*",
+    "@t3-oss/env-nextjs": "^0.13.11",
     "@tailwindcss/postcss": "^4.1.8",
     "@tanstack/react-query": "^5.82.0",
     "@trpc/client": "^11.4.3",
@@ -40,15 +38,10 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@ototabi/eslint-config": "*",
     "@ototabi/typescript-config": "*",
     "@types/node": "^25.9.1",
     "@types/react": "19.2.15",
     "@types/react-dom": "19.2.3",
-    "eslint": "^10.4.0",
-    "prettier": "^3.6.2",
-    "prettier-plugin-sort-imports": "^1.8.8",
-    "prettier-plugin-tailwindcss": "^0.8.0",
     "typescript": "6.0.3"
   }
 }

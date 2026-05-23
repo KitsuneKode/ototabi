@@ -2,25 +2,14 @@
   "extends": "@ototabi/typescript-config/nextjs.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
-      "@/*": [
-        "./*"
-      ],
-      "@ototabi/ui": [
-        "../../packages/ui/src/*"
-      ],
-      "@ototabi/store": [
-        "../../packages/store/src/*"
-      ],
-      "@ototabi/auth": [
-        "../../packages/auth/src/*"
-      ],
-      "@ototabi/trpc": [
-        "../../packages/trpc/src/*"
-      ],
-      "@ototabi/common": [
-        "../../packages/common/src/*"
-      ]
+      "@/*": ["./*"],
+      "@ototabi/ui": ["../../packages/ui/src/*"],
+      "@ototabi/store": ["../../packages/store/src/*"],
+      "@ototabi/auth": ["../../packages/auth/src/*"],
+      "@ototabi/trpc": ["../../packages/trpc/src/*"],
+      "@ototabi/common": ["../../packages/common/src/*"]
     },
     "plugins": [
       {
@@ -28,14 +17,6 @@
       }
     ]
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "next-env.d.ts",
-    "next.config.js",
-    ".next/types/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["**/*.ts", "**/*.tsx", "next-env.d.ts", "next.config.js", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
 }

@@ -1,57 +1,51 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useTRPC } from '@/trpc/client'
-import { useRouter } from 'next/navigation'
-import { useMutation, useQueries } from '@tanstack/react-query'
-import { db } from '@/lib/localDB'
-import { AnalogCard, AnalogInset } from '@/components/ui/analog-card'
-import { Led, LedInline } from '@/components/ui/led'
+import { useMutation, useQueries } from "@tanstack/react-query";
+import { RefreshCw, CheckCircle, AlertTriangle, HardDrive, ArrowLeft, Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, useMemo } from "react";
+
+import { AnalogCard } from "@/components/ui/analog-card";
+import { Led, LedInline } from "@/components/ui/led";
 import {
   MonoLabel,
   PanelTitle,
   NoiseBackground,
   MechButton,
-} from '@/components/ui/retro-primitives'
-import {
-  RefreshCw,
-  CheckCircle,
-  AlertTriangle,
-  HardDrive,
-  ArrowLeft,
-  Upload,
-} from 'lucide-react'
+} from "@/components/ui/retro-primitives";
+import { db } from "@/lib/localDB";
+import { useTRPC } from "@/trpc/client";
 
 interface PendingTrack {
-  trackSid: string
-  sessionId: string
-  s3Key: string
-  type: string
-  uploadId: string
-  pendingChunks: number
+  trackSid: string;
+  sessionId: string;
+  s3Key: string;
+  type: string;
+  uploadId: string;
+  pendingChunks: number;
 }
 
 export default function RecoveryPage() {
-  const router = useRouter()
-  const trpc = useTRPC()
+  const router = useRouter();
+  const trpc = useTRPC();
 
-  const [pendingTracks, setPendingTracks] = useState<PendingTrack[]>([])
-  const [isLoadingLocal, setIsLoadingLocal] = useState(true)
-  const [localError, setLocalError] = useState<string | null>(null)
-  const [retryingTracks, setRetryingTracks] = useState<Set<string>>(new Set())
-  const [completedTracks, setCompletedTracks] = useState<Set<string>>(new Set())
+  const [pendingTracks, setPendingTracks] = useState<PendingTrack[]>([]);
+  const [isLoadingLocal, setIsLoadingLocal] = useState(true);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [retryingTracks, setRetryingTracks] = useState<Set<string>>(new Set());
+  const [completedTracks, setCompletedTracks] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     async function loadLocalTracks() {
       try {
-        const sessions = await db.uploadSessions.toArray()
+        const sessions = await db.uploadSessions.toArray();
         const tracks = await Promise.all(
           sessions.map(async (s) => {
             const chunkCount = await db.chunks
-              .where('trackSid')
+              .where("trackSid")
               .equals(s.trackSid)
-              .filter((c) => c.status === 'pending' || c.status === 'failed')
-              .count()
+              .filter((c) => c.status === "pending" || c.status === "failed")
+              .count();
             return {
               trackSid: s.trackSid,
               sessionId: s.sessionId,
@@ -59,24 +53,24 @@ export default function RecoveryPage() {
               type: s.type,
               uploadId: s.uploadId,
               pendingChunks: chunkCount,
-            }
+            };
           }),
-        )
-        setPendingTracks(tracks)
-      } catch (err) {
-        setLocalError('Failed to read local IndexedDB storage.')
+        );
+        setPendingTracks(tracks);
+      } catch {
+        setLocalError("Failed to read local IndexedDB storage.");
       } finally {
-        setIsLoadingLocal(false)
+        setIsLoadingLocal(false);
       }
     }
-    loadLocalTracks()
-  }, [])
+    loadLocalTracks();
+  }, []);
 
   // Resolve track IDs from server session data for each unique session
   const uniqueSessionIds = useMemo(
     () => [...new Set(pendingTracks.map((t) => t.sessionId))],
     [pendingTracks],
-  )
+  );
 
   const sessionQueries = useQueries({
     queries: uniqueSessionIds.map((sessionId) =>
@@ -85,111 +79,102 @@ export default function RecoveryPage() {
         { enabled: !isLoadingLocal && uniqueSessionIds.length > 0 },
       ),
     ),
-  })
+  });
 
   // Build trackSid → trackId lookup from resolved session queries
   const trackIdMap = useMemo(() => {
-    const map: Record<string, string> = {}
+    const map: Record<string, string> = {};
     for (const q of sessionQueries) {
-      if (!q.data) continue
+      if (!q.data) continue;
       for (const track of q.data.tracks) {
-        map[track.trackSid] = track.id
+        map[track.trackSid] = track.id;
       }
     }
-    return map
-  }, [sessionQueries])
+    return map;
+  }, [sessionQueries]);
 
   const retryMutation = useMutation(
     trpc.uploads.retryUpload.mutationOptions({
       onSuccess: (_data, variables) => {
         setRetryingTracks((prev) => {
-          const next = new Set(prev)
-          next.delete(variables.trackId)
-          return next
-        })
-        setCompletedTracks((prev) => new Set(prev).add(variables.trackId))
+          const next = new Set(prev);
+          next.delete(variables.trackId);
+          return next;
+        });
+        setCompletedTracks((prev) => new Set(prev).add(variables.trackId));
       },
       onError: (_err, variables) => {
         setRetryingTracks((prev) => {
-          const next = new Set(prev)
-          next.delete(variables.trackId)
-          return next
-        })
+          const next = new Set(prev);
+          next.delete(variables.trackId);
+          return next;
+        });
       },
     }),
-  )
+  );
 
   const handleRetry = useCallback(
     (track: PendingTrack) => {
-      const trackId = trackIdMap[track.trackSid]
-      if (!trackId) return
-      setRetryingTracks((prev) => new Set(prev).add(trackId))
-      retryMutation.mutate({ trackId })
+      const trackId = trackIdMap[track.trackSid];
+      if (!trackId) return;
+      setRetryingTracks((prev) => new Set(prev).add(trackId));
+      retryMutation.mutate({ trackId });
     },
     [retryMutation, trackIdMap],
-  )
+  );
 
-  const areSessionsLoading = sessionQueries.some((q) => q.isLoading)
+  const areSessionsLoading = sessionQueries.some((q) => q.isLoading);
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoadingLocal) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background font-sans">
+      <div className="bg-background flex min-h-screen items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 rounded-full border-2 border-border border-t-accent animate-spin" />
-          <span className="font-mono text-xs uppercase font-bold tracking-widest animate-pulse">
+          <div className="border-border border-t-accent h-8 w-8 animate-spin rounded-full border-2" />
+          <span className="animate-pulse font-mono text-xs font-bold tracking-widest uppercase">
             Scanning Local Storage...
           </span>
         </div>
       </div>
-    )
+    );
   }
 
   // ── Error ────────────────────────────────────────────────────────────────
   if (localError) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 font-sans">
-        <AnalogCard className="p-8 text-center max-w-sm w-full">
-          <AlertTriangle className="mx-auto h-12 w-12 text-led-on mb-4" />
-          <p className="font-bold uppercase text-led-on tracking-wider text-sm mb-2">
+      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
+        <AnalogCard className="w-full max-w-sm p-8 text-center">
+          <AlertTriangle className="text-led-on mx-auto mb-4 h-12 w-12" />
+          <p className="text-led-on mb-2 text-sm font-bold tracking-wider uppercase">
             Storage Read Failure
           </p>
-          <p className="font-mono text-xs text-muted-foreground mb-6 leading-normal">
+          <p className="text-muted-foreground mb-6 font-mono text-xs leading-normal">
             {localError}
           </p>
-          <MechButton
-            onClick={() => router.push('/dashboard')}
-            className="w-full justify-center"
-          >
+          <MechButton onClick={() => router.push("/dashboard")} className="w-full justify-center">
             Return to Dashboard
           </MechButton>
         </AnalogCard>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans p-4 md:p-8 relative">
+    <div className="bg-background text-foreground relative min-h-screen p-4 font-sans md:p-8">
       <NoiseBackground />
 
-      <div className="max-w-3xl w-full mx-auto relative z-10 space-y-8">
-
+      <div className="relative z-10 mx-auto w-full max-w-3xl space-y-8">
         {/* ── Header ──────────────────────────────────────────────────────── */}
-        <header className="flex items-end justify-between border-b-2 border-border pb-4">
+        <header className="border-border flex items-end justify-between border-b-2 pb-4">
           <div className="flex items-end gap-4">
-            <MechButton
-              onClick={() => router.push('/dashboard')}
-              className="px-2.5 py-2 h-9"
-            >
+            <MechButton onClick={() => router.push("/dashboard")} className="h-9 px-2.5 py-2">
               <ArrowLeft className="h-4 w-4" />
             </MechButton>
             <div>
-              <h1 className="text-3xl font-bold leading-none tracking-tight uppercase">
+              <h1 className="text-3xl leading-none font-bold tracking-tight uppercase">
                 Recovery Console
               </h1>
-              <MonoLabel className="block mt-1.5">
-                Local IndexedDB Pending Track Recovery
-              </MonoLabel>
+              <MonoLabel className="mt-1.5 block">Local IndexedDB Pending Track Recovery</MonoLabel>
             </div>
           </div>
           <Led color="amber" size="md" pulse label="PENDING" />
@@ -198,19 +183,13 @@ export default function RecoveryPage() {
         {/* ── Empty State ───────────────────────────────────────────────── */}
         {pendingTracks.length === 0 ? (
           <AnalogCard className="p-12 text-center">
-            <HardDrive className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
-            <PanelTitle
-              label="Storage Status"
-              title="No Pending Recordings"
-            />
-            <p className="font-mono text-xs text-muted-foreground/60 leading-normal max-w-sm mx-auto mt-4">
-              No pending recordings were found in your browser&apos;s local
-              IndexedDB storage. All local tracks have been uploaded.
+            <HardDrive className="text-muted-foreground/20 mx-auto mb-4 h-12 w-12" />
+            <PanelTitle label="Storage Status" title="No Pending Recordings" />
+            <p className="text-muted-foreground/60 mx-auto mt-4 max-w-sm font-mono text-xs leading-normal">
+              No pending recordings were found in your browser&apos;s local IndexedDB storage. All
+              local tracks have been uploaded.
             </p>
-            <MechButton
-              onClick={() => router.push('/dashboard')}
-              className="mt-6 mx-auto"
-            >
+            <MechButton onClick={() => router.push("/dashboard")} className="mx-auto mt-6">
               <ArrowLeft className="h-3.5 w-3.5" />
               Back to Dashboard
             </MechButton>
@@ -220,44 +199,41 @@ export default function RecoveryPage() {
           <div className="space-y-4">
             <PanelTitle
               label="Pending Tracks"
-              title={`${pendingTracks.length} Track${pendingTracks.length !== 1 ? 's' : ''} Awaiting Upload`}
+              title={`${pendingTracks.length} Track${pendingTracks.length !== 1 ? "s" : ""} Awaiting Upload`}
             />
 
             {areSessionsLoading ? (
-              <div className="py-12 text-center font-mono text-xs text-muted-foreground uppercase tracking-widest animate-pulse">
+              <div className="text-muted-foreground animate-pulse py-12 text-center font-mono text-xs tracking-widest uppercase">
                 RESOLVING TRACK STATUSES...
               </div>
             ) : (
               pendingTracks.map((track) => {
-                const trackId = trackIdMap[track.trackSid]
-                const isRetrying = trackId ? retryingTracks.has(trackId) : false
-                const isCompleted = trackId ? completedTracks.has(trackId) : false
-                const canRetry = !!trackId && !isRetrying && !isCompleted
+                const trackId = trackIdMap[track.trackSid];
+                const isRetrying = trackId ? retryingTracks.has(trackId) : false;
+                const isCompleted = trackId ? completedTracks.has(trackId) : false;
 
                 return (
                   <AnalogCard key={track.trackSid} className="p-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-popover border border-border rounded flex items-center justify-center shrink-0">
-                          <HardDrive className="h-5 w-5 text-muted-foreground" />
+                        <div className="bg-popover border-border flex h-10 w-10 shrink-0 items-center justify-center rounded border">
+                          <HardDrive className="text-muted-foreground h-5 w-5" />
                         </div>
                         <div>
-                          <p className="font-bold uppercase text-sm tracking-tight">
-                            {track.type}
-                          </p>
+                          <p className="text-sm font-bold tracking-tight uppercase">{track.type}</p>
                           <MonoLabel className="text-[9px]">
                             SID: {track.trackSid.slice(-12)}
                           </MonoLabel>
                           <MonoLabel className="text-[9px]">
                             Chunks: {track.pendingChunks}
-                            {' | '}Session: {track.sessionId.slice(-8).toUpperCase()}
+                            {" | "}Session: {track.sessionId.slice(-8).toUpperCase()}
                           </MonoLabel>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 shrink-0">
+                      <div className="flex shrink-0 items-center gap-3">
                         {isCompleted ? (
-                          <span className="inline-flex items-center gap-1.5 border border-led-green/30 bg-led-green/10 px-2 py-0.5 rounded-full font-mono text-[9px] font-bold uppercase tracking-wider text-led-green">
+                          <span className="border-led-green/30 bg-led-green/10 text-led-green inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[9px] font-bold tracking-wider uppercase">
                             <CheckCircle className="h-3 w-3" />
                             RETRY INITIATED
                           </span>
@@ -267,14 +243,14 @@ export default function RecoveryPage() {
                           </MonoLabel>
                         ) : (
                           <>
-                            <span className="inline-flex items-center gap-1 border border-border bg-popover px-2 py-0.5 rounded-full font-mono text-[9px] font-bold uppercase tracking-wider text-led-on">
+                            <span className="border-border bg-popover text-led-on inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[9px] font-bold tracking-wider uppercase">
                               <LedInline color="red" size="sm" />
                               {track.pendingChunks} PENDING
                             </span>
                             <MechButton
                               onClick={() => handleRetry(track)}
                               disabled={isRetrying}
-                              className="px-3 py-1.5 h-8 text-[10px]"
+                              className="h-8 px-3 py-1.5 text-[10px]"
                             >
                               {isRetrying ? (
                                 <>
@@ -293,20 +269,19 @@ export default function RecoveryPage() {
                       </div>
                     </div>
                   </AnalogCard>
-                )
+                );
               })
             )}
 
             {/* ── System Note ──────────────────────────────────────────── */}
-            <AnalogCard className="p-5 flex items-start gap-3">
+            <AnalogCard className="flex items-start gap-3 p-5">
               <Led color="amber" size="sm" pulse className="mt-0.5 shrink-0" />
               <div>
-                <MonoLabel className="block mb-1">System Note</MonoLabel>
-                <p className="font-mono text-[10px] text-muted-foreground leading-relaxed">
-                  Tracks stored in IndexedDB with pending or failed chunks can be
-                  retried from this console. After retry, the upload process will
-                  resume from where it left off. If the track was already completed
-                  on the server, no further action is needed.
+                <MonoLabel className="mb-1 block">System Note</MonoLabel>
+                <p className="text-muted-foreground font-mono text-[10px] leading-relaxed">
+                  Tracks stored in IndexedDB with pending or failed chunks can be retried from this
+                  console. After retry, the upload process will resume from where it left off. If
+                  the track was already completed on the server, no further action is needed.
                 </p>
               </div>
             </AnalogCard>
@@ -314,5 +289,5 @@ export default function RecoveryPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

@@ -8,11 +8,12 @@
       "outputs": [".next/**", "!.next/cache/**"],
       "env": ["DATABASE_URL", "NODE_ENV"]
     },
-    "lint": {
-      "dependsOn": ["^lint"]
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
     },
-    "check-types": {
-      "dependsOn": ["^check-types"]
+    "test": {
+      "dependsOn": ["^build"],
+      "cache": false
     },
     "dev": {
       "cache": false,

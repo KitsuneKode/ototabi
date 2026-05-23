@@ -1,3 +1,3 @@
-import { createLogger } from '@ototabi/common/logger'
+import { createLogger } from "@ototabi/common/logger";
 
-export const logger = createLogger('ototabi-api')
+export const logger = createLogger("ototabi-api");

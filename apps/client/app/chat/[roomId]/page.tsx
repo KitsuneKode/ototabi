@@ -1,27 +1,5 @@
-'use client'
+"use client";
 
-import config from '@/utils/config'
-import '@livekit/components-styles'
-import { useTRPC } from '@/trpc/client'
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
-import { Button } from '@ototabi/ui/components/button'
-import { useQuery, useMutation } from '@tanstack/react-query'
-import { RecorderManager } from '@/lib/recorder/recorder-manager'
-import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { useTimer, formatTimer } from '@/lib/hooks/use-timer'
-import {
-  Room,
-  RoomEvent,
-  Track,
-  RoomOptions,
-  VideoPresets,
-} from 'livekit-client'
-import {
-  ArrowLeft,
-  CheckCircle,
-  AlertTriangle,
-  Radio,
-} from 'lucide-react'
 import {
   ControlBar,
   GridLayout,
@@ -30,72 +8,79 @@ import {
   RoomContext,
   useTracks,
   useChat,
-} from '@livekit/components-react'
-import { AnalogCard, AnalogInset } from '@/components/ui/analog-card'
-import { Led, LedInline } from '@/components/ui/led'
+} from "@livekit/components-react";
+import "@livekit/components-styles";
+import { Button } from "@ototabi/ui/components/button";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Room, RoomEvent, Track, RoomOptions, VideoPresets } from "livekit-client";
+import { ArrowLeft, CheckCircle, AlertTriangle, Radio } from "lucide-react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+
+import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
+import { Led, LedInline } from "@/components/ui/led";
 import {
   MonoLabel,
   PanelTitle,
   StatusBadge,
   NoiseBackground,
   MechButton,
-} from '@/components/ui/retro-primitives'
+} from "@/components/ui/retro-primitives";
+import { useTimer, formatTimer } from "@/lib/hooks/use-timer";
+import { RecorderManager } from "@/lib/recorder/recorder-manager";
+import { useTRPC } from "@/trpc/client";
+import config from "@/utils/config";
 
 export default function StudioPage() {
-  const { roomId } = useParams() as { roomId: string }
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const trpc = useTRPC()
+  const { roomId } = useParams() as { roomId: string };
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const trpc = useTRPC();
 
-  const audioEnabled = searchParams.get('audioEnabled') === 'true'
-  const videoEnabled = searchParams.get('videoEnabled') === 'true'
-  const screenShareEnabled = searchParams.get('screenShareEnabled') === 'true'
-  const micId = searchParams.get('micId') || ''
-  const camId = searchParams.get('camId') || ''
+  const audioEnabled = searchParams.get("audioEnabled") === "true";
+  const videoEnabled = searchParams.get("videoEnabled") === "true";
+  const screenShareEnabled = searchParams.get("screenShareEnabled") === "true";
+  const micId = searchParams.get("micId") || "";
+  const camId = searchParams.get("camId") || "";
 
-  const [token, setToken] = useState<string | null>(null)
-  const [tokenLoading, setTokenLoading] = useState(true)
-  const [tokenError, setTokenError] = useState('')
-  const [sessionUser, setSessionUser] = useState<any>(null)
-  const [roomDetails, setRoomDetails] = useState<any>(null)
-  const [isRecording, setIsRecording] = useState(false)
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+  const [_token, setToken] = useState<string | null>(null);
+  const [tokenLoading, setTokenLoading] = useState(true);
+  const [tokenError, setTokenError] = useState("");
+  const [sessionUser, setSessionUser] = useState<any>(null);
+  const [roomDetails, setRoomDetails] = useState<any>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [progressMap, setProgressMap] = useState<
     Map<string, { name: string; progress: number; type: string }>
-  >(new Map())
-  const [connectionError, setConnectionError] = useState('')
-  const [isConnected, setIsConnected] = useState(false)
-  const [connectionHealth, setConnectionHealth] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected')
-  const [sidebarTab, setSidebarTab] = useState<'uploads' | 'chat'>('uploads')
-  const [chatInput, setChatInput] = useState('')
+  >(new Map());
+  const [connectionError, setConnectionError] = useState("");
+  const [_isConnected, setIsConnected] = useState(false);
+  const [connectionHealth, setConnectionHealth] = useState<
+    "connected" | "reconnecting" | "disconnected"
+  >("disconnected");
+  const [sidebarTab, setSidebarTab] = useState<"uploads" | "chat">("uploads");
+  const [chatInput, setChatInput] = useState("");
 
-  const recorderManager = useRef<RecorderManager | null>(null)
+  const recorderManager = useRef<RecorderManager | null>(null);
 
-  const recordingSeconds = useTimer(isRecording)
+  const recordingSeconds = useTimer(isRecording);
 
-  const authState = useQuery(trpc.auth.getSession.queryOptions())
+  const authState = useQuery(trpc.auth.getSession.queryOptions());
 
   useEffect(() => {
-    if (authState.data?.user) setSessionUser(authState.data.user)
-  }, [authState.data])
+    if (authState.data?.user) setSessionUser(authState.data.user);
+  }, [authState.data]);
 
   const roomInfo = useQuery(
-    trpc.rooms.getRoom.queryOptions(
-      { code: roomId },
-      { enabled: !!roomId }
-    )
-  )
+    trpc.rooms.getRoom.queryOptions({ code: roomId }, { enabled: !!roomId }),
+  );
 
   useEffect(() => {
-    if (roomInfo.data) setRoomDetails(roomInfo.data)
-  }, [roomInfo.data])
+    if (roomInfo.data) setRoomDetails(roomInfo.data);
+  }, [roomInfo.data]);
 
-  const startSessionMutation = useMutation(
-    trpc.rooms.startRecordingSession.mutationOptions(),
-  )
-  const stopSessionMutation = useMutation(
-    trpc.rooms.stopRecordingSession.mutationOptions(),
-  )
+  const startSessionMutation = useMutation(trpc.rooms.startRecordingSession.mutationOptions());
+  const stopSessionMutation = useMutation(trpc.rooms.stopRecordingSession.mutationOptions());
 
   const room = useRef(
     new Room({
@@ -115,218 +100,226 @@ export default function StudioPage() {
         },
       },
     } as RoomOptions),
-  ).current
+  ).current;
 
-  const handleDataReceived = useCallback(
-    (payload: Uint8Array, participant?: any) => {
-      try {
-        const data = JSON.parse(new TextDecoder().decode(payload))
-        if (data.type === 'start_recording') {
-          setActiveSessionId(data.sessionId)
-          setIsRecording(true)
-          recorderManager.current?.startRecording(data.sessionId)
-        } else if (data.type === 'stop_recording') {
-          setIsRecording(false)
-          recorderManager.current?.stopRecording()
-        } else if (data.type === 'upload_progress') {
-          setProgressMap((prev) => {
-            const next = new Map(prev)
-            next.set(data.trackSid, {
-              name: participant?.identity || 'Guest',
-              progress: data.progress,
-              type: data.trackSid.includes('video') ? 'VIDEO' : 'AUDIO',
-            })
-            return next
-          })
-        }
-      } catch {
-        // ignore malformed payloads
+  const handleDataReceived = useCallback((payload: Uint8Array, participant?: any) => {
+    try {
+      const data = JSON.parse(new TextDecoder().decode(payload));
+      if (data.type === "start_recording") {
+        setActiveSessionId(data.sessionId);
+        setIsRecording(true);
+        recorderManager.current?.startRecording(data.sessionId);
+      } else if (data.type === "stop_recording") {
+        setIsRecording(false);
+        recorderManager.current?.stopRecording();
+      } else if (data.type === "upload_progress") {
+        setProgressMap((prev) => {
+          const next = new Map(prev);
+          next.set(data.trackSid, {
+            name: participant?.identity || "Guest",
+            progress: data.progress,
+            type: data.trackSid.includes("video") ? "VIDEO" : "AUDIO",
+          });
+          return next;
+        });
       }
-    },
-    [],
-  )
+    } catch {
+      // ignore malformed payloads
+    }
+  }, []);
 
   useEffect(() => {
-    if (!sessionUser || !roomId || !roomDetails) return
+    if (!sessionUser || !roomId || !roomDetails) return;
 
-    let cancelled = false
+    let cancelled = false;
 
-    ;(async () => {
+    (async () => {
       try {
-        setTokenLoading(true)
+        setTokenLoading(true);
         const resp = await fetch(
-          `${config.getConfig('apiBaseUrl')}/api/token?room=${roomId}&username=${encodeURIComponent(sessionUser.name || sessionUser.email)}`,
-        )
-        if (!resp.ok) throw new Error(`Token request failed: ${resp.status}`)
-        const data = await resp.json()
-        if (cancelled) return
+          `${config.getConfig("apiBaseUrl")}/api/token?room=${roomId}&username=${encodeURIComponent(sessionUser.name || sessionUser.email)}`,
+        );
+        if (!resp.ok) throw new Error(`Token request failed: ${resp.status}`);
+        const data = await resp.json();
+        if (cancelled) return;
 
-        if (!data.token) throw new Error('No token returned from server')
+        if (!data.token) throw new Error("No token returned from server");
 
-        setToken(data.token)
+        setToken(data.token);
 
-        room.on(RoomEvent.DataReceived, handleDataReceived)
+        room.on(RoomEvent.DataReceived, handleDataReceived);
         room.on(RoomEvent.Disconnected, () => {
-          setIsConnected(false)
-          setConnectionHealth('disconnected')
-          setConnectionError('Disconnected from studio')
-        })
+          setIsConnected(false);
+          setConnectionHealth("disconnected");
+          setConnectionError("Disconnected from studio");
+        });
         room.on(RoomEvent.Reconnecting, () => {
-          setConnectionHealth('reconnecting')
-          setConnectionError('Reconnecting...')
-        })
+          setConnectionHealth("reconnecting");
+          setConnectionError("Reconnecting...");
+        });
         room.on(RoomEvent.Reconnected, () => {
-          setConnectionError('')
-          setIsConnected(true)
-          setConnectionHealth('connected')
-        })
+          setConnectionError("");
+          setIsConnected(true);
+          setConnectionHealth("connected");
+        });
 
-        await room.connect(config.getConfig('liveKitUrl'), data.token)
-        if (cancelled) return
+        await room.connect(config.getConfig("liveKitUrl"), data.token);
+        if (cancelled) return;
 
-        setIsConnected(true)
-        setConnectionHealth('connected')
-        setTokenLoading(false)
+        setIsConnected(true);
+        setConnectionHealth("connected");
+        setTokenLoading(false);
 
-        if (videoEnabled) await room.localParticipant.setCameraEnabled(true)
-        if (audioEnabled) await room.localParticipant.setMicrophoneEnabled(true)
-        if (screenShareEnabled) await room.localParticipant.setScreenShareEnabled(true)
+        if (videoEnabled) await room.localParticipant.setCameraEnabled(true);
+        if (audioEnabled) await room.localParticipant.setMicrophoneEnabled(true);
+        if (screenShareEnabled) await room.localParticipant.setScreenShareEnabled(true);
 
-        recorderManager.current = new RecorderManager({ room })
+        recorderManager.current = new RecorderManager({ room });
       } catch (err: any) {
         if (!cancelled) {
-          setTokenError(err.message || 'Failed to connect to studio')
-          setTokenLoading(false)
+          setTokenError(err.message || "Failed to connect to studio");
+          setTokenLoading(false);
         }
       }
-    })()
+    })();
 
     return () => {
-      cancelled = true
-      room.off(RoomEvent.DataReceived, handleDataReceived)
-      recorderManager.current?.cleanup()
-      room.disconnect()
-    }
-  }, [sessionUser, roomId, roomDetails, handleDataReceived, room, audioEnabled, videoEnabled, screenShareEnabled])
+      cancelled = true;
+      room.off(RoomEvent.DataReceived, handleDataReceived);
+      recorderManager.current?.cleanup();
+      room.disconnect();
+    };
+  }, [
+    sessionUser,
+    roomId,
+    roomDetails,
+    handleDataReceived,
+    room,
+    audioEnabled,
+    videoEnabled,
+    screenShareEnabled,
+  ]);
 
   const handleStartRecording = async () => {
-    if (!roomDetails) return
+    if (!roomDetails) return;
     try {
       const session = await startSessionMutation.mutateAsync({
         roomId: roomDetails.id,
-      })
-      setActiveSessionId(session.id)
-      setIsRecording(true)
-      await recorderManager.current?.startRecording(session.id)
+      });
+      setActiveSessionId(session.id);
+      setIsRecording(true);
+      await recorderManager.current?.startRecording(session.id);
 
       const data = new TextEncoder().encode(
-        JSON.stringify({ type: 'start_recording', sessionId: session.id }),
-      )
-      await room.localParticipant.publishData(data, { reliable: true })
+        JSON.stringify({ type: "start_recording", sessionId: session.id }),
+      );
+      await room.localParticipant.publishData(data, { reliable: true });
     } catch (e) {
-      console.error('Failed starting recording:', e)
+      console.error("Failed starting recording:", e);
     }
-  }
+  };
 
   const handleStopRecording = async () => {
-    if (!activeSessionId) return
+    if (!activeSessionId) return;
     try {
-      await stopSessionMutation.mutateAsync({ sessionId: activeSessionId })
-      setIsRecording(false)
-      await recorderManager.current?.stopRecording()
+      await stopSessionMutation.mutateAsync({ sessionId: activeSessionId });
+      setIsRecording(false);
+      await recorderManager.current?.stopRecording();
 
-      const data = new TextEncoder().encode(
-        JSON.stringify({ type: 'stop_recording' }),
-      )
-      await room.localParticipant.publishData(data, { reliable: true })
+      const data = new TextEncoder().encode(JSON.stringify({ type: "stop_recording" }));
+      await room.localParticipant.publishData(data, { reliable: true });
     } catch (e) {
-      console.error('Failed stopping recording:', e)
+      console.error("Failed stopping recording:", e);
     }
-  }
+  };
 
-  const { chatMessages, send } = useChat({ room })
+  const { chatMessages, send } = useChat({ room });
 
-  const persistMessage = useMutation(
-    trpc.chat.sendMessage.mutationOptions(),
-  )
+  const persistMessage = useMutation(trpc.chat.sendMessage.mutationOptions());
 
   const persistedMessagesQuery = useQuery(
     trpc.chat.getMessages.queryOptions(
-      { roomId: roomDetails?.id ?? '' },
+      { roomId: roomDetails?.id ?? "" },
       { enabled: !!roomDetails?.id },
     ),
-  )
+  );
 
   const allMessages = useMemo(() => {
-    const persisted = (persistedMessagesQuery.data ?? []).map(m => ({
+    const persisted = (persistedMessagesQuery.data ?? []).map((m) => ({
       id: m.id,
       timestamp: new Date(m.createdAt).getTime(),
       message: m.message,
       from: { identity: m.user.name, name: m.user.name },
-    }))
+    }));
 
-    const dedupedPersisted = persisted.filter(p =>
-      !chatMessages.some(r =>
-        r.from?.identity === p.from?.identity &&
-        r.message === p.message &&
-        Math.abs(r.timestamp - p.timestamp) < 3000
-      )
-    )
+    const dedupedPersisted = persisted.filter(
+      (p) =>
+        !chatMessages.some(
+          (r) =>
+            r.from?.identity === p.from?.identity &&
+            r.message === p.message &&
+            Math.abs(r.timestamp - p.timestamp) < 3000,
+        ),
+    );
 
-    return [...dedupedPersisted, ...chatMessages].sort((a, b) => a.timestamp - b.timestamp)
-  }, [persistedMessagesQuery.data, chatMessages])
+    return [...dedupedPersisted, ...chatMessages].sort((a, b) => a.timestamp - b.timestamp);
+  }, [persistedMessagesQuery.data, chatMessages]);
 
   const handleSend = async () => {
-    if (!chatInput.trim()) return
+    if (!chatInput.trim()) return;
     try {
-      await send(chatInput.trim())
+      await send(chatInput.trim());
       await persistMessage.mutateAsync({
         roomId: roomDetails.id,
         message: chatInput.trim(),
-      })
-      setChatInput('')
+      });
+      setChatInput("");
     } catch (e) {
-      console.error('Failed to send message:', e)
+      console.error("Failed to send message:", e);
     }
-  }
+  };
 
-  const isHost = roomDetails && sessionUser && roomDetails.creatorId === sessionUser.id
+  const isHost = roomDetails && sessionUser && roomDetails.creatorId === sessionUser.id;
 
   // ─── Error State ────────────────────────────────────────────────────────────
   if (tokenError) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 font-sans">
-        <AnalogCard className="p-8 text-center max-w-sm w-full">
-          <div className="w-12 h-12 rounded-full bg-led-on/10 border border-led-on/30 flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="h-6 w-6 text-led-on" />
+      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
+        <AnalogCard className="w-full max-w-sm p-8 text-center">
+          <div className="bg-led-on/10 border-led-on/30 mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border">
+            <AlertTriangle className="text-led-on h-6 w-6" />
           </div>
-          <p className="font-bold uppercase text-led-on tracking-wider text-sm mb-2">Connection Fault</p>
-          <p className="font-mono text-xs text-muted-foreground leading-normal mb-6">{tokenError}</p>
-          <MechButton onClick={() => router.push('/dashboard')} className="w-full justify-center">
+          <p className="text-led-on mb-2 text-sm font-bold tracking-wider uppercase">
+            Connection Fault
+          </p>
+          <p className="text-muted-foreground mb-6 font-mono text-xs leading-normal">
+            {tokenError}
+          </p>
+          <MechButton onClick={() => router.push("/dashboard")} className="w-full justify-center">
             Return to Dashboard
           </MechButton>
         </AnalogCard>
       </div>
-    )
+    );
   }
 
   // ─── Loading State ───────────────────────────────────────────────────────────
   if (tokenLoading || !roomDetails) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background font-sans text-foreground">
+      <div className="bg-background text-foreground flex min-h-screen items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-8 w-8 rounded-full border-2 border-border border-t-accent animate-spin" />
+          <div className="border-border border-t-accent h-8 w-8 animate-spin rounded-full border-2" />
           <div className="space-y-1 text-center">
-            <span className="font-mono text-xs uppercase font-bold tracking-widest animate-pulse block">
+            <span className="block animate-pulse font-mono text-xs font-bold tracking-widest uppercase">
               Synchronizing Studio Link...
             </span>
             <AnalogInset className="mx-auto h-1.5 w-48">
-              <div className="h-full w-2/3 bg-accent/60 animate-pulse rounded" />
+              <div className="bg-accent/60 h-full w-2/3 animate-pulse rounded" />
             </AnalogInset>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   // ─── Studio Main UI ──────────────────────────────────────────────────────────
@@ -334,23 +327,26 @@ export default function StudioPage() {
     <RoomContext.Provider value={room}>
       <NoiseBackground />
 
-      <div className="flex h-screen flex-col overflow-hidden bg-background font-sans text-foreground relative z-10">
-
+      <div className="bg-background text-foreground relative z-10 flex h-screen flex-col overflow-hidden font-sans">
         {/* ── Header ─────────────────────────────────────────────────────────── */}
-        <header className="z-10 flex shrink-0 items-center justify-between border-b-2 border-border bg-card px-5 py-3 shadow-[0_4px_0_0_var(--color-border)]">
+        <header className="border-border bg-card z-10 flex shrink-0 items-center justify-between border-b-2 px-5 py-3 shadow-[0_4px_0_0_var(--color-border)]">
           <div className="flex items-center gap-4">
-            <MechButton onClick={() => router.push('/dashboard')} aria-label="Return to Dashboard" className="h-9 w-9" title="Return to Dashboard">
+            <MechButton
+              onClick={() => router.push("/dashboard")}
+              aria-label="Return to Dashboard"
+              className="h-9 w-9"
+              title="Return to Dashboard"
+            >
               <ArrowLeft className="h-4 w-4" />
             </MechButton>
             <div>
-              <h1 className="text-sm font-bold uppercase tracking-wide text-foreground leading-none">
-                Studio:{' '}
-                <span className="text-muted-foreground">{roomDetails.name}</span>
+              <h1 className="text-foreground text-sm leading-none font-bold tracking-wide uppercase">
+                Studio: <span className="text-muted-foreground">{roomDetails.name}</span>
               </h1>
               <div className="mt-0.5 flex items-center gap-1.5">
                 <MonoLabel>
                   Join Code: <span className="text-foreground">{roomDetails.code}</span>
-                  {' | '}Op: {sessionUser?.name}
+                  {" | "}Op: {sessionUser?.name}
                 </MonoLabel>
                 {isHost && (
                   <StatusBadge variant="ok" className="text-[8px]">
@@ -362,24 +358,34 @@ export default function StudioPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex flex-wrap items-center gap-3">
             {/* Connection health LED */}
             <AnalogInset className="flex items-center gap-2 px-3 py-1.5">
               <Led
-                color={connectionHealth === 'connected' ? 'green' : connectionHealth === 'reconnecting' ? 'amber' : 'red'}
+                color={
+                  connectionHealth === "connected"
+                    ? "green"
+                    : connectionHealth === "reconnecting"
+                      ? "amber"
+                      : "red"
+                }
                 size="sm"
-                pulse={connectionHealth === 'reconnecting'}
+                pulse={connectionHealth === "reconnecting"}
               />
               <MonoLabel>
-                {connectionHealth === 'connected' ? 'LIVE'
-                  : connectionHealth === 'reconnecting' ? 'SYNC'
-                  : 'LOST'}
+                {connectionHealth === "connected"
+                  ? "LIVE"
+                  : connectionHealth === "reconnecting"
+                    ? "SYNC"
+                    : "LOST"}
               </MonoLabel>
             </AnalogInset>
 
             {connectionError && (
-              <div className="flex items-center gap-1.5 border border-yellow-600/40 bg-yellow-400/10 px-3 py-1.5 rounded">
-                <MonoLabel className="text-yellow-600 dark:text-yellow-400">{connectionError}</MonoLabel>
+              <div className="flex items-center gap-1.5 rounded border border-yellow-600/40 bg-yellow-400/10 px-3 py-1.5">
+                <MonoLabel className="text-yellow-600 dark:text-yellow-400">
+                  {connectionError}
+                </MonoLabel>
               </div>
             )}
 
@@ -397,14 +403,14 @@ export default function StudioPage() {
                 {!isRecording ? (
                   <Button
                     onClick={handleStartRecording}
-                    className="btn-mechanical h-9 rounded text-[10px] font-bold uppercase tracking-widest text-secondary-foreground px-5"
+                    className="btn-mechanical text-secondary-foreground h-9 rounded px-5 text-[10px] font-bold tracking-widest uppercase"
                   >
                     Start Recording
                   </Button>
                 ) : (
                   <Button
                     onClick={handleStopRecording}
-                    className="h-9 bg-led-on/90 hover:bg-led-on border border-led-on/60 text-white shadow-[0_3px_5px_rgba(0,0,0,0.2),0_0_10px_var(--color-led-on)] rounded text-[10px] font-bold uppercase tracking-widest active:translate-y-[2px] transition-[transform,box-shadow] ease-[var(--ease-mechanical)] duration-150 px-5"
+                    className="bg-led-on/90 hover:bg-led-on border-led-on/60 h-9 rounded border px-5 text-[10px] font-bold tracking-widest text-white uppercase shadow-[0_3px_5px_rgba(0,0,0,0.2),0_0_10px_var(--color-led-on)] transition-[transform,box-shadow] duration-150 ease-[var(--ease-mechanical)] active:translate-y-[2px]"
                   >
                     Stop Recording
                   </Button>
@@ -416,20 +422,19 @@ export default function StudioPage() {
 
         {/* ── Main Layout ─────────────────────────────────────────────────────── */}
         <div className="flex flex-1 overflow-hidden">
-
           {/* Video feed area */}
-          <main className="relative flex min-w-0 flex-1 flex-col bg-[#111] overflow-hidden will-change-transform">
+          <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-[#111] will-change-transform">
             {/* CRT scanline overlay on the entire video area */}
             <div
               className="pointer-events-none absolute inset-0 z-10 opacity-20 will-change-transform"
               style={{
-                background: 'linear-gradient(rgba(255,255,255,0) 50%, rgba(0,0,0,0.15) 50%)',
-                backgroundSize: '100% 4px',
+                background: "linear-gradient(rgba(255,255,255,0) 50%, rgba(0,0,0,0.15) 50%)",
+                backgroundSize: "100% 4px",
               }}
             />
 
             {/* Corner label */}
-            <div className="absolute top-3 left-3 z-20 font-mono text-[9px] text-[#888] uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded border border-white/10">
+            <div className="absolute top-3 left-3 z-20 rounded border border-white/10 bg-black/60 px-2 py-0.5 font-mono text-[9px] tracking-widest text-[#888] uppercase">
               CH 1 : Studio Feed
             </div>
 
@@ -440,43 +445,47 @@ export default function StudioPage() {
           </main>
 
           {/* ── Sidebar ──────────────────────────────────────────────────────── */}
-          <aside className="hidden w-72 flex-col overflow-y-auto border-l-2 border-border bg-card shadow-[-4px_0_0_0_var(--color-border)] md:flex">
+          <aside className="border-border bg-card hidden w-72 flex-col overflow-y-auto border-l-2 shadow-[-4px_0_0_0_var(--color-border)] md:flex">
             {/* Tab bar */}
-            <div className="flex border-b border-border shrink-0">
+            <div className="border-border flex shrink-0 border-b">
               <button
-                onClick={() => setSidebarTab('uploads')}
-                className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                  sidebarTab === 'uploads'
-                    ? 'bg-popover text-foreground border-b-2 border-accent'
-                    : 'bg-card text-muted-foreground hover:text-foreground'
+                onClick={() => setSidebarTab("uploads")}
+                className={`flex-1 py-2 text-[10px] font-bold tracking-widest uppercase transition-colors ${
+                  sidebarTab === "uploads"
+                    ? "bg-popover text-foreground border-accent border-b-2"
+                    : "bg-card text-muted-foreground hover:text-foreground"
                 }`}
               >
                 Uploads
               </button>
               <button
-                onClick={() => setSidebarTab('chat')}
-                className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                  sidebarTab === 'chat'
-                    ? 'bg-popover text-foreground border-b-2 border-accent'
-                    : 'bg-card text-muted-foreground hover:text-foreground'
+                onClick={() => setSidebarTab("chat")}
+                className={`flex-1 py-2 text-[10px] font-bold tracking-widest uppercase transition-colors ${
+                  sidebarTab === "chat"
+                    ? "bg-popover text-foreground border-accent border-b-2"
+                    : "bg-card text-muted-foreground hover:text-foreground"
                 }`}
               >
                 Chat
               </button>
             </div>
 
-            {sidebarTab === 'uploads' ? (
+            {sidebarTab === "uploads" ? (
               <div className="flex-1 overflow-y-auto p-4">
                 {isHost ? (
                   <>
-                    <PanelTitle label="Track Upload Queues" title="Upload Monitor" className="mb-4 pb-3 border-b border-border" />
+                    <PanelTitle
+                      label="Track Upload Queues"
+                      title="Upload Monitor"
+                      className="border-border mb-4 border-b pb-3"
+                    />
 
                     {progressMap.size === 0 ? (
                       <AnalogInset className="flex flex-col items-center justify-center gap-3 border-dashed p-6 text-center">
-                        <Radio className="h-8 w-8 animate-pulse text-muted-foreground/30" />
+                        <Radio className="text-muted-foreground/30 h-8 w-8 animate-pulse" />
                         <div className="space-y-1">
                           <MonoLabel className="block">Standby Mode</MonoLabel>
-                          <p className="max-w-[160px] font-mono text-[8px] text-muted-foreground/60 leading-normal uppercase">
+                          <p className="text-muted-foreground/60 max-w-[160px] font-mono text-[8px] leading-normal uppercase">
                             Upload feeds populate once recorders activate.
                           </p>
                         </div>
@@ -486,36 +495,34 @@ export default function StudioPage() {
                         {Array.from(progressMap.entries()).map(([trackSid, data]) => (
                           <AnalogInset key={trackSid} className="p-3">
                             <div className="mb-2 flex items-center justify-between">
-                              <span className="max-w-[120px] truncate text-xs font-bold text-foreground uppercase">
+                              <span className="text-foreground max-w-[120px] truncate text-xs font-bold uppercase">
                                 {data.name}
                               </span>
-                              <StatusBadge className="text-[8px]">
-                                {data.type}
-                              </StatusBadge>
+                              <StatusBadge className="text-[8px]">{data.type}</StatusBadge>
                             </div>
 
                             <div className="flex items-center gap-2.5">
                               <AnalogInset className="h-2 flex-1 p-0">
                                 <div
-                                  className={`h-full transition-[width] duration-300 rounded-sm ${
+                                  className={`h-full rounded-sm transition-[width] duration-300 ${
                                     data.progress === 100
-                                      ? 'bg-led-green shadow-[0_0_5px_var(--color-led-green)]'
-                                      : 'bg-accent shadow-[0_0_5px_var(--color-accent-glow)]'
+                                      ? "bg-led-green shadow-[0_0_5px_var(--color-led-green)]"
+                                      : "bg-accent shadow-[0_0_5px_var(--color-accent-glow)]"
                                   }`}
                                   style={{ width: `${data.progress}%` }}
                                 />
                               </AnalogInset>
-                              <span className="min-w-[32px] text-right font-mono text-[10px] font-bold tabular-nums text-foreground">
+                              <span className="text-foreground min-w-[32px] text-right font-mono text-[10px] font-bold tabular-nums">
                                 {data.progress}%
                               </span>
                             </div>
 
-                            <div className="mt-2 flex items-center justify-between font-mono text-[8px] text-muted-foreground/60">
+                            <div className="text-muted-foreground/60 mt-2 flex items-center justify-between font-mono text-[8px]">
                               <span className="max-w-[140px] truncate uppercase">
                                 SID: {trackSid.slice(-10)}
                               </span>
                               {data.progress === 100 && (
-                                <span className="flex items-center gap-0.5 text-led-green font-bold">
+                                <span className="text-led-green flex items-center gap-0.5 font-bold">
                                   <CheckCircle className="h-3 w-3 shrink-0" />
                                   <span>SAVED</span>
                                 </span>
@@ -528,7 +535,11 @@ export default function StudioPage() {
                   </>
                 ) : progressMap.size > 0 ? (
                   <>
-                    <PanelTitle label="Your Tracks" title="Upload Status" className="mb-4 pb-3 border-b border-border" />
+                    <PanelTitle
+                      label="Your Tracks"
+                      title="Upload Status"
+                      className="border-border mb-4 border-b pb-3"
+                    />
                     <div className="space-y-3.5">
                       {Array.from(progressMap.entries())
                         .filter(([, d]) => d.name === sessionUser?.name)
@@ -537,7 +548,7 @@ export default function StudioPage() {
                             <div className="mb-2 flex items-center justify-between">
                               <MonoLabel className="text-[8px]">{data.type}</MonoLabel>
                               {data.progress === 100 && (
-                                <span className="flex items-center gap-0.5 text-led-green font-mono font-bold text-[8px]">
+                                <span className="text-led-green flex items-center gap-0.5 font-mono text-[8px] font-bold">
                                   <CheckCircle className="h-3 w-3" />
                                   <span>DONE</span>
                                 </span>
@@ -546,13 +557,15 @@ export default function StudioPage() {
                             <div className="flex items-center gap-2">
                               <AnalogInset className="h-2 flex-1 p-0">
                                 <div
-                                  className={`h-full transition-[width] duration-300 rounded-sm ${
-                                    data.progress === 100 ? 'bg-led-green' : 'bg-accent'
+                                  className={`h-full rounded-sm transition-[width] duration-300 ${
+                                    data.progress === 100 ? "bg-led-green" : "bg-accent"
                                   }`}
                                   style={{ width: `${data.progress}%` }}
                                 />
                               </AnalogInset>
-                              <span className="font-mono text-[10px] font-bold tabular-nums">{data.progress}%</span>
+                              <span className="font-mono text-[10px] font-bold tabular-nums">
+                                {data.progress}%
+                              </span>
                             </div>
                           </AnalogInset>
                         ))}
@@ -562,64 +575,68 @@ export default function StudioPage() {
               </div>
             ) : (
               <div className="flex flex-1 flex-col overflow-hidden">
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                <div className="flex-1 space-y-3 overflow-y-auto p-4">
                   {allMessages.length === 0 ? (
                     <AnalogInset className="flex flex-col items-center justify-center gap-3 border-dashed p-6 text-center">
                       <div className="space-y-1">
                         <MonoLabel className="block">No Messages</MonoLabel>
-                        <p className="max-w-[160px] font-mono text-[8px] text-muted-foreground/60 leading-normal uppercase">
+                        <p className="text-muted-foreground/60 max-w-[160px] font-mono text-[8px] leading-normal uppercase">
                           Chat messages will appear here.
                         </p>
                       </div>
                     </AnalogInset>
                   ) : (
                     allMessages.map((msg) => {
-                      const isLocal = msg.from?.identity === sessionUser?.name
+                      const isLocal = msg.from?.identity === sessionUser?.name;
                       return (
                         <div
                           key={msg.id}
-                          className={`flex ${isLocal ? 'justify-end' : 'justify-start'}`}
+                          className={`flex ${isLocal ? "justify-end" : "justify-start"}`}
                         >
                           <div
                             className={`max-w-[90%] rounded px-3 py-2 ${
                               isLocal
-                                ? 'bg-accent/20 border border-accent/30'
-                                : 'bg-popover border border-border'
+                                ? "bg-accent/20 border-accent/30 border"
+                                : "bg-popover border-border border"
                             }`}
                           >
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="font-mono text-[8px] font-bold uppercase text-muted-foreground">
-                                {msg.from?.name || msg.from?.identity || 'Unknown'}
+                            <div className="mb-0.5 flex items-center gap-2">
+                              <span className="text-muted-foreground font-mono text-[8px] font-bold uppercase">
+                                {msg.from?.name || msg.from?.identity || "Unknown"}
                               </span>
-                              <span className="font-mono text-[7px] text-muted-foreground/50">
-                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                              <span className="text-muted-foreground/50 font-mono text-[7px]">
+                                {new Date(msg.timestamp).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  second: "2-digit",
+                                })}
                               </span>
                             </div>
-                            <p className="font-mono text-[11px] text-foreground leading-relaxed break-words">
+                            <p className="text-foreground font-mono text-[11px] leading-relaxed break-words">
                               {msg.message}
                             </p>
                           </div>
                         </div>
-                      )
+                      );
                     })
                   )}
                 </div>
-                <div className="border-t border-border p-3">
+                <div className="border-border border-t p-3">
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault()
-                          handleSend()
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSend();
                         }
                       }}
                       placeholder="Type a message..."
-                      className="flex-1 bg-popover border border-border rounded px-3 py-2 font-mono text-[11px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-accent/60"
+                      className="bg-popover border-border text-foreground placeholder:text-muted-foreground/40 focus:border-accent/60 flex-1 rounded border px-3 py-2 font-mono text-[11px] focus:outline-none"
                     />
-                    <MechButton onClick={handleSend} className="px-3 py-2 h-auto">
+                    <MechButton onClick={handleSend} className="h-auto px-3 py-2">
                       Send
                     </MechButton>
                   </div>
@@ -630,12 +647,12 @@ export default function StudioPage() {
         </div>
 
         {/* ── Control Footer ──────────────────────────────────────────────────── */}
-        <footer className="z-10 flex h-16 shrink-0 items-center justify-center border-t-2 border-border bg-card shadow-[0_-4px_0_0_var(--color-border)]">
+        <footer className="border-border bg-card z-10 flex h-16 shrink-0 items-center justify-center border-t-2 shadow-[0_-4px_0_0_var(--color-border)]">
           <ControlBar variation="minimal" />
         </footer>
       </div>
     </RoomContext.Provider>
-  )
+  );
 }
 
 function StudioVideoConference() {
@@ -645,21 +662,21 @@ function StudioVideoConference() {
       { source: Track.Source.ScreenShare, withPlaceholder: false },
     ],
     { onlySubscribed: false },
-  )
+  );
 
   return (
     <GridLayout
       tracks={tracks}
       className="h-full w-full"
       style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-        gap: '16px',
-        alignItems: 'center',
-        justifyContent: 'center',
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+        gap: "16px",
+        alignItems: "center",
+        justifyContent: "center",
       }}
     >
-      <ParticipantTile className="overflow-hidden rounded border-2 border-border/60 bg-card shadow-[0_4px_12px_rgba(0,0,0,0.4)]" />
+      <ParticipantTile className="border-border/60 bg-card overflow-hidden rounded border-2 shadow-[0_4px_12px_rgba(0,0,0,0.4)]" />
     </GridLayout>
-  )
+  );
 }

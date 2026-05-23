@@ -1,35 +1,33 @@
 {
   "name": "@ototabi/api",
-  "module": "./src/server.ts",
-  "type": "module",
   "private": true,
+  "type": "module",
+  "module": "./src/server.ts",
   "scripts": {
     "start": "bun ./src/server.ts",
     "dev": "bun --watch run ./src/server.ts",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
-  },
-  "devDependencies": {
-    "@ototabi/typescript-config": "*",
-    "@types/bun": "latest",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.3",
-    "prettier": "^3.6.2",
-    "prettier-plugin-sort-imports": "^1.8.8"
-  },
-  "peerDependencies": {
-    "typescript": "^5.9.3"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@t3-oss/env-core": "^0.13.11",
     "@ototabi/auth": "*",
     "@ototabi/backend-common": "*",
     "@ototabi/common": "*",
     "@ototabi/store": "*",
     "@ototabi/trpc": "*",
+    "@t3-oss/env-core": "^0.13.11",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
     "http-status-codes": "^2.3.0",
     "livekit-server-sdk": "^2.13.1"
+  },
+  "devDependencies": {
+    "@ototabi/typescript-config": "*",
+    "@types/bun": "latest",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.3"
   }
 }
