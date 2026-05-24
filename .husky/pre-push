@@ -1,0 +1,4 @@
+bun fmt:check
+bun lint
+bun typecheck
+bun run test

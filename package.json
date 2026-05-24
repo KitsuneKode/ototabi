@@ -18,6 +18,7 @@
     "fmt:check": "oxfmt --check",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "prepare": "husky",
     "preinstall": "npx only-allow bun",
     "postinstall": "turbo run db:generate"
   },
@@ -37,10 +38,21 @@
   },
   "devDependencies": {
     "@types/minimatch": "^6.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
     "oxfmt": "^0.51.0",
     "oxlint": "^1.66.0",
     "turbo": "^2.5.6",
     "typescript": "6.0.3"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,md,css}": [
+      "oxfmt",
+      "oxlint --fix --report-unused-disable-directives"
+    ],
+    "*.prisma": [
+      "oxfmt"
+    ]
   },
   "engines": {
     "node": ">=18"

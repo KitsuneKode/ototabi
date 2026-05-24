@@ -17,26 +17,24 @@ const app = express();
 
 const isDev = config.getConfig("nodeEnv") === "development";
 
-const allowedOrigins = [
-  ...new Set(
-    [
-      config.getConfig("frontendUrl"),
-      "http://localhost:3000",
-      "http://localhost:8080",
-      ...(config.getConfig("allowedOrigins")
-        ? config
-            .getConfig("allowedOrigins")
-            .split(",")
-            .map((s: string) => s.trim())
-        : []),
-    ].filter(Boolean),
-  ),
-];
+const allowedOrigins = new Set(
+  [
+    config.getConfig("frontendUrl"),
+    "http://localhost:3000",
+    "http://localhost:8080",
+    ...(config.getConfig("allowedOrigins")
+      ? config
+          .getConfig("allowedOrigins")
+          .split(",")
+          .map((s: string) => s.trim())
+      : []),
+  ].filter(Boolean),
+);
 
 const corsOptions: CorsOptions = {
   credentials: true,
   origin(origin, callback) {
-    if (!origin || isDev || allowedOrigins.includes(origin)) {
+    if (!origin || isDev || allowedOrigins.has(origin)) {
       callback(null, true);
     } else {
       callback(new Error(`CORS: origin ${origin} not allowed`));

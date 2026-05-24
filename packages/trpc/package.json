@@ -7,6 +7,9 @@
     ".": "./src/index.ts",
     "./simp": "./src/simple.ts"
   },
+  "scripts": {
+    "test": "bun test"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.864.0",
     "@aws-sdk/s3-request-presigner": "^3.864.0",

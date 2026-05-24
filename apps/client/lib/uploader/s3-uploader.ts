@@ -57,7 +57,7 @@ export class S3Uploader {
       this.s3Key = response.key;
     } catch (err) {
       console.error("Failed to start multipart upload via tRPC:", err);
-      throw new Error("Failed to start multipart upload.");
+      throw new Error("Failed to start multipart upload.", { cause: err });
     }
   }
 
@@ -81,7 +81,7 @@ export class S3Uploader {
       }
     } catch (err) {
       console.error("Failed to recover existing parts via tRPC:", err);
-      throw new Error("Failed to list existing parts.");
+      throw new Error("Failed to list existing parts.", { cause: err });
     }
   }
 
@@ -173,7 +173,7 @@ export class S3Uploader {
       });
     } catch (err) {
       console.error("Failed to complete upload via tRPC:", err);
-      throw new Error("Failed to finalize upload.");
+      throw new Error("Failed to finalize upload.", { cause: err });
     }
   }
 }
