@@ -47,6 +47,35 @@ existing code. Don't take shortcuts by just adding local logic to solve a proble
 - Prisma docs: https://www.prisma.io/docs
 - shadcn/ui: https://ui.shadcn.com
 
+## Code Quality Standards
+
+### React
+- **No inline components** — never define components inside other components.
+  Inline components remount on every render, losing state, focus, and animations.
+  Extract to module scope and pass props.
+- **No barrel imports** — Next.js `optimizePackageImports` is configured for
+  `lucide-react`, `date-fns`, and `@radix-ui/*`. Standard imports are fine.
+- **No `&&` for number conditions** — use `count > 0 ? <Thing /> : null` instead
+  of `count && <Thing />` to prevent rendering `0`.
+- **`'use client'` on all interactive pages** — Next.js App Router default is
+  server components. All Ototabi pages use client-side state and hooks.
+- **Suspense for `useSearchParams`** — not required when page is fully `'use client'`.
+
+### Composition
+- **Composition over boolean props** — avoid `isEditing`, `isPreview`, etc.
+  Compose explicit variant components instead.
+- **Lift state to provider** — state shared across siblings goes into context,
+  not prop drilling.
+
+### Performance
+- **Date formatting: date-fns** — use `formatDate`, `formatTime`, `formatDateTime`
+  from `@/lib/date-utils` instead of manual `toLocaleDateString()`.
+- **State management: zustand** — use `@/lib/stores/recording-store` for
+  cross-component recording state instead of useState chains.
+- **Validation: zod** — all tRPC inputs must use zod schemas. No manual parsing.
+- **No module-level mutable state** — don't create request-scoped state at
+  module level in RSC or SSR paths (our pages are client-side; this is fine).
+
 ## Project Snapshot
 
 Ototabi is a browser-based podcast recording platform — a Riverside.fm alternative. It
