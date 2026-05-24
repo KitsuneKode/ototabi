@@ -8,14 +8,11 @@ import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { useState, useCallback } from "react";
 
+import { AppShell } from "@/components/layout/app-shell";
+import { PageHeader } from "@/components/layout/page-header";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
-import { Led, LedInline } from "@/components/ui/led";
-import {
-  MonoLabel,
-  PanelTitle,
-  NoiseBackground,
-  MechButton,
-} from "@/components/ui/retro-primitives";
+import { LedInline } from "@/components/ui/led";
+import { MonoLabel, PanelTitle, MechButton } from "@/components/ui/retro-primitives";
 import { formatDate } from "@/lib/date-utils";
 import {
   ArrowLeft,
@@ -116,27 +113,17 @@ export default function SettingsPage() {
   const confirmMatch = deleteConfirm.toLowerCase() === "delete my account";
 
   return (
-    <div className="bg-background text-foreground relative min-h-screen p-4 font-sans md:p-8">
-      <NoiseBackground />
-
-      <div className="relative z-10 mx-auto w-full max-w-2xl space-y-8">
-        {/* ── Header ──────────────────────────────────────────────────────── */}
-        <header className="border-border flex items-end justify-between border-b-2 pb-4">
-          <div className="flex items-end gap-4">
-            <MechButton
-              onClick={() => router.push("/dashboard")}
-              aria-label="Back to Dashboard"
-              className="h-9 px-2.5 py-2"
-            >
+    <AppShell maxWidth="max-w-2xl">
+      <div className="space-y-8">
+        <PageHeader
+          label="Operator profile"
+          title="Settings"
+          actions={
+            <MechButton onClick={() => router.push("/dashboard")} className="h-9 px-2.5 py-2">
               <ArrowLeft className="h-4 w-4" />
             </MechButton>
-            <div>
-              <h1 className="text-3xl leading-none font-bold tracking-tight uppercase">Settings</h1>
-              <MonoLabel className="mt-1.5 block">Operator Profile Management Console</MonoLabel>
-            </div>
-          </div>
-          <Led color="amber" size="md" pulse label="ACTIVE" />
-        </header>
+          }
+        />
 
         {/* ── Profile Info Banner ───────────────────────────────────────── */}
         {user && (
@@ -270,71 +257,71 @@ export default function SettingsPage() {
             Delete My Account
           </MechButton>
         </AnalogCard>
+
+        {/* ── Delete Confirmation Modal ─────────────────────────────────────── */}
+        {showDeleteModal && (
+          <div
+            className="bg-background/80 fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Confirm deletion"
+            tabIndex={-1}
+          >
+            <AnalogCard className="animate-in fade-in zoom-in-95 w-full max-w-md space-y-6 p-8 duration-200">
+              <div role="document">
+                <div className="flex items-start gap-4">
+                  <div className="bg-led-on/10 border-led-on/30 mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border">
+                    <ShieldAlert className="text-led-on h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold tracking-tight uppercase">
+                      Confirm Account Deletion
+                    </h3>
+                    <p className="text-muted-foreground mt-1 font-mono text-xs leading-relaxed">
+                      Type <span className="text-accent font-bold">delete my account</span> to
+                      confirm.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-muted-foreground font-mono text-[10px] font-bold tracking-widest uppercase">
+                    Confirmation Phrase
+                  </Label>
+                  <Input
+                    type="text"
+                    value={deleteConfirm}
+                    onChange={(e) => setDeleteConfirm(e.target.value)}
+                    placeholder="delete my account"
+                    className="border-border bg-popover text-foreground placeholder:text-muted-foreground/30 focus-visible:ring-led-on/40 h-11 rounded border font-mono text-sm shadow-inner focus-visible:ring-1"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <MechButton
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setDeleteConfirm("");
+                    }}
+                    className="flex-1 justify-center"
+                  >
+                    Cancel
+                  </MechButton>
+                  <MechButton
+                    variant="danger"
+                    onClick={handleDeleteAccount}
+                    disabled={!confirmMatch || deleteAccount.isPending}
+                    className="flex-1 justify-center"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {deleteAccount.isPending ? "DELETING..." : "CONFIRM"}
+                  </MechButton>
+                </div>
+              </div>
+            </AnalogCard>
+          </div>
+        )}
       </div>
-
-      {/* ── Delete Confirmation Modal ─────────────────────────────────────── */}
-      {showDeleteModal && (
-        <div
-          className="bg-background/80 fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Confirm deletion"
-          tabIndex={-1}
-        >
-          <AnalogCard className="animate-in fade-in zoom-in-95 w-full max-w-md space-y-6 p-8 duration-200">
-            <div role="document">
-              <div className="flex items-start gap-4">
-                <div className="bg-led-on/10 border-led-on/30 mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border">
-                  <ShieldAlert className="text-led-on h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold tracking-tight uppercase">
-                    Confirm Account Deletion
-                  </h3>
-                  <p className="text-muted-foreground mt-1 font-mono text-xs leading-relaxed">
-                    Type <span className="text-accent font-bold">delete my account</span> to
-                    confirm.
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-muted-foreground font-mono text-[10px] font-bold tracking-widest uppercase">
-                  Confirmation Phrase
-                </Label>
-                <Input
-                  type="text"
-                  value={deleteConfirm}
-                  onChange={(e) => setDeleteConfirm(e.target.value)}
-                  placeholder="delete my account"
-                  className="border-border bg-popover text-foreground placeholder:text-muted-foreground/30 focus-visible:ring-led-on/40 h-11 rounded border font-mono text-sm shadow-inner focus-visible:ring-1"
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <MechButton
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setDeleteConfirm("");
-                  }}
-                  className="flex-1 justify-center"
-                >
-                  Cancel
-                </MechButton>
-                <MechButton
-                  variant="danger"
-                  onClick={handleDeleteAccount}
-                  disabled={!confirmMatch || deleteAccount.isPending}
-                  className="flex-1 justify-center"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  {deleteAccount.isPending ? "DELETING..." : "CONFIRM"}
-                </MechButton>
-              </div>
-            </div>
-          </AnalogCard>
-        </div>
-      )}
-    </div>
+    </AppShell>
   );
 }

@@ -126,11 +126,18 @@ export const roomsRouter = {
 
   startRecordingSession: protectedProcedure
     .input(z.object({ roomId: z.string() }))
-    .mutation(({ input }) => roomsService.startRecordingSession(input.roomId)),
+    .mutation(({ input, ctx }) =>
+      roomsService.startRecordingSession({ actorId: ctx.session.user.id, roomId: input.roomId }),
+    ),
 
   stopRecordingSession: protectedProcedure
     .input(z.object({ sessionId: z.string() }))
-    .mutation(({ input }) => roomsService.stopRecordingSession(input.sessionId)),
+    .mutation(({ input, ctx }) =>
+      roomsService.stopRecordingSession({
+        actorId: ctx.session.user.id,
+        sessionId: input.sessionId,
+      }),
+    ),
 
   getRecordingSessions: protectedProcedure
     .input(z.object({ roomId: z.string() }))

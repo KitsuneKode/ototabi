@@ -1,6 +1,6 @@
 # Plan 03: Sync Markers via LiveKit RTP Timestamps
 
-**Status:** pending  
+**Status:** in-progress  
 **Priority:** P1
 
 ## Problem

@@ -1,6 +1,5 @@
 "use client";
 
-import { authClient } from "@ototabi/auth/client";
 import { Button } from "@ototabi/ui/components/button";
 import { Input } from "@ototabi/ui/components/input";
 import { Label } from "@ototabi/ui/components/label";
@@ -9,21 +8,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useCallback } from "react";
 
+import { AppShell } from "@/components/layout/app-shell";
+import { PageHeader } from "@/components/layout/page-header";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
-import { Led, LedInline } from "@/components/ui/led";
-import {
-  MonoLabel,
-  PanelTitle,
-  StatusBadge,
-  NoiseBackground,
-  MechButton,
-} from "@/components/ui/retro-primitives";
+import { LedInline } from "@/components/ui/led";
+import { MonoLabel, PanelTitle, StatusBadge, MechButton } from "@/components/ui/retro-primitives";
 import { formatDate, formatTime, formatDateTime } from "@/lib/date-utils";
 import {
   Copy,
   Plus,
   Video,
-  LogOut,
   Calendar,
   Clock,
   Settings as SettingsIcon,
@@ -33,7 +27,6 @@ import {
   Film,
   ExternalLink,
   Lock,
-  User,
 } from "@/lib/icons";
 import { useTRPC } from "@/trpc/client";
 
@@ -84,17 +77,11 @@ export default function DashboardPage() {
     setTimeout(() => setCopiedRoomCode(null), 2000);
   }, []);
 
-  const handleSignOut = useCallback(async () => {
-    await authClient.signOut();
-    router.push("/");
-  }, [router]);
-
   // ── Loading ──────────────────────────────────────────────────────────────
   if (authState.isLoading) {
     return (
-      <div className="bg-background text-foreground relative flex min-h-screen flex-col overflow-x-hidden p-4 font-sans md:p-8">
-        <NoiseBackground />
-        <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col space-y-8">
+      <AppShell>
+        <div className="flex flex-1 flex-col space-y-8">
           <div className="flex items-center justify-center gap-3 py-4">
             <div className="border-border border-t-accent h-8 w-8 animate-spin rounded-full border-2" />
             <span className="animate-pulse font-mono text-xs font-bold tracking-widest uppercase">
@@ -124,7 +111,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
@@ -164,42 +151,13 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="bg-background text-foreground relative flex min-h-screen flex-col overflow-x-hidden p-4 font-sans md:p-8">
-      <NoiseBackground />
-
-      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col space-y-8">
-        {/* ── Header ──────────────────────────────────────────────────────── */}
-        <header className="border-border flex flex-col items-start justify-between gap-4 border-b-2 pb-4 md:flex-row md:items-end">
-          <div>
-            <h1 className="text-4xl leading-none font-bold tracking-tight uppercase">Dashboard</h1>
-            <MonoLabel className="mt-1.5 block">Model 16-A // Host Room Controller Board</MonoLabel>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* User tag */}
-            <div className="bg-card border-border flex items-center gap-2 rounded border px-3 py-1.5 shadow-sm">
-              <Led color="amber" size="sm" pulse />
-              <MonoLabel>
-                <span className="text-muted-foreground mr-1">OP:</span>
-                <span className="text-foreground font-bold">{authState.data.user.name}</span>
-              </MonoLabel>
-            </div>
-
-            <MechButton onClick={() => router.push("/settings")}>
-              <User className="h-3.5 w-3.5" />
-              <span>Settings</span>
-            </MechButton>
-
-            <MechButton
-              variant="danger"
-              onClick={handleSignOut}
-              className="text-destructive-foreground"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              <span>Log Out</span>
-            </MechButton>
-          </div>
-        </header>
+    <AppShell>
+      <div className="flex flex-1 flex-col space-y-8">
+        <PageHeader
+          label="Host Room Controller"
+          title="Dashboard"
+          description="Create studios, review sessions, and recover local uploads."
+        />
 
         {/* ── Main Grid ───────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
@@ -538,6 +496,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }

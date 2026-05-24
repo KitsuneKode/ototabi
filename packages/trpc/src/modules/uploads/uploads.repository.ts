@@ -83,6 +83,25 @@ export const uploadsRepository = {
     });
   },
 
+  async canUserAccessTrack(trackId: string, userId: string) {
+    const track = await prisma.recordingTrack.findFirst({
+      where: {
+        id: trackId,
+        session: {
+          room: {
+            OR: [
+              { creatorId: userId },
+              { members: { some: { userId } } },
+              { participants: { some: { userId } } },
+            ],
+          },
+        },
+      },
+      select: { id: true },
+    });
+    return !!track;
+  },
+
   async findTrackById(id: string) {
     return prisma.recordingTrack.findUnique({
       where: { id },

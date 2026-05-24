@@ -1,5 +1,7 @@
 import { chatRouter } from "../modules/chat/chat.router";
+import { recordingEventsRouter } from "../modules/recording-events/recording-events.router";
 import { roomsRouter } from "../modules/rooms/rooms.router";
+import { syncMarkersRouter } from "../modules/sync-markers/sync-markers.router";
 import { transcriptRouter } from "../modules/transcript/transcript.router";
 import { uploadsRouter } from "../modules/uploads/uploads.router";
 import { createTRPCRouter } from "../trpc";
@@ -14,6 +16,8 @@ export const appRouter = createTRPCRouter({
   rooms: roomsRouter,
   uploads: uploadsRouter,
   chat: chatRouter,
+  recordingEvents: recordingEventsRouter,
+  syncMarkers: syncMarkersRouter,
   transcript: transcriptRouter,
 });
 

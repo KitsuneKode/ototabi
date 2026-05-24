@@ -45,7 +45,7 @@ export function PanelTitle({ label, title, className }: PanelTitleProps) {
   return (
     <div className={cn("flex flex-col gap-0.5", className)}>
       {label && <MonoLabel>{label}</MonoLabel>}
-      <h2 className="text-xl font-bold tracking-tight uppercase">{title}</h2>
+      <h2 className="font-display text-xl font-bold tracking-tight uppercase">{title}</h2>
     </div>
   );
 }
@@ -114,7 +114,7 @@ export function MechButton({
   return (
     <button
       className={cn(
-        "btn-mechanical text-secondary-foreground inline-flex items-center justify-center gap-2 rounded px-4 py-2 text-xs font-bold tracking-widest uppercase",
+        "btn-mechanical font-display text-secondary-foreground inline-flex items-center justify-center gap-2 rounded px-4 py-2 text-xs font-bold tracking-widest uppercase transition-transform duration-150 active:scale-[0.96]",
         variant === "danger" &&
           "from-destructive/80 to-destructive border-destructive/60 text-destructive-foreground bg-gradient-to-b shadow-none hover:brightness-110",
         className,

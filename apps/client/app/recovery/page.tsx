@@ -4,14 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 
+import { AppShell } from "@/components/layout/app-shell";
+import { PageHeader } from "@/components/layout/page-header";
+import { UploadStatusBadge } from "@/components/patterns/upload-status-badge";
 import { AnalogCard } from "@/components/ui/analog-card";
 import { Led, LedInline } from "@/components/ui/led";
-import {
-  MonoLabel,
-  PanelTitle,
-  NoiseBackground,
-  MechButton,
-} from "@/components/ui/retro-primitives";
+import { MonoLabel, PanelTitle, MechButton } from "@/components/ui/retro-primitives";
 import { RefreshCw, CheckCircle, AlertTriangle, HardDrive, ArrowLeft, Upload } from "@/lib/icons";
 import { db, type UploadSession } from "@/lib/localDB";
 import { opfsStorage } from "@/lib/localDB/opfs-storage";
@@ -148,27 +146,24 @@ export default function RecoveryPage() {
   }
 
   return (
-    <div className="bg-background text-foreground relative min-h-screen p-4 font-sans md:p-8">
-      <NoiseBackground />
-
-      <div className="relative z-10 mx-auto w-full max-w-3xl space-y-8">
-        {/* ── Header ──────────────────────────────────────────────────────── */}
-        <header className="border-border flex items-end justify-between border-b-2 pb-4">
-          <div className="flex items-end gap-4">
-            <MechButton onClick={() => router.push("/dashboard")} className="h-9 px-2.5 py-2">
-              <ArrowLeft className="h-4 w-4" />
-            </MechButton>
-            <div>
-              <h1 className="text-3xl leading-none font-bold tracking-tight uppercase">
-                Recovery Console
-              </h1>
-              <MonoLabel className="mt-1.5 block">
-                Local IndexedDB + OPFS Redundant Storage Recovery
-              </MonoLabel>
-            </div>
-          </div>
-          <Led color="amber" size="md" pulse label="PENDING" />
-        </header>
+    <AppShell maxWidth="max-w-3xl">
+      <div className="space-y-8">
+        <PageHeader
+          label="IndexedDB + OPFS recovery"
+          title="Recovery Console"
+          actions={
+            <>
+              <MechButton onClick={() => router.push("/dashboard")} className="h-9 px-2.5 py-2">
+                <ArrowLeft className="h-4 w-4" />
+              </MechButton>
+              {pendingTracks.length > 0 ? (
+                <UploadStatusBadge status="recoverable" />
+              ) : (
+                <UploadStatusBadge status="complete" />
+              )}
+            </>
+          }
+        />
 
         {/* ── Empty State ───────────────────────────────────────────────── */}
         {pendingTracks.length === 0 ? (
@@ -275,6 +270,6 @@ export default function RecoveryPage() {
           </div>
         )}
       </div>
-    </div>
+    </AppShell>
   );
 }

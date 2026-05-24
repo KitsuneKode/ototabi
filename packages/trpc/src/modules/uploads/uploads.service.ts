@@ -8,6 +8,7 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { TRPCError } from "@trpc/server";
 
+import { recordingEventsService } from "../recording-events/recording-events.service";
 import { uploadsRepository } from "./uploads.repository";
 
 const accessKeyId =
@@ -181,7 +182,7 @@ export const uploadsService = {
     parts: { ETag: string; PartNumber: number }[];
     userId: string;
   }) {
-    await this.requireUploadOwner(params);
+    const upload = await this.requireUploadOwner(params);
 
     if (s3Client && isS3Configured && !params.uploadId.startsWith("mock-upload-id")) {
       try {
@@ -206,6 +207,14 @@ export const uploadsService = {
 
     try {
       await uploadsRepository.markTrackComplete(params.key, finalUrl);
+      await recordingEventsService.createEvent({
+        actorId: params.userId,
+        sessionId: upload.sessionId,
+        type: "UPLOAD_COMPLETED",
+        trackSid: upload.trackSid,
+        message: `${upload.type} upload completed`,
+        metadata: { s3Key: upload.s3Key },
+      });
     } catch (dbError) {
       console.error("[Uploads] DB update error:", dbError);
       throw new TRPCError({
@@ -217,17 +226,25 @@ export const uploadsService = {
     return { status: "success" };
   },
 
-  async getUploadStatus(trackId: string) {
-    const track = await uploadsRepository.findTrackById(trackId);
+  async getUploadStatus(params: { trackId: string; userId: string }) {
+    const canAccess = await uploadsRepository.canUserAccessTrack(params.trackId, params.userId);
+    if (!canAccess) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to view this track" });
+    }
+    const track = await uploadsRepository.findTrackById(params.trackId);
     if (!track) throw new TRPCError({ code: "NOT_FOUND", message: "Track not found" });
     return track;
   },
 
-  async retryUpload(trackId: string) {
-    const track = await uploadsRepository.findTrackBySid(trackId);
+  async retryUpload(params: { trackId: string; userId: string }) {
+    const canAccess = await uploadsRepository.canUserAccessTrack(params.trackId, params.userId);
+    if (!canAccess) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to retry this track" });
+    }
+    const track = await uploadsRepository.findTrackBySid(params.trackId);
     if (!track) throw new TRPCError({ code: "NOT_FOUND", message: "Track not found" });
     if (track.status === "COMPLETED") return { status: "already_completed" as const };
-    await uploadsRepository.resetTrackStatus(trackId);
+    await uploadsRepository.resetTrackStatus(params.trackId);
     return {
       status: "retrying" as const,
       trackSid: track.trackSid,

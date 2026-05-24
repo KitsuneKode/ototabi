@@ -4,6 +4,8 @@
 export {
   IconArrowLeft as ArrowLeft,
   IconArrowRight as ArrowRight,
+  IconChevronLeft as ChevronLeft,
+  IconChevronRight as ChevronRight,
   IconAlertTriangle as AlertTriangle,
   IconCircleCheck as CheckCircle,
   IconInfoCircle as InfoCircle,
@@ -43,6 +45,7 @@ export {
   IconShield as Shield,
   IconActivity as Activity,
   IconHome as Home,
+  IconLayoutDashboard as LayoutDashboard,
   IconLayoutSidebarRight as PanelRight,
   IconUpload as Upload,
   IconLogout as LogOut,
@@ -57,4 +60,8 @@ export {
   IconSun as Sun,
   IconDeviceTablet as Tablet,
   IconX as X,
+  IconMenu2 as Menu,
+  IconCloudUpload as CloudUpload,
+  IconUsers as Users,
+  IconWaveSine as Waveform,
 } from "@tabler/icons-react";

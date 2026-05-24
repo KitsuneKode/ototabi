@@ -22,110 +22,115 @@
  * ─────────────────────────────────────────────────────────────────────────── */
 
 :root {
-  /* Surfaces */
-  --background: oklch(1 0 0); /* outer chassis body — warm grey-beige */
-  --card: oklch(1 0 0); /* analog chassis panel */
-  --popover: oklch(1 0 0); /* inset / recessed panel */
+  /* Surfaces — warm grey-beige chassis */
+  --background: oklch(0.93 0.02 85);
+  --card: oklch(0.97 0.015 88);
+  --popover: oklch(0.9 0.025 80);
 
   /* Text */
-  --foreground: oklch(0.145 0 0); /* charcoal */
-  --card-foreground: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --foreground: oklch(0.22 0.02 55);
+  --card-foreground: oklch(0.22 0.02 55);
+  --popover-foreground: oklch(0.22 0.02 55);
 
-  /* Primary — inverted chassis for strong CTAs */
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  /* Primary — charcoal chassis faceplate */
+  --primary: oklch(0.28 0.03 50);
+  --primary-foreground: oklch(0.97 0.01 90);
 
-  /* Secondary — raised button base */
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+  /* Secondary — raised mechanical button */
+  --secondary: oklch(0.88 0.02 85);
+  --secondary-foreground: oklch(0.25 0.03 50);
 
   /* Muted */
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted: oklch(0.9 0.02 85);
+  --muted-foreground: oklch(0.48 0.03 55);
 
-  /* Accent — warm amber-orange signal color */
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* Accent — amber signal (REC / active / focus) */
+  --accent: oklch(0.68 0.17 48);
+  --accent-foreground: oklch(0.98 0.01 90);
 
   /* Destructive */
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: #ffffff;
 
   /* Borders & inputs */
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0); /* accent focus ring */
+  --border: oklch(0.82 0.03 80);
+  --input: oklch(0.86 0.025 82);
+  --ring: oklch(0.68 0.17 48);
+
+  /* Tertiary text (footer links, watermarks) */
+  --subtle-foreground: oklch(0.55 0.025 55);
 
   /* Radius */
   --radius: 0.625rem;
 
   /* Sidebar */
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.95 0.015 88);
+  --sidebar-foreground: oklch(0.22 0.02 55);
+  --sidebar-primary: oklch(0.68 0.17 48);
+  --sidebar-primary-foreground: oklch(0.98 0.01 90);
+  --sidebar-accent: oklch(0.9 0.02 85);
+  --sidebar-accent-foreground: oklch(0.25 0.03 50);
+  --sidebar-border: oklch(0.82 0.03 80);
+  --sidebar-ring: oklch(0.68 0.17 48);
+  --chart-1: oklch(0.68 0.17 48);
+  --chart-2: oklch(0.55 0.08 55);
+  --chart-3: oklch(0.48 0.06 50);
+  --chart-4: oklch(0.4 0.05 48);
+  --chart-5: oklch(0.32 0.04 45);
 }
 
 .dark {
-  /* Surfaces */
-  --background: oklch(0.145 0 0); /* deep warm brown-charcoal */
-  --card: oklch(0.205 0 0); /* warm charcoal panel */
-  --popover: oklch(0.205 0 0); /* deep inset panel */
+  /* Surfaces — deep console (low chroma = serious, not muddy brown) */
+  --background: oklch(0.12 0.008 48);
+  --card: oklch(0.165 0.01 50);
+  --popover: oklch(0.1 0.008 46);
 
   /* Text */
-  --foreground: oklch(0.985 0 0); /* warm bone-white */
-  --card-foreground: oklch(0.985 0 0);
-  --popover-foreground: oklch(0.985 0 0);
+  --foreground: oklch(0.93 0.01 90);
+  --card-foreground: oklch(0.93 0.01 90);
+  --popover-foreground: oklch(0.93 0.01 90);
 
   /* Primary */
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: oklch(0.93 0.01 90);
+  --primary-foreground: oklch(0.14 0.01 50);
 
   /* Secondary */
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.22 0.012 50);
+  --secondary-foreground: oklch(0.93 0.01 90);
 
   /* Muted */
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
+  --muted: oklch(0.2 0.01 50);
+  --muted-foreground: oklch(0.58 0.02 62);
 
-  /* Accent — amber-orange, slightly desaturated for dark */
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Accent — broadcast amber (use sparingly for signal, not decoration) */
+  --accent: oklch(0.66 0.11 42);
+  --accent-foreground: oklch(0.12 0.01 48);
 
   /* Destructive */
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: #ffffff;
 
   /* Borders & inputs */
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.66 0.11 42);
+
+  --subtle-foreground: oklch(0.48 0.02 58);
 
   /* Sidebar */
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.2 0.025 52);
+  --sidebar-foreground: oklch(0.94 0.015 90);
+  --sidebar-primary: oklch(0.72 0.16 48);
+  --sidebar-primary-foreground: oklch(0.18 0.025 50);
+  --sidebar-accent: oklch(0.26 0.02 52);
+  --sidebar-accent-foreground: oklch(0.94 0.015 90);
+  --sidebar-border: oklch(0.32 0.025 52);
+  --sidebar-ring: oklch(0.72 0.16 48);
+  --chart-1: oklch(0.72 0.16 48);
+  --chart-2: oklch(0.62 0.1 55);
+  --chart-3: oklch(0.52 0.08 50);
+  --chart-4: oklch(0.44 0.06 48);
+  --chart-5: oklch(0.36 0.05 45);
 }
 
 /* ─── Tailwind Theme Tokens ──────────────────────────────────────────────── */
@@ -150,6 +155,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-subtle-foreground: var(--subtle-foreground);
 
   /* Radii */
   --radius-sm: calc(var(--radius) - 4px);
@@ -176,7 +182,7 @@
   --color-led-green-off: #14532d; /* green dim */
 
   /* Amber accent glow (used with shadow utilities) */
-  --color-accent-glow: rgba(232, 104, 42, 0.35);
+  --color-accent-glow: rgba(210, 118, 58, 0.22);
 
   /* ── Easing curves (Emil-style — strong, intentional, never weak) ────────── */
 
@@ -191,8 +197,9 @@
 
   /* Drawer / slide — iOS-like, feels weighty */
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
-  --font-heading: var(--font-sans);
-  --font-sans: var(--font-sans);
+  --font-display: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -219,7 +226,14 @@
   h2,
   h3,
   h4 {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
     text-wrap: balance;
+    letter-spacing: -0.02em;
+  }
+
+  .font-display {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.02em;
   }
 
   /* Scrollbar — matches the retro panel inset aesthetic */
@@ -282,9 +296,39 @@
 
   .dark .chassis-shadow {
     box-shadow:
-      inset 0 1px 2px rgba(255, 255, 255, 0.08),
-      0 10px 20px rgba(0, 0, 0, 0.4),
-      0 4px 0px var(--border);
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 1px 2px rgba(0, 0, 0, 0.28),
+      0 12px 32px rgba(0, 0, 0, 0.36);
+  }
+
+  /* Secondary panel action — outline, no heavy mechanical lift */
+  .btn-panel-ghost {
+    border: 1px solid var(--border);
+    background: color-mix(in oklch, var(--card) 80%, transparent);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition:
+      color 150ms var(--ease-out),
+      border-color 150ms var(--ease-out),
+      background-color 150ms var(--ease-out),
+      transform 150ms var(--ease-mechanical);
+  }
+
+  .btn-panel-ghost:hover {
+    border-color: color-mix(in oklch, var(--accent) 35%, var(--border));
+    background: color-mix(in oklch, var(--muted) 60%, var(--card));
+  }
+
+  .btn-panel-ghost:active {
+    transform: scale(0.96);
+  }
+
+  /* Footer watermark typography */
+  .footer-watermark {
+    color: color-mix(in oklch, var(--foreground) 6%, transparent);
+    letter-spacing: -0.04em;
+    line-height: 0.85;
+    user-select: none;
+    pointer-events: none;
   }
 
   /* Mechanical button — raised physical feel */
@@ -378,13 +422,58 @@
   .led-amber {
     background-color: var(--accent);
     box-shadow:
-      0 0 10px var(--color-accent-glow),
-      inset 0 2px 4px rgba(255, 255, 255, 0.3);
+      0 0 6px var(--color-accent-glow),
+      inset 0 1px 2px rgba(255, 255, 255, 0.25);
+  }
+
+  .dark .led-amber {
+    box-shadow:
+      0 0 5px var(--color-accent-glow),
+      inset 0 1px 2px rgba(255, 255, 255, 0.12);
   }
 
   /* Noise texture — mechanical aged surface feel */
   .noise-texture {
     background-image: url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E");
-    opacity: 0.03;
+    opacity: 0.022;
+  }
+
+  /* Subtle top vignette for marketing depth */
+  .studio-atmosphere {
+    background: radial-gradient(
+      120% 80% at 50% -20%,
+      color-mix(in oklch, var(--accent) 8%, transparent),
+      transparent 55%
+    );
+  }
+
+  /* Staggered marketing enter — GPU-friendly, interruptible */
+  .analog-enter {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+    transition:
+      opacity 400ms var(--ease-out),
+      transform 400ms var(--ease-out);
+  }
+
+  .analog-enter.analog-enter-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .analog-enter-delay-1 {
+    transition-delay: 80ms;
+  }
+  .analog-enter-delay-2 {
+    transition-delay: 160ms;
+  }
+  .analog-enter-delay-3 {
+    transition-delay: 240ms;
+  }
+  .analog-enter-delay-4 {
+    transition-delay: 320ms;
+  }
+  .analog-enter-delay-5 {
+    transition-delay: 400ms;
   }
 }

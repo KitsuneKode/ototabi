@@ -3,6 +3,7 @@ import { prisma } from "@ototabi/store";
 import { TRPCError } from "@trpc/server";
 import crypto from "node:crypto";
 
+import { recordingEventsService } from "../recording-events/recording-events.service";
 import { roomsPolicy } from "./rooms.policy";
 import { roomsRepository } from "./rooms.repository";
 
@@ -169,6 +170,15 @@ export const roomsService = {
     const { member, participant } = await roomsRepository.findAccessContext(room.id, params.userId);
     if (room.creatorId === params.userId || member || participant) {
       await roomsRepository.addParticipant(room.id, params.userId);
+      const activeSession = await roomsRepository.findActiveSessionByRoom(room.id);
+      if (activeSession) {
+        await recordingEventsService.createEvent({
+          actorId: params.userId,
+          sessionId: activeSession.id,
+          type: "JOIN",
+          message: "Participant joined studio",
+        });
+      }
       return room;
     }
 
@@ -186,6 +196,15 @@ export const roomsService = {
 
     if (invite) {
       await roomsRepository.consumeInvite(invite.id, room.id, params.userId);
+      const activeSession = await roomsRepository.findActiveSessionByRoom(room.id);
+      if (activeSession) {
+        await recordingEventsService.createEvent({
+          actorId: params.userId,
+          sessionId: activeSession.id,
+          type: "JOIN",
+          message: "Participant joined studio with invite",
+        });
+      }
       return room;
     }
 
@@ -194,7 +213,16 @@ export const roomsService = {
   },
 
   async leaveRoom(params: { userId: string; roomId: string }) {
+    const activeSession = await roomsRepository.findActiveSessionByRoom(params.roomId);
     await roomsRepository.removeParticipant(params.roomId, params.userId);
+    if (activeSession) {
+      await recordingEventsService.createEvent({
+        sessionId: activeSession.id,
+        type: "LEAVE",
+        message: "Participant left studio",
+        metadata: { userId: params.userId },
+      });
+    }
     return { success: true };
   },
 
@@ -202,32 +230,64 @@ export const roomsService = {
     return roomsRepository.listParticipants(roomId);
   },
 
-  async startRecordingSession(roomId: string) {
-    const room = await roomsRepository.findById(roomId);
+  async startRecordingSession(params: { actorId: string; roomId: string }) {
+    const { room, member, participant } = await roomsRepository.findAccessContext(
+      params.roomId,
+      params.actorId,
+    );
     if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
-    await roomsRepository.endActiveSessions(roomId);
-    return roomsRepository.createSession(roomId);
+    if (
+      !roomsPolicy.canJoinRoom({
+        room,
+        userId: params.actorId,
+        member,
+        participant,
+        inviteUsable: false,
+      })
+    ) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to start recording" });
+    }
+
+    await roomsRepository.endActiveSessions(params.roomId);
+    const session = await roomsRepository.createSession(params.roomId);
+    await recordingEventsService.createEvent({
+      actorId: params.actorId,
+      sessionId: session.id,
+      type: "START",
+      message: "Recording started",
+    });
+    return session;
   },
 
-  async stopRecordingSession(sessionId: string) {
-    const session = await roomsRepository.findSession(sessionId);
+  async stopRecordingSession(params: { actorId: string; sessionId: string }) {
+    const session = await roomsRepository.findSession(params.sessionId);
     if (!session)
       throw new TRPCError({ code: "NOT_FOUND", message: "Recording session not found" });
-    const result = await roomsRepository.markSessionComplete(sessionId);
+    const canAccess = await roomsRepository.canUserAccessSession(params.sessionId, params.actorId);
+    if (!canAccess) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to stop recording" });
+    }
+    const result = await roomsRepository.markSessionComplete(params.sessionId);
+    await recordingEventsService.createEvent({
+      actorId: params.actorId,
+      sessionId: params.sessionId,
+      type: "STOP",
+      message: "Recording stopped",
+    });
 
     // Queue background jobs
     try {
-      const audioTrack = await roomsRepository.findFirstAudioTrack(sessionId);
+      const audioTrack = await roomsRepository.findFirstAudioTrack(params.sessionId);
       if (audioTrack?.s3Url) {
-        await getTranscriptQueue().add(`transcript-${sessionId}`, {
-          sessionId,
+        await getTranscriptQueue().add(`transcript-${params.sessionId}`, {
+          sessionId: params.sessionId,
           audioTrackS3Key: audioTrack.s3Url,
         });
       } else {
         // Queue without audio URL — worker will retry until upload completes
         await getTranscriptQueue().add(
-          `transcript-${sessionId}`,
-          { sessionId, audioTrackS3Key: "" },
+          `transcript-${params.sessionId}`,
+          { sessionId: params.sessionId, audioTrackS3Key: "" },
           { delay: 30000 },
         );
       }

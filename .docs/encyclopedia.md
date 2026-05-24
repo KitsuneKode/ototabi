@@ -60,6 +60,19 @@
 | **Noise Texture**  | Fullscreen SVG turbulence overlay for a mechanical aged-surface feel.                                                                                    |
 | **Scanlines**      | CRT-style horizontal line overlay on video areas. Pure CSS via gradient background.                                                                      |
 
+## Retro Analog v2 (Product Shell)
+
+| Term               | Definition                                                                                                        |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| **ProductShell**   | Shared page frame: noise texture, `min-h-[100dvh]`, centered `max-w-6xl` content column.                          |
+| **SiteHeader**     | Marketing/app chrome: brand block, primary nav, PWR/SYNC LEDs, mobile menu.                                       |
+| **Signal accent**  | Single amber-orange (`--accent`) for active UI — never purple gradients or multi-accent palettes.                 |
+| **Section rhythm** | Major sections use `py-20 md:py-28` and `border-t-2` separators — chapters, not stacked cards.                    |
+| **Feature bento**  | Asymmetric `grid-flow-dense` layout; outer radius = inner radius + padding (concentric radii).                    |
+| **Motion**         | Enter from `scale(0.96)` + opacity; exits faster than enters; `--ease-mechanical` for press, `--ease-out` for UI. |
+
+Default product theme: **dark** (studio console). Light mode remains available via system preference.
+
 ## Typography
 
 | Font              | Use                                                                                |

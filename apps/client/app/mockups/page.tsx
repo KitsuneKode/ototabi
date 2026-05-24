@@ -155,6 +155,38 @@ const DESIGNS: DesignPreset[] = [
     desc: "Vibrant, nostalgia-inducing layout with warm beige paper, orange grid overlays, and pixel buttons.",
     theme: "Light / Analog",
   },
+  {
+    id: 17,
+    name: "Signal Lock",
+    file: "design-17",
+    category: "Instrument UI",
+    desc: "Void black + phosphor green meters. Precision-tool trust for technical creators.",
+    theme: "Dark / Minimal",
+  },
+  {
+    id: 18,
+    name: "Tape Archive",
+    file: "design-18",
+    category: "Editorial Trust",
+    desc: "Warm paper, serif headlines, reel metaphor. Calm conversion for interview podcasts.",
+    theme: "Light / Heritage",
+  },
+  {
+    id: 19,
+    name: "Patchbay Pro",
+    file: "design-19",
+    category: "Studio Rack",
+    desc: "Evolved Studio Console: gunmetal chassis, amber REC, live waveform in CRT. Recommended default.",
+    theme: "Dark / Analog+",
+  },
+  {
+    id: 20,
+    name: "Timeline Master",
+    file: "design-20",
+    category: "Edit-First",
+    desc: "Waveform hero + multi-track lanes. Sells aligned masters and post-production.",
+    theme: "Dark / Cyan",
+  },
 ];
 
 export default function MockupsPage() {

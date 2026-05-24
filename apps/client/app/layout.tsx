@@ -2,11 +2,23 @@ import type { Metadata } from "next";
 
 import { cn } from "@ototabi/ui/lib/utils";
 import "@ototabi/ui/globals.css";
-import { Courier_Prime, Oswald } from "next/font/google";
+import { Courier_Prime, Oswald, Source_Sans_3 } from "next/font/google";
 
 import { Providers } from "@/components/providers";
 
-const oswald = Oswald({ subsets: ["latin"], variable: "--font-sans" });
+/** Display — chassis labels, headings, mechanical buttons (uppercase) */
+const fontDisplay = Oswald({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["500", "600", "700"],
+});
+
+/** Body — paragraphs, descriptions, readable UI prose */
+const fontSans = Source_Sans_3({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  weight: ["400", "500", "600"],
+});
 
 const fontMono = Courier_Prime({
   subsets: ["latin"],
@@ -27,8 +39,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={cn("font-sans", oswald.variable)}>
-      <body className={`${oswald.variable} ${fontMono.variable} font-sans antialiased`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={cn(fontDisplay.variable, fontSans.variable, fontMono.variable)}
+    >
+      <body className="font-sans antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

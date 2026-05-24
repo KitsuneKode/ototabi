@@ -4,15 +4,17 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
+import { AppShell } from "@/components/layout/app-shell";
+import { PageHeader } from "@/components/layout/page-header";
+import { SessionStatusRail } from "@/components/layout/session-status-rail";
+import { SessionTimeline } from "@/components/patterns/session-timeline";
+import {
+  mapTrackStatusToUploadDisplay,
+  UploadStatusBadge,
+} from "@/components/patterns/upload-status-badge";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { Led, LedInline } from "@/components/ui/led";
-import {
-  MonoLabel,
-  PanelTitle,
-  StatusBadge,
-  NoiseBackground,
-  MechButton,
-} from "@/components/ui/retro-primitives";
+import { MonoLabel, PanelTitle, StatusBadge, MechButton } from "@/components/ui/retro-primitives";
 import { formatDateTime, formatTimestamp } from "@/lib/date-utils";
 import {
   ArrowLeft,
@@ -34,31 +36,6 @@ const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }
   SCREENSHARE: Monitor,
 };
 
-function TrackStatusBadge({ status }: { status: string }) {
-  if (status === "COMPLETED") {
-    return (
-      <StatusBadge variant="ok">
-        <LedInline color="green" size="sm" />
-        UPLOADED
-      </StatusBadge>
-    );
-  }
-  if (status === "UPLOADING") {
-    return (
-      <StatusBadge variant="warn">
-        <LedInline color="amber" size="sm" pulse />
-        UPLOADING
-      </StatusBadge>
-    );
-  }
-  return (
-    <StatusBadge variant="recording">
-      <LedInline color="red" size="sm" />
-      FAILED
-    </StatusBadge>
-  );
-}
-
 export default function RecordingSessionPage() {
   const { sessionId } = useParams() as { sessionId: string };
   const router = useRouter();
@@ -76,6 +53,10 @@ export default function RecordingSessionPage() {
 
   const chapters = useQuery(
     trpc.transcript.getChapters.queryOptions({ sessionId }, { enabled: !!sessionId }),
+  );
+
+  const events = useQuery(
+    trpc.recordingEvents.listBySession.queryOptions({ sessionId }, { enabled: !!sessionId }),
   );
 
   // ── Auth Gate ──────────────────────────────────────────────────────────
@@ -139,34 +120,28 @@ export default function RecordingSessionPage() {
     return acc;
   }, {});
 
+  const aggregateUploadStatus = allUploaded ? "complete" : "uploading";
+
   return (
-    <div className="bg-background text-foreground relative min-h-screen p-4 font-sans md:p-8">
-      <NoiseBackground />
+    <AppShell maxWidth="max-w-5xl">
+      <div className="space-y-8">
+        <PageHeader
+          label={`REEL: ${data.id.slice(-8).toUpperCase()} // ${data.room.name}`}
+          title="Session Review"
+          actions={
+            <>
+              <MechButton onClick={() => router.push("/dashboard")} className="h-9 px-2.5 py-2">
+                <ArrowLeft className="h-4 w-4" />
+              </MechButton>
+              <StatusBadge variant={allUploaded ? "ok" : "warn"}>
+                <LedInline color={allUploaded ? "green" : "amber"} size="sm" pulse={!allUploaded} />
+                {allUploaded ? "ALL UPLOADED" : "SYNC PENDING"}
+              </StatusBadge>
+            </>
+          }
+        />
 
-      <div className="relative z-10 mx-auto w-full max-w-5xl space-y-8">
-        {/* ── Header ──────────────────────────────────────────────────────── */}
-        <header className="border-border flex flex-col items-start justify-between gap-4 border-b-2 pb-4 md:flex-row md:items-end">
-          <div className="flex items-end gap-4">
-            <MechButton onClick={() => router.push("/dashboard")} className="h-9 px-2.5 py-2">
-              <ArrowLeft className="h-4 w-4" />
-            </MechButton>
-            <div>
-              <h1 className="text-3xl leading-none font-bold tracking-tight uppercase">
-                Session Review
-              </h1>
-              <MonoLabel className="mt-1.5 block">
-                REEL: {data.id.slice(-8).toUpperCase()} // {data.room.name}
-              </MonoLabel>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <StatusBadge variant={allUploaded ? "ok" : "warn"}>
-              <LedInline color={allUploaded ? "green" : "amber"} size="sm" pulse={!allUploaded} />
-              {allUploaded ? "ALL UPLOADED" : "SYNC PENDING"}
-            </StatusBadge>
-          </div>
-        </header>
+        <SessionStatusRail uploadStatus={aggregateUploadStatus} syncOk={allUploaded} />
 
         {/* ── Session Meta Card ─────────────────────────────────────────── */}
         <AnalogCard className="p-6">
@@ -267,7 +242,9 @@ export default function RecordingSessionPage() {
                             </div>
 
                             <div className="flex items-center gap-3">
-                              <TrackStatusBadge status={track.status} />
+                              <UploadStatusBadge
+                                status={mapTrackStatusToUploadDisplay(track.status)}
+                              />
 
                               {track.status === "COMPLETED" && track.s3Url ? (
                                 <a
@@ -313,6 +290,11 @@ export default function RecordingSessionPage() {
               );
             })
           )}
+        </div>
+
+        <div className="space-y-4">
+          <PanelTitle label="Event Tape" title="Recording Timeline" />
+          <SessionTimeline events={events.data} isLoading={events.isLoading} />
         </div>
 
         {/* ── Transcript Section ────────────────────────────────────────── */}
@@ -398,6 +380,6 @@ export default function RecordingSessionPage() {
           </Link>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }

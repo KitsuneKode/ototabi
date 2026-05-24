@@ -27,6 +27,23 @@ export const roomsRepository = {
     return { room, member, participant };
   },
 
+  async canUserAccessSession(sessionId: string, userId: string) {
+    const session = await prisma.recordingSession.findFirst({
+      where: {
+        id: sessionId,
+        room: {
+          OR: [
+            { creatorId: userId },
+            { members: { some: { userId } } },
+            { participants: { some: { userId } } },
+          ],
+        },
+      },
+      select: { id: true },
+    });
+    return !!session;
+  },
+
   async findByIdWithRelations(id: string) {
     return prisma.room.findFirst({
       where: { id },
@@ -181,6 +198,14 @@ export const roomsRepository = {
 
   async findSession(sessionId: string) {
     return prisma.recordingSession.findUnique({ where: { id: sessionId } });
+  },
+
+  async findActiveSessionByRoom(roomId: string) {
+    return prisma.recordingSession.findFirst({
+      where: { roomId, status: "RECORDING" },
+      orderBy: { startedAt: "desc" },
+      select: { id: true },
+    });
   },
 
   async markSessionComplete(sessionId: string) {

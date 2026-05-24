@@ -29,6 +29,7 @@ model User {
   rooms         Room[]
   tracks        RecordingTrack[]
   uploadSessions UploadSession[]
+  recordingEvents RecordingEvent[]
   roomParticipations RoomParticipant[]
   roomMemberships RoomMember[]
   chatMessages  ChatMessage[]
@@ -165,6 +166,8 @@ model RecordingSession {
   status          String           // "RECORDING" | "COMPLETED"
   tracks          RecordingTrack[]
   uploadSessions  UploadSession[]
+  events          RecordingEvent[]
+  syncMarkers     SyncMarker[]
   transcriptSegments TranscriptSegment[]
   chapters        Chapter[]
   showNotes       ShowNotes?
@@ -212,6 +215,39 @@ model UploadSession {
   @@unique([sessionId, trackSid])
   @@index([userId, status])
   @@map("upload_session")
+}
+
+model SyncMarker {
+  id         String           @id @default(cuid())
+  sessionId  String
+  session    RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId     String
+  localTime  Float
+  rtpTimestamp Float?
+  trackSid   String?
+  createdAt  DateTime         @default(now())
+
+  @@index([sessionId, userId])
+  @@index([sessionId, createdAt])
+  @@map("sync_marker")
+}
+
+model RecordingEvent {
+  id         String           @id @default(cuid())
+  sessionId  String
+  session    RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type       String           // START | STOP | PAUSE | RESUME | JOIN | LEAVE | RECONNECT | TRACK_PUBLISHED | TRACK_UNPUBLISHED | UPLOAD_COMPLETED
+  trackSid   String?
+  message    String?
+  metadata   Json             @default("{}")
+  occurredAt DateTime         @default(now())
+  createdAt  DateTime         @default(now())
+
+  @@index([sessionId, occurredAt])
+  @@index([sessionId, type])
+  @@map("recording_event")
 }
 
 model TranscriptSegment {

@@ -16,6 +16,7 @@ import { Room, RoomEvent, Track, RoomOptions, VideoPresets } from "livekit-clien
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 
+import { SessionStatusRail } from "@/components/layout/session-status-rail";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { KeyboardShortcutsOverlay } from "@/components/ui/keyboard-shortcuts-overlay";
 import { Led, LedInline } from "@/components/ui/led";
@@ -81,6 +82,7 @@ export default function StudioPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const recorderManager = useRef<RecorderManager | null>(null);
+  const activeSessionIdRef = useRef<string | null>(null);
 
   const recordingSeconds = useTimer(isRecording);
 
@@ -100,6 +102,13 @@ export default function StudioPage() {
 
   const startSessionMutation = useMutation(trpc.rooms.startRecordingSession.mutationOptions());
   const stopSessionMutation = useMutation(trpc.rooms.stopRecordingSession.mutationOptions());
+  const leaveRoomMutation = useMutation(trpc.rooms.leaveRoom.mutationOptions());
+  const createEventMutation = useMutation(trpc.recordingEvents.create.mutationOptions());
+  const submitSyncMarkerMutation = useMutation(trpc.syncMarkers.submit.mutationOptions());
+
+  useEffect(() => {
+    activeSessionIdRef.current = activeSessionId;
+  }, [activeSessionId]);
 
   const room = useRef(
     new Room({
@@ -120,6 +129,26 @@ export default function StudioPage() {
       },
     } as RoomOptions),
   ).current;
+
+  useEffect(() => {
+    if (!isRecording || isPaused || !activeSessionId) return;
+
+    const publishMarker = () => {
+      const localTime = performance.now();
+      submitSyncMarkerMutation.mutate({
+        sessionId: activeSessionId,
+        localTime,
+      });
+      const payload = new TextEncoder().encode(
+        JSON.stringify({ type: "sync_marker", localTime, sessionId: activeSessionId }),
+      );
+      room.localParticipant.publishData(payload, { reliable: false }).catch(() => undefined);
+    };
+
+    publishMarker();
+    const intervalId = window.setInterval(publishMarker, 2000);
+    return () => window.clearInterval(intervalId);
+  }, [isRecording, isPaused, activeSessionId, room, submitSyncMarkerMutation]);
 
   const handleDataReceived = useCallback((payload: Uint8Array, participant?: any) => {
     try {
@@ -183,6 +212,14 @@ export default function StudioPage() {
           setConnectionError("");
           setIsConnected(true);
           setConnectionHealth("connected");
+          const sessionId = activeSessionIdRef.current;
+          if (sessionId) {
+            createEventMutation.mutate({
+              sessionId,
+              type: "RECONNECT",
+              message: "Participant reconnected to studio",
+            });
+          }
         });
 
         await room.connect(config.getConfig("liveKitUrl"), data.token);
@@ -208,6 +245,7 @@ export default function StudioPage() {
     return () => {
       cancelled = true;
       room.off(RoomEvent.DataReceived, handleDataReceived);
+      if (roomDetails?.id) leaveRoomMutation.mutate({ roomId: roomDetails.id });
       recorderManager.current?.cleanup();
       room.disconnect();
     };
@@ -221,6 +259,8 @@ export default function StudioPage() {
     videoEnabled,
     screenShareEnabled,
     inviteToken,
+    createEventMutation,
+    leaveRoomMutation,
   ]);
 
   const handleStartRecording = async () => {
@@ -396,7 +436,7 @@ export default function StudioPage() {
             <MechButton
               onClick={() => router.push("/dashboard")}
               aria-label="Return to Dashboard"
-              className="h-9 w-9"
+              className="focus-visible:ring-accent h-9 w-9 focus-visible:ring-2 focus-visible:outline-none"
               title="Return to Dashboard"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -424,8 +464,9 @@ export default function StudioPage() {
             {/* Mobile sidebar toggle */}
             <MechButton
               onClick={() => setSidebarOpen((p) => !p)}
-              aria-label="Toggle sidebar"
-              className="h-9 w-9 md:hidden"
+              aria-label="Toggle participants panel"
+              title="Participants"
+              className="focus-visible:ring-accent h-9 w-9 focus-visible:ring-2 focus-visible:outline-none md:hidden"
             >
               <PanelRight className="h-4 w-4" />
             </MechButton>
@@ -484,9 +525,23 @@ export default function StudioPage() {
                       onClick={() => {
                         if (isPaused) {
                           recorderManager.current?.resumeRecording();
+                          if (activeSessionId) {
+                            createEventMutation.mutate({
+                              sessionId: activeSessionId,
+                              type: "RESUME",
+                              message: "Recording resumed",
+                            });
+                          }
                           setIsPaused(false);
                         } else {
                           recorderManager.current?.pauseRecording();
+                          if (activeSessionId) {
+                            createEventMutation.mutate({
+                              sessionId: activeSessionId,
+                              type: "PAUSE",
+                              message: "Recording paused",
+                            });
+                          }
                           setIsPaused(true);
                         }
                       }}
@@ -506,6 +561,17 @@ export default function StudioPage() {
             )}
           </div>
         </header>
+
+        {(isRecording || connectionHealth !== "connected") && (
+          <div className="border-border shrink-0 border-b px-4 py-2 md:px-5">
+            <SessionStatusRail
+              isRecording={isRecording}
+              isPaused={isPaused}
+              uploadStatus={isRecording ? "recording" : undefined}
+              syncOk={connectionHealth === "connected"}
+            />
+          </div>
+        )}
 
         {/* ── Main Layout ─────────────────────────────────────────────────────── */}
         <div className="flex flex-1 overflow-hidden">

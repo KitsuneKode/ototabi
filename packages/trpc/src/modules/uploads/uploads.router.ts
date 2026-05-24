@@ -49,9 +49,13 @@ export const uploadsRouter = {
 
   getUploadStatus: protectedProcedure
     .input(z.object({ trackId: z.string() }))
-    .query(({ input }) => uploadsService.getUploadStatus(input.trackId)),
+    .query(({ input, ctx }) =>
+      uploadsService.getUploadStatus({ trackId: input.trackId, userId: ctx.session.user.id }),
+    ),
 
   retryUpload: protectedProcedure
     .input(z.object({ trackId: z.string() }))
-    .mutation(({ input }) => uploadsService.retryUpload(input.trackId)),
+    .mutation(({ input, ctx }) =>
+      uploadsService.retryUpload({ trackId: input.trackId, userId: ctx.session.user.id }),
+    ),
 } satisfies TRPCRouterRecord;

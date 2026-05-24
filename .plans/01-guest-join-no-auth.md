@@ -1,6 +1,6 @@
 # Plan 01: Guest Join Without Authentication
 
-**Status:** pending  
+**Status:** in-progress  
 **Priority:** P0
 
 ## Problem

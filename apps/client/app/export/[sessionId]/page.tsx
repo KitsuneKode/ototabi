@@ -6,15 +6,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useRef, useState, useCallback } from "react";
 
+import { AppShell } from "@/components/layout/app-shell";
+import { PageHeader } from "@/components/layout/page-header";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { Led, LedInline } from "@/components/ui/led";
-import {
-  MonoLabel,
-  PanelTitle,
-  StatusBadge,
-  NoiseBackground,
-  MechButton,
-} from "@/components/ui/retro-primitives";
+import { MonoLabel, PanelTitle, StatusBadge, MechButton } from "@/components/ui/retro-primitives";
 import { formatDateTime, formatTimestamp } from "@/lib/date-utils";
 import {
   ArrowLeft,
@@ -484,47 +480,39 @@ export default function ExportSessionPage() {
   const completedTracks = data.tracks.filter((t) => t.status === "COMPLETED");
 
   return (
-    <div className="bg-background text-foreground relative min-h-screen p-4 font-sans md:p-8">
-      <NoiseBackground />
-
-      <div className="relative z-10 mx-auto w-full max-w-5xl space-y-8">
-        {/* ── Header ──────────────────────────────────────────────────────── */}
-        <header className="border-border flex flex-col items-start justify-between gap-4 border-b-2 pb-4 md:flex-row md:items-end">
-          <div className="flex items-end gap-4">
-            <MechButton onClick={() => router.push("/dashboard")} className="h-9 px-2.5 py-2">
-              <ArrowLeft className="h-4 w-4" />
-            </MechButton>
-            <div>
-              <h1 className="text-3xl leading-none font-bold tracking-tight uppercase">
-                Export Console
-              </h1>
-              <MonoLabel className="mt-1.5 block">
-                SESSION: {data.id.slice(-8).toUpperCase()} // {data.room.name}
-              </MonoLabel>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Led
-              color={procColor}
-              size="sm"
-              pulse={processingStatus === "processing" || processingStatus === "loading-ffmpeg"}
-            />
-            <StatusBadge
-              variant={
-                processingStatus === "processing" || processingStatus === "loading-ffmpeg"
-                  ? "warn"
-                  : processingStatus === "done"
-                    ? "ok"
-                    : processingStatus === "error"
-                      ? "recording"
-                      : "default"
-              }
-            >
-              {procLabel}
-            </StatusBadge>
-          </div>
-        </header>
+    <AppShell maxWidth="max-w-5xl">
+      <div className="space-y-8">
+        <PageHeader
+          label={`SESSION: ${data.id.slice(-8).toUpperCase()} // ${data.room.name}`}
+          title="Export Console"
+          actions={
+            <>
+              <MechButton onClick={() => router.push("/dashboard")} className="h-9 px-2.5 py-2">
+                <ArrowLeft className="h-4 w-4" />
+              </MechButton>
+              <div className="flex items-center gap-3">
+                <Led
+                  color={procColor}
+                  size="sm"
+                  pulse={processingStatus === "processing" || processingStatus === "loading-ffmpeg"}
+                />
+                <StatusBadge
+                  variant={
+                    processingStatus === "processing" || processingStatus === "loading-ffmpeg"
+                      ? "warn"
+                      : processingStatus === "done"
+                        ? "ok"
+                        : processingStatus === "error"
+                          ? "recording"
+                          : "default"
+                  }
+                >
+                  {procLabel}
+                </StatusBadge>
+              </div>
+            </>
+          }
+        />
 
         {/* ── Session Meta Card ─────────────────────────────────────────── */}
         <AnalogCard className="p-6">
@@ -860,6 +848,6 @@ export default function ExportSessionPage() {
           </MechButton>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }
