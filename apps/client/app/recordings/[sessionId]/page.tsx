@@ -1,18 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  Download,
-  Mic,
-  Video,
-  Monitor,
-  AlertTriangle,
-  RefreshCw,
-  User,
-  Film,
-  BookOpen,
-} from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
@@ -26,6 +14,18 @@ import {
   MechButton,
 } from "@/components/ui/retro-primitives";
 import { formatDateTime, formatTimestamp } from "@/lib/date-utils";
+import {
+  ArrowLeft,
+  Download,
+  Mic,
+  Video,
+  Monitor,
+  AlertTriangle,
+  RefreshCw,
+  User,
+  Film,
+  BookOpen,
+} from "@/lib/icons";
 import { useTRPC } from "@/trpc/client";
 
 const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {

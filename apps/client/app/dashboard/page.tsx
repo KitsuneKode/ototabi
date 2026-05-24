@@ -5,6 +5,20 @@ import { Button } from "@ototabi/ui/components/button";
 import { Input } from "@ototabi/ui/components/input";
 import { Label } from "@ototabi/ui/components/label";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
+
+import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
+import { Led, LedInline } from "@/components/ui/led";
+import {
+  MonoLabel,
+  PanelTitle,
+  StatusBadge,
+  NoiseBackground,
+  MechButton,
+} from "@/components/ui/retro-primitives";
+import { formatDate, formatTime, formatDateTime } from "@/lib/date-utils";
 import {
   Copy,
   Plus,
@@ -20,21 +34,7 @@ import {
   ExternalLink,
   Lock,
   User,
-} from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState, useCallback } from "react";
-
-import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
-import { Led, LedInline } from "@/components/ui/led";
-import {
-  MonoLabel,
-  PanelTitle,
-  StatusBadge,
-  NoiseBackground,
-  MechButton,
-} from "@/components/ui/retro-primitives";
-import { formatDate, formatTime, formatDateTime } from "@/lib/date-utils";
+} from "@/lib/icons";
 import { useTRPC } from "@/trpc/client";
 
 export default function DashboardPage() {

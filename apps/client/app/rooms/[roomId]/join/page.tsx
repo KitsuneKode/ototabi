@@ -2,13 +2,13 @@
 
 import { Label } from "@ototabi/ui/components/label";
 import { useQuery } from "@tanstack/react-query";
-import { Mic, ArrowRight, Info, AlertTriangle, RefreshCw, VideoOff, Tv, User } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect, useRef, useCallback } from "react";
 
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { LedInline } from "@/components/ui/led";
 import { MonoLabel, NoiseBackground, MechButton } from "@/components/ui/retro-primitives";
+import { Mic, ArrowRight, Info, AlertTriangle, RefreshCw, VideoOff, Tv, User } from "@/lib/icons";
 import { useTRPC } from "@/trpc/client";
 import config from "@/utils/config";
 

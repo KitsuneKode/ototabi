@@ -5,12 +5,13 @@ import { authClient } from "@ototabi/auth/client";
 import { Button } from "@ototabi/ui/components/button";
 import { Form, FormField, FormItem, FormLabel, FormMessage } from "@ototabi/ui/components/form";
 import { Input } from "@ototabi/ui/components/input";
-import { Key, Mail, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+
+import { Key, Mail, ShieldAlert } from "@/lib/icons";
 
 const signInSchema = z.object({
   email: z.string().email("Please enter a valid email address"),

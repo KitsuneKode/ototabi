@@ -3,18 +3,6 @@
 import { Input } from "@ototabi/ui/components/input";
 import { Label } from "@ototabi/ui/components/label";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  Copy,
-  Trash2,
-  Save,
-  AlertTriangle,
-  Film,
-  ExternalLink,
-  Calendar,
-  Clock,
-  ShieldAlert,
-} from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useCallback } from "react";
@@ -29,6 +17,18 @@ import {
   MechButton,
 } from "@/components/ui/retro-primitives";
 import { formatDate, formatTime } from "@/lib/date-utils";
+import {
+  ArrowLeft,
+  Copy,
+  Trash2,
+  Save,
+  AlertTriangle,
+  Film,
+  ExternalLink,
+  Calendar,
+  Clock,
+  ShieldAlert,
+} from "@/lib/icons";
 import { useTRPC } from "@/trpc/client";
 
 export default function RoomSettingsPage() {

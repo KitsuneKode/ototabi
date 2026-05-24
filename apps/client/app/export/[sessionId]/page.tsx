@@ -3,17 +3,6 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL, fetchFile } from "@ffmpeg/util";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  Download,
-  Mic,
-  Video,
-  Monitor,
-  AlertTriangle,
-  RefreshCw,
-  Scissors,
-  Combine,
-} from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useRef, useState, useCallback } from "react";
 
@@ -27,6 +16,17 @@ import {
   MechButton,
 } from "@/components/ui/retro-primitives";
 import { formatDateTime, formatTimestamp } from "@/lib/date-utils";
+import {
+  ArrowLeft,
+  Download,
+  Mic,
+  Video,
+  Monitor,
+  AlertTriangle,
+  RefreshCw,
+  Scissors,
+  Combine,
+} from "@/lib/icons";
 import { useTRPC } from "@/trpc/client";
 
 const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {

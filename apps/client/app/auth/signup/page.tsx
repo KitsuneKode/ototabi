@@ -5,12 +5,13 @@ import { authClient } from "@ototabi/auth/client";
 import { Button } from "@ototabi/ui/components/button";
 import { Form, FormField, FormItem, FormLabel, FormMessage } from "@ototabi/ui/components/form";
 import { Input } from "@ototabi/ui/components/input";
-import { Key, Mail, ShieldAlert, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+
+import { Key, Mail, ShieldAlert, User } from "@/lib/icons";
 
 const signUpSchema = z.object({
   name: z.string().min(1, "Display name is required").max(100, "Name must be under 100 characters"),

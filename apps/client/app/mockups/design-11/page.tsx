@@ -1,6 +1,6 @@
 "use client";
 
-import { Video } from "lucide-react";
+import { Video } from "@/lib/icons";
 
 export default function ClayBentoMockup() {
   return (

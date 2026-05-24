@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
-import { RefreshCw, CheckCircle, AlertTriangle, HardDrive, ArrowLeft, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useMemo } from "react";
 
@@ -13,6 +12,7 @@ import {
   NoiseBackground,
   MechButton,
 } from "@/components/ui/retro-primitives";
+import { RefreshCw, CheckCircle, AlertTriangle, HardDrive, ArrowLeft, Upload } from "@/lib/icons";
 import { db } from "@/lib/localDB";
 import { opfsStorage } from "@/lib/localDB/opfs-storage";
 import { useTRPC } from "@/trpc/client";

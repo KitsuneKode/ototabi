@@ -50,6 +50,7 @@ existing code. Don't take shortcuts by just adding local logic to solve a proble
 ## Code Quality Standards
 
 ### React
+
 - **No inline components** — never define components inside other components.
   Inline components remount on every render, losing state, focus, and animations.
   Extract to module scope and pass props.
@@ -62,12 +63,14 @@ existing code. Don't take shortcuts by just adding local logic to solve a proble
 - **Suspense for `useSearchParams`** — not required when page is fully `'use client'`.
 
 ### Composition
+
 - **Composition over boolean props** — avoid `isEditing`, `isPreview`, etc.
   Compose explicit variant components instead.
 - **Lift state to provider** — state shared across siblings goes into context,
   not prop drilling.
 
 ### Performance
+
 - **Date formatting: date-fns** — use `formatDate`, `formatTime`, `formatDateTime`
   from `@/lib/date-utils` instead of manual `toLocaleDateString()`.
 - **State management: zustand** — use `@/lib/stores/recording-store` for

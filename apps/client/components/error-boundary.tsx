@@ -1,8 +1,9 @@
 "use client";
 
 import { Button } from "@ototabi/ui/components/button";
-import { AlertTriangle } from "lucide-react";
 import { Component, type ReactNode, type ErrorInfo } from "react";
+
+import { AlertTriangle } from "@/lib/icons";
 
 interface Props {
   children: ReactNode;

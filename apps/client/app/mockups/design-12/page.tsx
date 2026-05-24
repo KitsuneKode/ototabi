@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, Shield } from "lucide-react";
+import { Settings, Shield } from "@/lib/icons";
 
 export default function MidnightGlowMockup() {
   return (

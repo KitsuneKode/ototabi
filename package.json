@@ -28,6 +28,7 @@
     "@polar-sh/sdk": "^0.47.1",
     "@t3-oss/env-core": "^0.13.11",
     "@t3-oss/env-nextjs": "^0.13.11",
+    "@tabler/icons-react": "^3.44.0",
     "date-fns": "^4.3.0",
     "express-rate-limit": "^8.5.2",
     "react-hook-form": "^7.57.0",

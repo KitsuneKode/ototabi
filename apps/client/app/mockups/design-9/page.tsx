@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, Video, VideoOff } from "lucide-react";
+import { Mic, Video, VideoOff } from "@/lib/icons";
 
 export default function GlassAuroraMockup() {
   return (

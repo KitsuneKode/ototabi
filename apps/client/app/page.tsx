@@ -1,5 +1,6 @@
-import { Mic, Video, Layers, ArrowRight, Shield } from "lucide-react";
 import Link from "next/link";
+
+import { Mic, Video, Layers, ArrowRight, Shield } from "@/lib/icons";
 
 export default function HomePage() {
   return (

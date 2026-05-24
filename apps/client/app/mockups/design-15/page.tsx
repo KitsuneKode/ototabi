@@ -1,6 +1,6 @@
 "use client";
 
-import { VideoOff } from "lucide-react";
+import { VideoOff } from "@/lib/icons";
 
 export default function SpaceSleekMockup() {
   return (

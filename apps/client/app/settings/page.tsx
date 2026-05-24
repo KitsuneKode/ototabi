@@ -4,18 +4,6 @@ import { authClient } from "@ototabi/auth/client";
 import { Input } from "@ototabi/ui/components/input";
 import { Label } from "@ototabi/ui/components/label";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  User,
-  Mail,
-  Save,
-  LogOut,
-  Trash2,
-  ShieldAlert,
-  Moon,
-  Sun,
-  Monitor,
-} from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { useState, useCallback } from "react";
@@ -29,6 +17,18 @@ import {
   MechButton,
 } from "@/components/ui/retro-primitives";
 import { formatDate } from "@/lib/date-utils";
+import {
+  ArrowLeft,
+  User,
+  Mail,
+  Save,
+  LogOut,
+  Trash2,
+  ShieldAlert,
+  Moon,
+  Sun,
+  Monitor,
+} from "@/lib/icons";
 import { useTRPC } from "@/trpc/client";
 
 const THEMES = [

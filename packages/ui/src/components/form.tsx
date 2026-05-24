@@ -1,9 +1,8 @@
 "use client";
 
 import { Label } from "@ototabi/ui/components/label";
+import { Slot } from "@ototabi/ui/lib/slot";
 import { cn } from "@ototabi/ui/lib/utils";
-import * as LabelPrimitive from "@radix-ui/react-label";
-import { Slot } from "@radix-ui/react-slot";
 import * as React from "react";
 import {
   Controller,
@@ -78,7 +77,7 @@ function FormItem({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function FormLabel({ className, ...props }: React.ComponentProps<typeof LabelPrimitive.Root>) {
+function FormLabel({ className, ...props }: React.ComponentProps<"label">) {
   const { error, formItemId } = useFormField();
 
   return (

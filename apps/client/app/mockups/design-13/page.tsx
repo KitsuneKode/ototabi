@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, VideoOff } from "lucide-react";
+import { Mic, VideoOff } from "@/lib/icons";
 
 export default function SoftNeumorphicMockup() {
   return (

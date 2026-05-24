@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
+
 import {
   Sliders,
   Monitor,
@@ -13,8 +15,7 @@ import {
   Sparkles,
   X,
   FileText,
-} from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+} from "@/lib/icons";
 
 interface DesignPreset {
   id: number;

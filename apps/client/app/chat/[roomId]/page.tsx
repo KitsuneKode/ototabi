@@ -13,7 +13,6 @@ import "@livekit/components-styles";
 import { Button } from "@ototabi/ui/components/button";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Room, RoomEvent, Track, RoomOptions, VideoPresets } from "livekit-client";
-import { ArrowLeft, CheckCircle, AlertTriangle, Radio, PanelRight } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 
@@ -30,6 +29,7 @@ import {
 import { formatTime } from "@/lib/date-utils";
 import { useKeyboardShortcuts } from "@/lib/hooks/use-keyboard-shortcuts";
 import { useTimer, formatTimer } from "@/lib/hooks/use-timer";
+import { ArrowLeft, CheckCircle, AlertTriangle, Radio, PanelRight } from "@/lib/icons";
 import { RecorderManager } from "@/lib/recorder/recorder-manager";
 import { useTRPC } from "@/trpc/client";
 import config from "@/utils/config";
