@@ -1,70 +1,82 @@
 "use client";
 
 import { cn } from "@ototabi/ui/lib/utils";
+import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
+import { Accordion as AccordionPrimitive } from "radix-ui";
 import * as React from "react";
 
-function Accordion({ children, ...props }: React.ComponentProps<"div">) {
+function Accordion({ className, ...props }: React.ComponentProps<typeof AccordionPrimitive.Root>) {
   return (
-    <div data-slot="accordion" {...props}>
-      {children}
-    </div>
+    <AccordionPrimitive.Root
+      data-slot="accordion"
+      className={cn("flex w-full flex-col", className)}
+      {...props}
+    />
   );
 }
 
 function AccordionItem({
   className,
+  ...props
+}: React.ComponentProps<typeof AccordionPrimitive.Item>) {
+  return (
+    <AccordionPrimitive.Item
+      data-slot="accordion-item"
+      className={cn("not-last:border-b", className)}
+      {...props}
+    />
+  );
+}
+
+function AccordionTrigger({
+  className,
   children,
   ...props
-}: React.ComponentProps<"details">) {
+}: React.ComponentProps<typeof AccordionPrimitive.Trigger>) {
   return (
-    <details
-      data-slot="accordion-item"
-      className={cn("border-border border-b", className)}
-      {...props}
-    >
-      {children}
-    </details>
-  );
-}
-
-function AccordionTrigger({ className, children, ...props }: React.ComponentProps<"summary">) {
-  return (
-    <summary
-      data-slot="accordion-trigger"
-      className={cn(
-        "flex flex-1 cursor-pointer items-center justify-between py-4 text-sm font-bold tracking-wider uppercase transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="size-4 shrink-0 transition-transform duration-200"
+    <AccordionPrimitive.Header className="flex">
+      <AccordionPrimitive.Trigger
+        data-slot="accordion-trigger"
+        className={cn(
+          "group/accordion-trigger focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:after:border-ring **:data-[slot=accordion-trigger-icon]:text-muted-foreground relative flex flex-1 items-start justify-between rounded-lg border border-transparent py-2.5 text-left text-sm font-medium transition-all outline-none hover:underline focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-4",
+          className,
+        )}
+        {...props}
       >
-        <path d="m6 9 6 6 6-6" />
-      </svg>
-    </summary>
+        {children}
+        <IconChevronDown
+          data-slot="accordion-trigger-icon"
+          className="pointer-events-none shrink-0 group-aria-expanded/accordion-trigger:hidden"
+        />
+        <IconChevronUp
+          data-slot="accordion-trigger-icon"
+          className="pointer-events-none hidden shrink-0 group-aria-expanded/accordion-trigger:inline"
+        />
+      </AccordionPrimitive.Trigger>
+    </AccordionPrimitive.Header>
   );
 }
 
-function AccordionContent({ className, children, ...props }: React.ComponentProps<"div">) {
+function AccordionContent({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof AccordionPrimitive.Content>) {
   return (
-    <div
+    <AccordionPrimitive.Content
       data-slot="accordion-content"
-      className={cn("overflow-hidden text-sm", className)}
+      className="data-open:animate-accordion-down data-closed:animate-accordion-up overflow-hidden text-sm"
       {...props}
     >
-      <div className="pt-0 pb-4">{children}</div>
-    </div>
+      <div
+        className={cn(
+          "[&_a]:hover:text-foreground h-(--radix-accordion-content-height) pt-0 pb-2.5 [&_a]:underline [&_a]:underline-offset-3 [&_p:not(:last-child)]:mb-4",
+          className,
+        )}
+      >
+        {children}
+      </div>
+    </AccordionPrimitive.Content>
   );
 }
 

@@ -1,15 +1,12 @@
 import type { Metadata } from "next";
 
-import { Oswald, Courier_Prime } from "next/font/google";
+import { cn } from "@ototabi/ui/lib/utils";
 import "@ototabi/ui/globals.css";
+import { Courier_Prime, Inter } from "next/font/google";
 
 import { Providers } from "@/components/providers";
 
-const fontSans = Oswald({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  weight: ["400", "500", "600", "700"],
-});
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 const fontMono = Courier_Prime({
   subsets: ["latin"],
@@ -30,8 +27,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${fontSans.variable} ${fontMono.variable} font-sans antialiased`}>
+    <html lang="en" suppressHydrationWarning className={cn("font-sans", inter.variable)}>
+      <body className={`${inter.variable} ${fontMono.variable} font-sans antialiased`}>
         <Providers>{children}</Providers>
       </body>
     </html>
