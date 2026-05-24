@@ -43,6 +43,7 @@ export default function StudioPage() {
   const audioEnabled = searchParams.get("audioEnabled") === "true";
   const videoEnabled = searchParams.get("videoEnabled") === "true";
   const screenShareEnabled = searchParams.get("screenShareEnabled") === "true";
+  const inviteToken = searchParams.get("invite") || "";
   const micId = searchParams.get("micId") || "";
   const camId = searchParams.get("camId") || "";
 
@@ -154,9 +155,12 @@ export default function StudioPage() {
     (async () => {
       try {
         setTokenLoading(true);
-        const resp = await fetch(
-          `${config.getConfig("apiBaseUrl")}/api/token?room=${roomId}&username=${encodeURIComponent(sessionUser.name || sessionUser.email)}`,
-        );
+        const tokenParams = new URLSearchParams({
+          room: roomId,
+          username: sessionUser.name || sessionUser.email,
+        });
+        if (inviteToken) tokenParams.set("invite", inviteToken);
+        const resp = await fetch(`${config.getConfig("apiBaseUrl")}/api/token?${tokenParams}`);
         if (!resp.ok) throw new Error(`Token request failed: ${resp.status}`);
         const data = await resp.json();
         if (cancelled) return;
@@ -216,6 +220,7 @@ export default function StudioPage() {
     audioEnabled,
     videoEnabled,
     screenShareEnabled,
+    inviteToken,
   ]);
 
   const handleStartRecording = async () => {

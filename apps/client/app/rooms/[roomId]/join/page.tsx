@@ -2,20 +2,23 @@
 
 import { Label } from "@ototabi/ui/components/label";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useState, useEffect, useRef, useCallback } from "react";
 
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { LedInline } from "@/components/ui/led";
 import { MonoLabel, NoiseBackground, MechButton } from "@/components/ui/retro-primitives";
+import { formatDateTime } from "@/lib/date-utils";
 import { Mic, ArrowRight, Info, AlertTriangle, RefreshCw, VideoOff, Tv, User } from "@/lib/icons";
 import { useTRPC } from "@/trpc/client";
 import config from "@/utils/config";
 
 export default function RoomJoinPage() {
   const { roomId } = useParams() as { roomId: string };
+  const searchParams = useSearchParams();
   const router = useRouter();
   const trpc = useTRPC();
+  const inviteToken = searchParams.get("invite") || undefined;
 
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [videoEnabled, setVideoEnabled] = useState(true);
@@ -38,6 +41,12 @@ export default function RoomJoinPage() {
 
   const roomInfo = useQuery(
     trpc.rooms.getRoomByCode.queryOptions({ code: roomId }, { enabled: !!roomId }),
+  );
+  const inviteInfo = useQuery(
+    trpc.rooms.validateInvite.queryOptions(
+      { code: roomId, token: inviteToken ?? "" },
+      { enabled: !!roomId && !!inviteToken, retry: false },
+    ),
   );
   const joinRoomMutation = useMutation(trpc.rooms.joinRoom.mutationOptions());
 
@@ -137,7 +146,7 @@ export default function RoomJoinPage() {
     }
 
     try {
-      await joinRoomMutation.mutateAsync({ code: roomId });
+      await joinRoomMutation.mutateAsync({ code: roomId, inviteToken });
     } catch {
       setMicError("Failed to verify room access");
       return;
@@ -151,6 +160,7 @@ export default function RoomJoinPage() {
       micId: selectedMic,
       camId: selectedCam,
     });
+    if (inviteToken) params.set("invite", inviteToken);
     router.push(`/chat/${roomId}?${params.toString()}`);
   }, [
     audioEnabled,
@@ -160,6 +170,7 @@ export default function RoomJoinPage() {
     selectedMic,
     selectedCam,
     roomId,
+    inviteToken,
     router,
     isSignedIn,
     guestName,
@@ -181,7 +192,7 @@ export default function RoomJoinPage() {
   }
 
   // ── Error ────────────────────────────────────────────────────────────────
-  if (roomInfo.error || !roomInfo.data) {
+  if (roomInfo.error || !roomInfo.data || inviteInfo.error) {
     return (
       <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
         <AnalogCard className="w-full max-w-md p-8 text-center">
@@ -190,7 +201,7 @@ export default function RoomJoinPage() {
             Reel Not Located
           </p>
           <p className="text-muted-foreground mb-6 font-mono text-xs leading-normal">
-            The studio join code &ldquo;{roomId}&rdquo; is unrecognized or has expired.
+            The studio join code or invite link is unrecognized, revoked, or expired.
           </p>
           <MechButton onClick={() => router.push("/dashboard")} className="w-full justify-center">
             Back to Dashboard
@@ -219,6 +230,18 @@ export default function RoomJoinPage() {
                   Room: {roomInfo.data.name}
                 </MonoLabel>
               </div>
+
+              {inviteInfo.data && (
+                <AnalogInset className="p-3">
+                  <MonoLabel className="text-accent block">SECURE INVITE VERIFIED</MonoLabel>
+                  <MonoLabel className="mt-1 block text-[9px]">
+                    ROLE: {inviteInfo.data.role.toUpperCase()}
+                    {inviteInfo.data.expiresAt
+                      ? ` // EXPIRES: ${formatDateTime(inviteInfo.data.expiresAt)}`
+                      : " // NO EXPIRY"}
+                  </MonoLabel>
+                </AnalogInset>
+              )}
 
               {/* CRT video display */}
               <div className="scanlines relative flex aspect-video w-full items-center justify-center overflow-hidden rounded border-4 border-[#1a1a1a] bg-[#111] shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]">

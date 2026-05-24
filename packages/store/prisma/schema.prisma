@@ -91,11 +91,31 @@ model Room {
   sessions     RecordingSession[]
   participants RoomParticipant[]
   members      RoomMember[]
+  invites      RoomInvite[]
   chatMessages ChatMessage[]
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
   @@map("room")
+}
+
+model RoomInvite {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  role      String   @default("participant") // participant | editor | viewer
+  email     String?
+  maxUses   Int?
+  usedCount Int      @default(0)
+  expiresAt DateTime?
+  revokedAt DateTime?
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([roomId, revokedAt])
+  @@map("room_invite")
 }
 
 model RoomMember {

@@ -1,9 +1,18 @@
 import { getTranscriptQueue } from "@ototabi/jobs/queues";
 import { prisma } from "@ototabi/store";
 import { TRPCError } from "@trpc/server";
+import crypto from "node:crypto";
 
 import { roomsPolicy } from "./rooms.policy";
 import { roomsRepository } from "./rooms.repository";
+
+function createInviteToken(): string {
+  return crypto.randomBytes(32).toString("base64url");
+}
+
+function hashInviteToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
 
 export const roomsService = {
   async createRoom(params: { userId: string; name: string }) {
@@ -88,11 +97,98 @@ export const roomsService = {
     return roomsRepository.listMembers(roomId);
   },
 
-  async joinRoom(params: { userId: string; code: string }) {
+  async createInvite(params: {
+    actorId: string;
+    roomId: string;
+    role: "participant" | "editor" | "viewer";
+    email?: string;
+    maxUses?: number;
+    expiresAt?: Date;
+  }) {
+    const room = await roomsRepository.findById(params.roomId);
+    if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
+
+    const actorMember = await roomsRepository.findMember(params.roomId, params.actorId);
+    if (!roomsPolicy.canInviteMember(actorMember, room, params.actorId)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to create invites" });
+    }
+
+    const token = createInviteToken();
+    const invite = await roomsRepository.createInvite({
+      roomId: params.roomId,
+      tokenHash: hashInviteToken(token),
+      role: params.role,
+      email: params.email,
+      maxUses: params.maxUses,
+      expiresAt: params.expiresAt,
+      createdBy: params.actorId,
+    });
+
+    return { ...invite, token };
+  },
+
+  async listInvites(params: { actorId: string; roomId: string }) {
+    const room = await roomsRepository.findById(params.roomId);
+    if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
+    const actorMember = await roomsRepository.findMember(params.roomId, params.actorId);
+    if (!roomsPolicy.canInviteMember(actorMember, room, params.actorId)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to view invites" });
+    }
+    return roomsRepository.listInvites(params.roomId);
+  },
+
+  async revokeInvite(params: { actorId: string; roomId: string; inviteId: string }) {
+    const room = await roomsRepository.findById(params.roomId);
+    if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
+    const actorMember = await roomsRepository.findMember(params.roomId, params.actorId);
+    if (!roomsPolicy.canInviteMember(actorMember, room, params.actorId)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to revoke invites" });
+    }
+    await roomsRepository.revokeInvite(params.inviteId);
+    return { success: true };
+  },
+
+  async validateInvite(params: { code: string; token: string }) {
+    const invite = await roomsRepository.findInviteByTokenHash(hashInviteToken(params.token));
+    if (!invite || invite.room.code !== params.code || !roomsPolicy.isInviteUsable(invite)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Invite is invalid or expired" });
+    }
+    return {
+      roomId: invite.roomId,
+      roomName: invite.room.name,
+      role: invite.role,
+      email: invite.email,
+      expiresAt: invite.expiresAt,
+    };
+  },
+
+  async joinRoom(params: { userId: string; code: string; inviteToken?: string }) {
     const room = await roomsRepository.findUniqueCode(params.code);
     if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
-    const existing = await roomsRepository.findParticipant(room.id, params.userId);
-    if (existing) return room;
+
+    const { member, participant } = await roomsRepository.findAccessContext(room.id, params.userId);
+    if (room.creatorId === params.userId || member || participant) {
+      await roomsRepository.addParticipant(room.id, params.userId);
+      return room;
+    }
+
+    const invite = params.inviteToken
+      ? await roomsRepository.findInviteByTokenHash(hashInviteToken(params.inviteToken))
+      : null;
+    const inviteUsable =
+      !!invite && invite.roomId === room.id && roomsPolicy.isInviteUsable(invite);
+
+    if (
+      !roomsPolicy.canJoinRoom({ room, userId: params.userId, member, participant, inviteUsable })
+    ) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "A valid invite is required" });
+    }
+
+    if (invite) {
+      await roomsRepository.consumeInvite(invite.id, room.id, params.userId);
+      return room;
+    }
+
     await roomsRepository.addParticipant(room.id, params.userId);
     return room;
   },

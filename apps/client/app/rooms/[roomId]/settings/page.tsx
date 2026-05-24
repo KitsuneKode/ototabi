@@ -16,7 +16,7 @@ import {
   NoiseBackground,
   MechButton,
 } from "@/components/ui/retro-primitives";
-import { formatDate, formatTime } from "@/lib/date-utils";
+import { formatDate, formatTime, formatDateTime } from "@/lib/date-utils";
 import {
   ArrowLeft,
   Copy,
@@ -108,7 +108,7 @@ export default function RoomSettingsPage() {
 
   const handleCopyLink = useCallback(() => {
     if (!roomInfo.data?.code) return;
-    navigator.clipboard.writeText(`${window.location.origin}/rooms/${roomInfo.data.code}/join`);
+    navigator.clipboard.writeText(roomInfo.data.code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [roomInfo.data?.code]);
@@ -216,7 +216,7 @@ export default function RoomSettingsPage() {
                   className="btn-mechanical text-secondary-foreground ml-auto flex items-center gap-1.5 rounded px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase"
                 >
                   <Copy className="h-3 w-3" />
-                  {copied ? "COPIED!" : "COPY LINK"}
+                  {copied ? "COPIED!" : "COPY CODE"}
                 </button>
               </AnalogInset>
             </div>
@@ -250,6 +250,11 @@ export default function RoomSettingsPage() {
         <AnalogCard className="space-y-4 p-6">
           <PanelTitle label="Crew Roster" title="Room Members" className="mb-4" />
           <MembersPanel roomId={data.id} />
+        </AnalogCard>
+
+        <AnalogCard className="space-y-4 p-6">
+          <PanelTitle label="Secure Access" title="Invite Links" className="mb-4" />
+          <InvitesPanel roomId={data.id} roomCode={data.code} />
         </AnalogCard>
 
         {/* ── Recent Sessions ───────────────────────────────────────────── */}
@@ -465,6 +470,129 @@ function MembersPanel({ roomId }: { roomId: string }) {
       ) : (
         <MonoLabel className="text-muted-foreground/60">
           No members yet. Invite collaborators above.
+        </MonoLabel>
+      )}
+    </div>
+  );
+}
+
+function InvitesPanel({ roomId, roomCode }: { roomId: string; roomCode: string }) {
+  const trpc = useTRPC();
+  const [inviteLink, setInviteLink] = useState("");
+  const [inviteError, setInviteError] = useState("");
+  const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
+
+  const invites = useQuery(trpc.rooms.listInvites.queryOptions({ roomId }, { enabled: !!roomId }));
+
+  const createInvite = useMutation(
+    trpc.rooms.createInvite.mutationOptions({
+      onSuccess: (invite) => {
+        const link = `${window.location.origin}/rooms/${roomCode}/join?invite=${invite.token}`;
+        setInviteLink(link);
+        setInviteError("");
+        invites.refetch();
+      },
+      onError: (err) => setInviteError(err.message),
+    }),
+  );
+
+  const revokeInvite = useMutation(
+    trpc.rooms.revokeInvite.mutationOptions({
+      onSuccess: () => invites.refetch(),
+    }),
+  );
+
+  const createDefaultInvite = () => {
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    createInvite.mutate({ roomId, role: "participant", maxUses: 1, expiresAt });
+  };
+
+  const copyInviteLink = (inviteId: string, link: string) => {
+    navigator.clipboard.writeText(link);
+    setCopiedInviteId(inviteId);
+    setTimeout(() => setCopiedInviteId(null), 2000);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <MonoLabel className="mb-1 block">Guest access is token-gated</MonoLabel>
+          <p className="text-muted-foreground font-mono text-[10px] leading-relaxed">
+            Create a single-use participant invite. The raw token is shown once and stored only as a
+            hash on the server.
+          </p>
+        </div>
+        <MechButton
+          type="button"
+          onClick={createDefaultInvite}
+          disabled={createInvite.isPending}
+          className="h-10 shrink-0"
+        >
+          {createInvite.isPending ? "CREATING..." : "Create Secure Link"}
+        </MechButton>
+      </div>
+
+      {inviteLink && (
+        <AnalogInset className="space-y-2 p-3">
+          <MonoLabel className="text-accent block">New invite link</MonoLabel>
+          <div className="flex gap-2">
+            <Input
+              readOnly
+              value={inviteLink}
+              className="border-border bg-popover text-foreground h-10 flex-1 rounded border font-mono text-[10px] shadow-inner"
+            />
+            <MechButton type="button" onClick={() => copyInviteLink("new", inviteLink)}>
+              <Copy className="h-3 w-3" />
+              {copiedInviteId === "new" ? "Copied" : "Copy"}
+            </MechButton>
+          </div>
+        </AnalogInset>
+      )}
+
+      {inviteError && <MonoLabel className="text-led-on">{inviteError}</MonoLabel>}
+
+      {invites.data?.length ? (
+        <div className="space-y-1.5">
+          {invites.data.map((invite) => {
+            const revoked = !!invite.revokedAt;
+            const expired = !!invite.expiresAt && invite.expiresAt <= new Date();
+            return (
+              <div
+                key={invite.id}
+                className="border-border bg-popover flex flex-col gap-3 rounded border px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <MonoLabel className="text-[9px]">
+                    ROLE: {invite.role.toUpperCase()} {"//"} USES: {invite.usedCount}/
+                    {invite.maxUses ?? "∞"}
+                  </MonoLabel>
+                  <MonoLabel className="mt-1 block text-[9px]">
+                    {revoked
+                      ? "REVOKED"
+                      : expired
+                        ? "EXPIRED"
+                        : invite.expiresAt
+                          ? `EXPIRES: ${formatDateTime(invite.expiresAt)}`
+                          : "NO EXPIRY"}
+                  </MonoLabel>
+                </div>
+                {!revoked && (
+                  <MechButton
+                    type="button"
+                    onClick={() => revokeInvite.mutate({ roomId, inviteId: invite.id })}
+                    className="h-7 px-2 text-[9px]"
+                  >
+                    Revoke
+                  </MechButton>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <MonoLabel className="text-muted-foreground/60">
+          No secure invite links yet. Create one before sharing with guests.
         </MonoLabel>
       )}
     </div>

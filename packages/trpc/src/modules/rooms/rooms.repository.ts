@@ -18,6 +18,15 @@ export const roomsRepository = {
     return prisma.room.findUnique({ where: { id } });
   },
 
+  async findAccessContext(roomId: string, userId: string) {
+    const [room, member, participant] = await Promise.all([
+      prisma.room.findUnique({ where: { id: roomId } }),
+      prisma.roomMember.findUnique({ where: { roomId_userId: { roomId, userId } } }),
+      prisma.roomParticipant.findUnique({ where: { roomId_userId: { roomId, userId } } }),
+    ]);
+    return { room, member, participant };
+  },
+
   async findByIdWithRelations(id: string) {
     return prisma.room.findFirst({
       where: { id },
@@ -78,9 +87,66 @@ export const roomsRepository = {
   },
 
   async addParticipant(roomId: string, userId: string) {
-    return prisma.roomParticipant.create({
-      data: { roomId, userId },
+    return prisma.roomParticipant.upsert({
+      where: { roomId_userId: { roomId, userId } },
+      update: {},
+      create: { roomId, userId },
     });
+  },
+
+  async createInvite(data: {
+    roomId: string;
+    tokenHash: string;
+    role: string;
+    email?: string;
+    maxUses?: number;
+    expiresAt?: Date;
+    createdBy: string;
+  }) {
+    return prisma.roomInvite.create({ data });
+  },
+
+  async listInvites(roomId: string) {
+    return prisma.roomInvite.findMany({
+      where: { roomId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        roomId: true,
+        role: true,
+        email: true,
+        maxUses: true,
+        usedCount: true,
+        expiresAt: true,
+        revokedAt: true,
+        createdAt: true,
+      },
+    });
+  },
+
+  async findInviteByTokenHash(tokenHash: string) {
+    return prisma.roomInvite.findUnique({
+      where: { tokenHash },
+      include: { room: true },
+    });
+  },
+
+  async revokeInvite(inviteId: string) {
+    return prisma.roomInvite.update({ where: { id: inviteId }, data: { revokedAt: new Date() } });
+  },
+
+  async consumeInvite(inviteId: string, roomId: string, userId: string) {
+    return prisma.$transaction([
+      prisma.roomInvite.update({
+        where: { id: inviteId },
+        data: { usedCount: { increment: 1 } },
+      }),
+      prisma.roomParticipant.upsert({
+        where: { roomId_userId: { roomId, userId } },
+        update: {},
+        create: { roomId, userId },
+      }),
+    ]);
   },
 
   async removeParticipant(roomId: string, userId: string) {
