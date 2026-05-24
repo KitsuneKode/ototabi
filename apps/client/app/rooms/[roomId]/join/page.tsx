@@ -1,7 +1,7 @@
 "use client";
 
 import { Label } from "@ototabi/ui/components/label";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect, useRef, useCallback } from "react";
 
@@ -39,6 +39,7 @@ export default function RoomJoinPage() {
   const roomInfo = useQuery(
     trpc.rooms.getRoomByCode.queryOptions({ code: roomId }, { enabled: !!roomId }),
   );
+  const joinRoomMutation = useMutation(trpc.rooms.joinRoom.mutationOptions());
 
   const enumerateDevices = useCallback(async () => {
     try {
@@ -135,6 +136,13 @@ export default function RoomJoinPage() {
       setGuestLoading(false);
     }
 
+    try {
+      await joinRoomMutation.mutateAsync({ code: roomId });
+    } catch {
+      setMicError("Failed to verify room access");
+      return;
+    }
+
     const params = new URLSearchParams({
       audioEnabled: String(audioEnabled),
       videoEnabled: String(videoEnabled),
@@ -155,6 +163,7 @@ export default function RoomJoinPage() {
     router,
     isSignedIn,
     guestName,
+    joinRoomMutation,
   ]);
 
   // ── Loading ──────────────────────────────────────────────────────────────

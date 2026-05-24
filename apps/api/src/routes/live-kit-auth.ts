@@ -1,4 +1,5 @@
 import { auth } from "@ototabi/auth/server";
+import { prisma } from "@ototabi/store";
 import { Router, type Request, type Response } from "express";
 import { AccessToken } from "livekit-server-sdk";
 
@@ -21,6 +22,34 @@ liveKitAuthRouter.get("/token", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Authentication required" });
   }
 
+  const roomRecord = await prisma.room.findUnique({
+    where: { code: room },
+    select: {
+      id: true,
+      creatorId: true,
+      members: { where: { userId: session.user.id }, select: { role: true }, take: 1 },
+      participants: { where: { userId: session.user.id }, select: { userId: true }, take: 1 },
+    },
+  });
+
+  if (!roomRecord) {
+    return res.status(404).json({ error: "Room not found" });
+  }
+
+  const hasRoomAccess =
+    roomRecord.creatorId === session.user.id ||
+    roomRecord.members.length > 0 ||
+    roomRecord.participants.length > 0;
+
+  if (!hasRoomAccess) {
+    return res.status(403).json({ error: "Room access denied" });
+  }
+
+  const participantRole =
+    roomRecord.creatorId === session.user.id
+      ? "host"
+      : (roomRecord.members[0]?.role ?? "participant");
+
   const apiKey = config.getConfig("liveKitApiKey");
   const apiSecret = config.getConfig("liveKitApiSecret");
   const wsUrl = config.getConfig("liveKitUrl");
@@ -30,7 +59,9 @@ liveKitAuthRouter.get("/token", async (req: Request, res: Response) => {
   }
 
   const at = new AccessToken(apiKey, apiSecret, {
-    identity: username,
+    identity: session.user.id,
+    name: username,
+    metadata: JSON.stringify({ role: participantRole, roomId: roomRecord.id }),
     ttl: "1h",
   });
   at.addGrant({ room, roomJoin: true, canPublish: true, canSubscribe: true });

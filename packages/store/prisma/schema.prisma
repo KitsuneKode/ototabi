@@ -28,6 +28,7 @@ model User {
   accounts      Account[]
   rooms         Room[]
   tracks        RecordingTrack[]
+  uploadSessions UploadSession[]
   roomParticipations RoomParticipant[]
   roomMemberships RoomMember[]
   chatMessages  ChatMessage[]
@@ -143,6 +144,7 @@ model RecordingSession {
   room            Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
   status          String           // "RECORDING" | "COMPLETED"
   tracks          RecordingTrack[]
+  uploadSessions  UploadSession[]
   transcriptSegments TranscriptSegment[]
   chapters        Chapter[]
   showNotes       ShowNotes?
@@ -169,6 +171,27 @@ model RecordingTrack {
   updatedAt DateTime         @updatedAt
 
   @@map("recording_track")
+}
+
+model UploadSession {
+  id          String           @id @default(cuid())
+  sessionId   String
+  session     RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trackSid    String
+  type        String           // "CAMERA" | "SCREENSHARE" | "MICROPHONE"
+  uploadId    String
+  s3Key       String           @unique
+  status      String           @default("UPLOADING") // "UPLOADING" | "COMPLETED" | "FAILED"
+  parts       Json             @default("[]")
+  completedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([sessionId, trackSid])
+  @@index([userId, status])
+  @@map("upload_session")
 }
 
 model TranscriptSegment {

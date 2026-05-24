@@ -1,8 +1,8 @@
 "use client";
 
-import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 import { AnalogCard } from "@/components/ui/analog-card";
 import { Led, LedInline } from "@/components/ui/led";
@@ -13,16 +13,12 @@ import {
   MechButton,
 } from "@/components/ui/retro-primitives";
 import { RefreshCw, CheckCircle, AlertTriangle, HardDrive, ArrowLeft, Upload } from "@/lib/icons";
-import { db } from "@/lib/localDB";
+import { db, type UploadSession } from "@/lib/localDB";
 import { opfsStorage } from "@/lib/localDB/opfs-storage";
+import { recoverPendingUpload } from "@/lib/uploader/upload-recovery";
 import { useTRPC } from "@/trpc/client";
 
-interface PendingTrack {
-  trackSid: string;
-  sessionId: string;
-  s3Key: string;
-  type: string;
-  uploadId: string;
+interface PendingTrack extends UploadSession {
   pendingChunks: number;
 }
 
@@ -35,6 +31,7 @@ export default function RecoveryPage() {
   const [localError, setLocalError] = useState<string | null>(null);
   const [retryingTracks, setRetryingTracks] = useState<Set<string>>(new Set());
   const [completedTracks, setCompletedTracks] = useState<Set<string>>(new Set());
+  const [progressByTrack, setProgressByTrack] = useState<Record<string, string>>({});
   const [opfsUsage, setOpfsUsage] = useState<{ files: number; bytes: number } | null>(null);
 
   const authState = useQuery(trpc.auth.getSession.queryOptions());
@@ -94,64 +91,27 @@ export default function RecoveryPage() {
     loadLocalTracks();
   }, []);
 
-  // Resolve track IDs from server session data for each unique session
-  const uniqueSessionIds = useMemo(
-    () => [...new Set(pendingTracks.map((t) => t.sessionId))],
-    [pendingTracks],
-  );
-
-  const sessionQueries = useQueries({
-    queries: uniqueSessionIds.map((sessionId) =>
-      trpc.rooms.getRecordingSessionById.queryOptions(
-        { sessionId },
-        { enabled: !isLoadingLocal && uniqueSessionIds.length > 0 },
-      ),
-    ),
-  });
-
-  // Build trackSid → trackId lookup from resolved session queries
-  const trackIdMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const q of sessionQueries) {
-      if (!q.data) continue;
-      for (const track of q.data.tracks) {
-        map[track.trackSid] = track.id;
-      }
+  const handleRetry = useCallback(async (track: PendingTrack) => {
+    setRetryingTracks((prev) => new Set(prev).add(track.trackSid));
+    try {
+      await recoverPendingUpload(track, ({ uploaded, total }) => {
+        setProgressByTrack((prev) => ({
+          ...prev,
+          [track.trackSid]: `${uploaded}/${total}`,
+        }));
+      });
+      setCompletedTracks((prev) => new Set(prev).add(track.trackSid));
+      setPendingTracks((prev) => prev.filter((candidate) => candidate.trackSid !== track.trackSid));
+    } catch {
+      setLocalError("Failed to recover upload. Check your connection and try again.");
+    } finally {
+      setRetryingTracks((prev) => {
+        const next = new Set(prev);
+        next.delete(track.trackSid);
+        return next;
+      });
     }
-    return map;
-  }, [sessionQueries]);
-
-  const retryMutation = useMutation(
-    trpc.uploads.retryUpload.mutationOptions({
-      onSuccess: (_data, variables) => {
-        setRetryingTracks((prev) => {
-          const next = new Set(prev);
-          next.delete(variables.trackId);
-          return next;
-        });
-        setCompletedTracks((prev) => new Set(prev).add(variables.trackId));
-      },
-      onError: (_err, variables) => {
-        setRetryingTracks((prev) => {
-          const next = new Set(prev);
-          next.delete(variables.trackId);
-          return next;
-        });
-      },
-    }),
-  );
-
-  const handleRetry = useCallback(
-    (track: PendingTrack) => {
-      const trackId = trackIdMap[track.trackSid];
-      if (!trackId) return;
-      setRetryingTracks((prev) => new Set(prev).add(trackId));
-      retryMutation.mutate({ trackId });
-    },
-    [retryMutation, trackIdMap],
-  );
-
-  const areSessionsLoading = sessionQueries.some((q) => q.isLoading);
+  }, []);
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoadingLocal) {
@@ -240,76 +200,65 @@ export default function RecoveryPage() {
               title={`${pendingTracks.length} Track${pendingTracks.length !== 1 ? "s" : ""} Awaiting Upload`}
             />
 
-            {areSessionsLoading ? (
-              <div className="text-muted-foreground animate-pulse py-12 text-center font-mono text-xs tracking-widest uppercase">
-                RESOLVING TRACK STATUSES...
-              </div>
-            ) : (
-              pendingTracks.map((track) => {
-                const trackId = trackIdMap[track.trackSid];
-                const isRetrying = trackId ? retryingTracks.has(trackId) : false;
-                const isCompleted = trackId ? completedTracks.has(trackId) : false;
+            {pendingTracks.map((track) => {
+              const isRetrying = retryingTracks.has(track.trackSid);
+              const isCompleted = completedTracks.has(track.trackSid);
 
-                return (
-                  <AnalogCard key={track.trackSid} className="p-5">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-popover border-border flex h-10 w-10 shrink-0 items-center justify-center rounded border">
-                          <HardDrive className="text-muted-foreground h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold tracking-tight uppercase">{track.type}</p>
-                          <MonoLabel className="text-[9px]">
-                            SID: {track.trackSid.slice(-12)}
-                          </MonoLabel>
-                          <MonoLabel className="text-[9px]">
-                            Chunks: {track.pendingChunks}
-                            {" | "}Session: {track.sessionId.slice(-8).toUpperCase()}
-                          </MonoLabel>
-                        </div>
+              return (
+                <AnalogCard key={track.trackSid} className="p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-popover border-border flex h-10 w-10 shrink-0 items-center justify-center rounded border">
+                        <HardDrive className="text-muted-foreground h-5 w-5" />
                       </div>
-
-                      <div className="flex shrink-0 items-center gap-3">
-                        {isCompleted ? (
-                          <span className="border-led-green/30 bg-led-green/10 text-led-green inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[9px] font-bold tracking-wider uppercase">
-                            <CheckCircle className="h-3 w-3" />
-                            RETRY INITIATED
-                          </span>
-                        ) : !trackId ? (
-                          <MonoLabel className="text-led-on text-[9px] whitespace-nowrap">
-                            UNAVAILABLE
-                          </MonoLabel>
-                        ) : (
-                          <>
-                            <span className="border-border bg-popover text-led-on inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[9px] font-bold tracking-wider uppercase">
-                              <LedInline color="red" size="sm" />
-                              {track.pendingChunks} PENDING
-                            </span>
-                            <MechButton
-                              onClick={() => handleRetry(track)}
-                              disabled={isRetrying}
-                              className="h-8 px-3 py-1.5 text-[10px]"
-                            >
-                              {isRetrying ? (
-                                <>
-                                  <RefreshCw className="h-3 w-3 animate-spin" />
-                                  RETRYING
-                                </>
-                              ) : (
-                                <>
-                                  <Upload className="h-3 w-3" />
-                                  RETRY UPLOAD
-                                </>
-                              )}
-                            </MechButton>
-                          </>
-                        )}
+                      <div>
+                        <p className="text-sm font-bold tracking-tight uppercase">{track.type}</p>
+                        <MonoLabel className="text-[9px]">
+                          SID: {track.trackSid.slice(-12)}
+                        </MonoLabel>
+                        <MonoLabel className="text-[9px]">
+                          Chunks: {track.pendingChunks}
+                          {" | "}Session: {track.sessionId.slice(-8).toUpperCase()}
+                        </MonoLabel>
                       </div>
                     </div>
-                  </AnalogCard>
-                );
-              })
-            )}
+
+                    <div className="flex shrink-0 items-center gap-3">
+                      {isCompleted ? (
+                        <span className="border-led-green/30 bg-led-green/10 text-led-green inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[9px] font-bold tracking-wider uppercase">
+                          <CheckCircle className="h-3 w-3" />
+                          RETRY INITIATED
+                        </span>
+                      ) : (
+                        <>
+                          <span className="border-border bg-popover text-led-on inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[9px] font-bold tracking-wider uppercase">
+                            <LedInline color="red" size="sm" />
+                            {track.pendingChunks} PENDING
+                          </span>
+                          <MechButton
+                            onClick={() => handleRetry(track)}
+                            disabled={isRetrying}
+                            className="h-8 px-3 py-1.5 text-[10px]"
+                          >
+                            {isRetrying ? (
+                              <>
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                                {progressByTrack[track.trackSid] ?? "RETRYING"}
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="h-3 w-3" />
+                                RETRY UPLOAD
+                              </>
+                            )}
+                          </MechButton>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </AnalogCard>
+              );
+            })}
 
             {/* ── System Note ──────────────────────────────────────────── */}
             <AnalogCard className="flex items-start gap-3 p-5">

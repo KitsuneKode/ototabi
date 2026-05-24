@@ -1,6 +1,34 @@
 import { prisma } from "@ototabi/store";
 
 export const uploadsRepository = {
+  async canUserUploadToSession(data: { sessionId: string; userId: string }) {
+    const session = await prisma.recordingSession.findFirst({
+      where: {
+        id: data.sessionId,
+        room: {
+          OR: [
+            { creatorId: data.userId },
+            { members: { some: { userId: data.userId } } },
+            { participants: { some: { userId: data.userId } } },
+          ],
+        },
+      },
+      select: { id: true },
+    });
+    return !!session;
+  },
+
+  async findActiveUpload(data: { sessionId: string; trackSid: string; userId: string }) {
+    return prisma.uploadSession.findFirst({
+      where: {
+        sessionId: data.sessionId,
+        trackSid: data.trackSid,
+        userId: data.userId,
+        status: { in: ["UPLOADING", "FAILED"] },
+      },
+    });
+  },
+
   async createTrack(data: {
     sessionId: string;
     userId: string;
@@ -13,10 +41,45 @@ export const uploadsRepository = {
     });
   },
 
+  async createUploadSession(data: {
+    sessionId: string;
+    userId: string;
+    trackSid: string;
+    type: string;
+    uploadId: string;
+    s3Key: string;
+  }) {
+    return prisma.uploadSession.create({ data });
+  },
+
+  async findUploadForUser(data: { userId: string; key: string; uploadId: string }) {
+    return prisma.uploadSession.findFirst({
+      where: {
+        userId: data.userId,
+        s3Key: data.key,
+        uploadId: data.uploadId,
+        status: { in: ["UPLOADING", "FAILED"] },
+      },
+    });
+  },
+
   async markTrackComplete(s3Key: string, s3Url: string) {
-    return prisma.recordingTrack.updateMany({
-      where: { s3Key: s3Key },
-      data: { status: "COMPLETED", s3Url },
+    await prisma.$transaction([
+      prisma.recordingTrack.updateMany({
+        where: { s3Key: s3Key },
+        data: { status: "COMPLETED", s3Url },
+      }),
+      prisma.uploadSession.updateMany({
+        where: { s3Key: s3Key },
+        data: { status: "COMPLETED", completedAt: new Date() },
+      }),
+    ]);
+  },
+
+  async markUploadFailed(data: { key: string; uploadId: string; userId: string }) {
+    return prisma.uploadSession.updateMany({
+      where: { s3Key: data.key, uploadId: data.uploadId, userId: data.userId },
+      data: { status: "FAILED" },
     });
   },
 

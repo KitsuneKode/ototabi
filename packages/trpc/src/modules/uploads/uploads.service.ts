@@ -54,6 +54,24 @@ export const uploadsService = {
     type: "CAMERA" | "MICROPHONE" | "SCREENSHARE";
     userId: string;
   }) {
+    const canUpload = await uploadsRepository.canUserUploadToSession({
+      sessionId: params.sessionId,
+      userId: params.userId,
+    });
+    if (!canUpload) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Not authorized to upload tracks for this recording session",
+      });
+    }
+
+    const existing = await uploadsRepository.findActiveUpload({
+      sessionId: params.sessionId,
+      trackSid: params.trackSid,
+      userId: params.userId,
+    });
+    if (existing) return { uploadId: existing.uploadId, key: existing.s3Key };
+
     const key = buildS3Key(params.sessionId, params.trackSid);
     let uploadId = `mock-upload-id-${Date.now()}`;
 
@@ -75,22 +93,45 @@ export const uploadsService = {
       }
     }
 
-    try {
-      await uploadsRepository.createTrack({
-        sessionId: params.sessionId,
-        userId: params.userId,
-        trackSid: params.trackSid,
-        type: params.type,
-        s3Key: key,
-      });
-    } catch (dbError) {
-      console.error("[Uploads] DB track creation error:", dbError);
-    }
+    await uploadsRepository.createTrack({
+      sessionId: params.sessionId,
+      userId: params.userId,
+      trackSid: params.trackSid,
+      type: params.type,
+      s3Key: key,
+    });
+
+    await uploadsRepository.createUploadSession({
+      sessionId: params.sessionId,
+      userId: params.userId,
+      trackSid: params.trackSid,
+      type: params.type,
+      uploadId,
+      s3Key: key,
+    });
 
     return { uploadId, key };
   },
 
-  async getSignedUrl(params: { key: string; uploadId: string; partNumber: number }) {
+  async requireUploadOwner(params: { userId: string; key: string; uploadId: string }) {
+    const upload = await uploadsRepository.findUploadForUser(params);
+    if (!upload) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Upload session not found or not owned by this user",
+      });
+    }
+    return upload;
+  },
+
+  async getSignedUrl(params: {
+    key: string;
+    uploadId: string;
+    partNumber: number;
+    userId: string;
+  }) {
+    await this.requireUploadOwner(params);
+
     if (!s3Client || !isS3Configured || params.uploadId.startsWith("mock-upload-id")) {
       const mockUrl = `/api/mock-upload?key=${encodeURIComponent(params.key)}&uploadId=${params.uploadId}&partNumber=${params.partNumber}`;
       return { url: mockUrl };
@@ -114,7 +155,9 @@ export const uploadsService = {
     }
   },
 
-  async listParts(params: { key: string; uploadId: string }) {
+  async listParts(params: { key: string; uploadId: string; userId: string }) {
+    await this.requireUploadOwner(params);
+
     if (!s3Client || !isS3Configured || params.uploadId.startsWith("mock-upload-id")) {
       return { parts: [] };
     }
@@ -136,7 +179,10 @@ export const uploadsService = {
     key: string;
     uploadId: string;
     parts: { ETag: string; PartNumber: number }[];
+    userId: string;
   }) {
+    await this.requireUploadOwner(params);
+
     if (s3Client && isS3Configured && !params.uploadId.startsWith("mock-upload-id")) {
       try {
         const command = new CompleteMultipartUploadCommand({
@@ -147,6 +193,7 @@ export const uploadsService = {
         });
         await s3Client.send(command);
       } catch (error) {
+        await uploadsRepository.markUploadFailed(params);
         console.error("[Uploads] S3 CompleteMultipartUpload failed:", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -161,6 +208,10 @@ export const uploadsService = {
       await uploadsRepository.markTrackComplete(params.key, finalUrl);
     } catch (dbError) {
       console.error("[Uploads] DB update error:", dbError);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Upload completed but database update failed",
+      });
     }
 
     return { status: "success" };

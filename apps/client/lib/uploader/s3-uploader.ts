@@ -40,6 +40,7 @@ export class S3Uploader {
   // Getters to safely access internal state
   getUploadId = (): string | null => this.uploadId;
   getS3Key = (): string | null => this.s3Key;
+  getSessionId = (): string => this.sessionId;
 
   /**
    * Calls the backend to start a new multipart upload, receiving an uploadId and a final S3 key.

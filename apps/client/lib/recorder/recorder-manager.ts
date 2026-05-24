@@ -28,6 +28,7 @@ export class RecorderManager {
   private trackTotalBytes: Map<string, number> = new Map();
   private trackUploadedPartsProgress: Map<string, Map<number, number>> = new Map();
   private trackPartSizes: Map<string, Map<number, number>> = new Map();
+  private chunkWritePromises: Map<string, Set<Promise<void>>> = new Map();
   private onLocalProgress?: (trackSid: string, progress: number) => void;
 
   constructor({
@@ -187,6 +188,7 @@ export class RecorderManager {
       this.trackTotalBytes.set(trackSid, 0);
       this.trackPartSizes.set(trackSid, new Map());
       this.trackUploadedPartsProgress.set(trackSid, new Map());
+      this.chunkWritePromises.set(trackSid, new Set());
 
       // 4. Capture loop
       recorder.ondataavailable = async (e: BlobEvent) => {
@@ -202,15 +204,24 @@ export class RecorderManager {
         const total = this.trackTotalBytes.get(trackSid) ?? 0;
         this.trackTotalBytes.set(trackSid, total + e.data.size);
 
-        // Save chunk locally (dual storage: IndexedDB + OPFS)
-        await db.chunks.put({
-          id: `${trackSid}-${partNumber}`,
-          trackSid,
-          partNumber,
-          data: e.data,
-          status: "pending",
-        });
-        opfsStorage.writeChunk(this.sessionId!, partNumber, trackSid, e.data).catch(() => {});
+        // Save chunk locally before upload. stopRecording waits on these writes.
+        const writePromise = Promise.all([
+          db.chunks.put({
+            id: `${trackSid}-${partNumber}`,
+            trackSid,
+            partNumber,
+            data: e.data,
+            status: "pending",
+          }),
+          opfsStorage.writeChunk(this.sessionId!, partNumber, trackSid, e.data),
+        ]).then(() => undefined);
+        const writes = this.chunkWritePromises.get(trackSid);
+        writes?.add(writePromise);
+        try {
+          await writePromise;
+        } finally {
+          writes?.delete(writePromise);
+        }
       };
 
       // 5. Start slicing data
@@ -229,7 +240,8 @@ export class RecorderManager {
   private async stopTrackRecorder(trackSid: string) {
     const recorder = this.recorders.get(trackSid);
     if (recorder) {
-      if (recorder.state !== "inactive") recorder.stop();
+      if (recorder.state !== "inactive")
+        await this.stopRecorderAndWaitForChunks(trackSid, recorder);
       this.recorders.delete(trackSid);
     }
 
@@ -249,6 +261,20 @@ export class RecorderManager {
       }
       this.uploaders.delete(trackSid);
     }
+    this.chunkWritePromises.delete(trackSid);
+  }
+
+  private async stopRecorderAndWaitForChunks(trackSid: string, recorder: MediaRecorder) {
+    const stopped = new Promise<void>((resolve) => {
+      recorder.addEventListener("stop", () => resolve(), { once: true });
+    });
+    recorder.stop();
+    await stopped;
+
+    const writes = this.chunkWritePromises.get(trackSid);
+    if (writes?.size) {
+      await Promise.all(Array.from(writes));
+    }
   }
 
   /**
@@ -256,7 +282,10 @@ export class RecorderManager {
    */
   private async processUploadQueue(specificTrackSid?: string) {
     const query = specificTrackSid
-      ? db.chunks.where({ trackSid: specificTrackSid, status: "pending" })
+      ? db.chunks
+          .where("trackSid")
+          .equals(specificTrackSid)
+          .filter((c) => c.status === "pending" || c.status === "failed")
       : db.chunks.where("status").anyOf("pending", "failed");
 
     const chunkToUpload = await query.first();
@@ -269,8 +298,15 @@ export class RecorderManager {
       // Mark as uploading to lock the row
       await db.chunks.update(chunkToUpload.id, { status: "uploading" });
 
+      const chunkBlob =
+        (await opfsStorage.readChunk(
+          uploader.getSessionId(),
+          chunkToUpload.partNumber,
+          chunkToUpload.trackSid,
+        )) ?? chunkToUpload.data;
+
       // Upload the chunk with progress callback
-      await uploader.uploadChunk(chunkToUpload.data, chunkToUpload.partNumber, 3, (sentBytes) => {
+      await uploader.uploadChunk(chunkBlob, chunkToUpload.partNumber, 3, (sentBytes) => {
         this.handleChunkProgress(chunkToUpload.trackSid, chunkToUpload.partNumber, sentBytes);
       });
 
@@ -404,6 +440,7 @@ export class RecorderManager {
     this.trackTotalBytes.clear();
     this.trackUploadedPartsProgress.clear();
     this.trackPartSizes.clear();
+    this.chunkWritePromises.clear();
     this.state = "idle";
     this.sessionId = null;
   }

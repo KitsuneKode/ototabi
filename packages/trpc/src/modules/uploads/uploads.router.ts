@@ -25,11 +25,15 @@ export const uploadsRouter = {
 
   getSignedUrl: protectedProcedure
     .input(z.object({ key: z.string(), uploadId: z.string(), partNumber: z.number() }))
-    .mutation(({ input }) => uploadsService.getSignedUrl(input)),
+    .mutation(({ input, ctx }) =>
+      uploadsService.getSignedUrl({ ...input, userId: ctx.session.user.id }),
+    ),
 
   listParts: protectedProcedure
     .input(z.object({ key: z.string(), uploadId: z.string() }))
-    .mutation(({ input }) => uploadsService.listParts(input)),
+    .mutation(({ input, ctx }) =>
+      uploadsService.listParts({ ...input, userId: ctx.session.user.id }),
+    ),
 
   complete: protectedProcedure
     .input(
@@ -39,7 +43,9 @@ export const uploadsRouter = {
         parts: z.array(z.object({ ETag: z.string(), PartNumber: z.number() })),
       }),
     )
-    .mutation(({ input }) => uploadsService.completeUpload(input)),
+    .mutation(({ input, ctx }) =>
+      uploadsService.completeUpload({ ...input, userId: ctx.session.user.id }),
+    ),
 
   getUploadStatus: protectedProcedure
     .input(z.object({ trackId: z.string() }))
