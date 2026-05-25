@@ -26,7 +26,8 @@
       "react": "^19.0.0",
       "react-dom": "^19.0.0",
       "typescript": "6.0.3",
-      "zod": "^4.4.3"
+      "zod": "^4.4.3",
+      "dotenv": "^17.4.2"
     }
   },
   "scripts": {
@@ -35,11 +36,13 @@
     "db:generate": "turbo run db:generate --filter=@ototabi/store",
     "db:migrate": "turbo run db:migrate --filter=@ototabi/store",
     "db:studio": "turbo run db:studio --filter=@ototabi/store",
+    "db:format": "turbo run db:format --filter=@ototabi/store",
+    "db:format:check": "turbo run db:format:check --filter=@ototabi/store",
     "lint": "oxlint --report-unused-disable-directives",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "typecheck": "turbo run typecheck",
-    "check": "bun run fmt:check && bun lint && bun typecheck && bun run test",
+    "check": "bun run fmt:check && bun run db:format:check && bun lint && bun typecheck && bun run test",
     "test": "turbo run test",
     "prepare": "husky",
     "preinstall": "npx only-allow bun",
@@ -61,9 +64,6 @@
     ],
     "*.{json,md,css}": [
       "oxfmt"
-    ],
-    "*.prisma": [
-      "bash -c 'cd packages/store && bunx prisma format'"
     ]
   },
   "engines": {

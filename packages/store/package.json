@@ -11,7 +11,9 @@
     "db:migrate": "bun run prisma migrate deploy",
     "db:seed": "bun run src/scripts/seed.ts",
     "db:studio": "bun run prisma studio",
-    "db:deploy": "bun run prisma deploy"
+    "db:deploy": "bun run prisma deploy",
+    "db:format": "bun run prisma format",
+    "db:format:check": "bun run prisma format --check"
   },
   "dependencies": {
     "@prisma/adapter-pg": "catalog:",
@@ -22,6 +24,7 @@
   "devDependencies": {
     "@ototabi/typescript-config": "workspace:*",
     "@types/bun": "catalog:",
+    "dotenv": "catalog:",
     "typescript": "catalog:"
   }
 }

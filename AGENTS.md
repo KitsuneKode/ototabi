@@ -2,7 +2,7 @@
 
 ## Task Completion Requirements
 
-- All of `bun fmt`, `bun lint`, and `bun typecheck` must pass before considering tasks completed.
+- All of `bun fmt`, `bun run db:format:check`, `bun lint`, and `bun typecheck` must pass before considering tasks completed.
 - NEVER run `bun test`. Always use `bun run test` (Bun test via turbo).
 
 ## Core Priorities
@@ -48,6 +48,12 @@ existing code. Don't take shortcuts by just adding local logic to solve a proble
 - shadcn/ui: https://ui.shadcn.com
 
 ## Code Quality Standards
+
+### Formatting (oxfmt + Prisma)
+
+- **TypeScript / JSON / CSS / Markdown:** `bun fmt` (oxfmt). Pre-commit runs oxfmt + oxlint on staged `*.{ts,tsx,js,jsx,json,md,css}` only.
+- **Prisma schema:** `bun run db:format` in `packages/store` (or `bun run db:format` from repo root). Not run in Husky — Prisma 7 config is separate from oxfmt.
+- **CI:** `bun fmt:check` and `bun run db:format:check` both run on every PR.
 
 ### React
 

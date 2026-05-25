@@ -43,6 +43,12 @@
     },
     "db:studio": {
       "cache": false
+    },
+    "db:format": {
+      "cache": false
+    },
+    "db:format:check": {
+      "cache": false
     }
   }
 }
