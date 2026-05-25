@@ -13,33 +13,15 @@ import {
   parseS3KeyFromReference,
   s3BucketName,
 } from "@ototabi/backend-common/s3-media";
-import { getTranscriptQueue } from "@ototabi/jobs/queues";
-import { prisma } from "@ototabi/store";
 import { TRPCError } from "@trpc/server";
 
+import { scheduleTranscriptForSession } from "../../lib/schedule-transcript";
 import { recordingEventsService } from "../recording-events/recording-events.service";
-import { roomsRepository } from "../rooms/rooms.repository";
 import { uploadsRepository } from "./uploads.repository";
 
 async function scheduleTranscriptIfReady(sessionId: string) {
   try {
-    const existing = await prisma.transcriptSegment.findFirst({ where: { sessionId } });
-    if (existing) return;
-
-    const session = await prisma.recordingSession.findUnique({
-      where: { id: sessionId },
-      select: { status: true },
-    });
-    if (session?.status !== "COMPLETED") return;
-
-    const audioTrack = await roomsRepository.findFirstAudioTrack(sessionId);
-    if (!audioTrack?.s3Key) return;
-
-    await getTranscriptQueue().add(
-      `transcript-${sessionId}`,
-      { sessionId, audioTrackS3Key: audioTrack.s3Key },
-      { jobId: `transcript-${sessionId}` },
-    );
+    await scheduleTranscriptForSession(sessionId);
   } catch (error) {
     console.warn("[Uploads] Failed to queue transcript after upload:", error);
   }

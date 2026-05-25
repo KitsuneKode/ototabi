@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useRef, useCallback } from "react";
 
 import { ClipRenderActions } from "@/components/clips/clip-render-actions";
+import { SessionExportActions } from "@/components/clips/session-export-actions";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { SessionStatusRail } from "@/components/layout/session-status-rail";
@@ -133,6 +134,7 @@ export default function ExportSessionPage() {
     session,
     transcriptSegments,
     clipCandidates,
+    exports,
     syncMarkers,
     timelineEvents,
     allUploaded,
@@ -727,6 +729,34 @@ export default function ExportSessionPage() {
           )}
         </div>
 
+        {exports ? (
+          <div className="space-y-4">
+            <PanelTitle label="Cloud worker" title="Full-session exports" />
+            <AnalogInset className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <MonoLabel>Episode MP3</MonoLabel>
+              <SessionExportActions
+                sessionId={sessionId}
+                preset="episode_mp3"
+                label="episode MP3"
+                downloadLabel="Download MP3"
+                exportSlot={exports.episodeMp3}
+                onQueued={() => void query.refetch()}
+              />
+            </AnalogInset>
+            <AnalogInset className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <MonoLabel>Landscape 16:9</MonoLabel>
+              <SessionExportActions
+                sessionId={sessionId}
+                preset="landscape_16_9"
+                label="landscape"
+                downloadLabel="Download 16:9"
+                exportSlot={exports.landscape}
+                onQueued={() => void query.refetch()}
+              />
+            </AnalogInset>
+          </div>
+        ) : null}
+
         {clipCandidates && clipCandidates.length > 0 ? (
           <div className="space-y-4">
             <PanelTitle label="Cloud worker" title="9:16 clip renders" />
@@ -743,6 +773,7 @@ export default function ExportSessionPage() {
                       clipId={clip.id}
                       renderStatus={clip.renderStatus}
                       renderS3Key={clip.renderS3Key}
+                      renderError={clip.renderError}
                       onQueued={() => void query.refetch()}
                     />
                   </div>

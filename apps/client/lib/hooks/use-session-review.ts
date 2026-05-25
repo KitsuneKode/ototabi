@@ -28,9 +28,15 @@ export function useSessionReview(sessionId: string) {
           const clipRendering = (q.state.data?.clipCandidates ?? []).some(
             (c) => c.renderStatus === "processing",
           );
+          const sessionExportProcessing =
+            q.state.data?.exports?.episodeMp3?.status === "processing" ||
+            q.state.data?.exports?.landscape?.status === "processing";
+          const transcriptQueued = q.state.data?.transcriptStatus === "queued";
           if (
             status === "processing" ||
             clipRendering ||
+            sessionExportProcessing ||
+            transcriptQueued ||
             (sessionStatus === "COMPLETED" && (status === "pending" || transcriptEmpty))
           ) {
             return 8_000;
@@ -58,6 +64,8 @@ export function useSessionReview(sessionId: string) {
     showNotes: data?.showNotes,
     clipCandidates: data?.clipCandidates,
     aiStatus: data?.aiStatus,
+    transcriptStatus: data?.transcriptStatus,
+    exports: data?.exports,
     timelineEvents,
     allUploaded,
     aggregateUploadStatus,

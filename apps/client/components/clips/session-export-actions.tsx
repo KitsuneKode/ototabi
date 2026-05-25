@@ -8,38 +8,44 @@ import { resolveTrackDownloadUrl } from "@/lib/resolve-track-download";
 import { useTRPC } from "@/trpc/client";
 import { trpcClient } from "@/trpc/vanilla";
 
-type ClipRenderActionsProps = {
+type SessionExportSlot = {
+  status: string;
+  s3Key: string | null;
+  error: string | null;
+};
+
+type SessionExportActionsProps = {
   sessionId: string;
-  clipId: string;
-  renderStatus: string;
-  renderS3Key: string | null;
-  renderError?: string | null;
+  preset: "episode_mp3" | "landscape_16_9";
+  label: string;
+  downloadLabel: string;
+  exportSlot: SessionExportSlot;
   onQueued?: () => void;
 };
 
-export function ClipRenderActions({
+export function SessionExportActions({
   sessionId,
-  clipId,
-  renderStatus,
-  renderS3Key,
-  renderError,
+  preset,
+  label,
+  downloadLabel,
+  exportSlot,
   onQueued,
-}: ClipRenderActionsProps) {
+}: SessionExportActionsProps) {
   const trpc = useTRPC();
 
-  const queueClipRender = useMutation(
-    trpc.clips.queueVerticalRender.mutationOptions({
+  const queueExport = useMutation(
+    trpc.sessionReview.queueSessionExport.mutationOptions({
       onSuccess: () => onQueued?.(),
     }),
   );
 
   const handleDownload = async () => {
-    if (!renderS3Key) return;
-    const url = await resolveTrackDownloadUrl(trpcClient, renderS3Key);
+    if (!exportSlot.s3Key) return;
+    const url = await resolveTrackDownloadUrl(trpcClient, exportSlot.s3Key);
     if (url) window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  if (renderStatus === "ready" && renderS3Key) {
+  if (exportSlot.status === "ready" && exportSlot.s3Key) {
     return (
       <MechButton
         type="button"
@@ -47,33 +53,33 @@ export function ClipRenderActions({
         className="inline-flex items-center gap-1.5"
       >
         <Download className="h-3.5 w-3.5" />
-        Download 9:16
+        {downloadLabel}
       </MechButton>
     );
   }
 
-  if (renderStatus === "processing") {
+  if (exportSlot.status === "processing") {
     return (
       <MechButton type="button" disabled className="opacity-60">
-        Rendering 9:16…
+        Rendering {label}…
       </MechButton>
     );
   }
 
-  if (renderStatus === "failed") {
+  if (exportSlot.status === "failed") {
     return (
       <div className="flex flex-col items-end gap-1">
-        {renderError ? (
+        {exportSlot.error ? (
           <p className="text-led-on max-w-xs text-right font-mono text-[9px] leading-snug">
-            {renderError}
+            {exportSlot.error}
           </p>
         ) : null}
         <MechButton
           type="button"
-          disabled={queueClipRender.isPending}
-          onClick={() => queueClipRender.mutate({ sessionId, clipId })}
+          disabled={queueExport.isPending}
+          onClick={() => queueExport.mutate({ sessionId, preset })}
         >
-          Retry 9:16 export
+          Retry {label}
         </MechButton>
       </div>
     );
@@ -82,10 +88,10 @@ export function ClipRenderActions({
   return (
     <MechButton
       type="button"
-      disabled={queueClipRender.isPending}
-      onClick={() => queueClipRender.mutate({ sessionId, clipId })}
+      disabled={queueExport.isPending}
+      onClick={() => queueExport.mutate({ sessionId, preset })}
     >
-      {queueClipRender.isPending ? "Queueing…" : "Queue 9:16 export"}
+      {queueExport.isPending ? "Queueing…" : `Queue ${label}`}
     </MechButton>
   );
 }

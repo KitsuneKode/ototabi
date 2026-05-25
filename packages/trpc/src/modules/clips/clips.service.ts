@@ -28,7 +28,7 @@ export const clipsService = {
 
     await prisma.clipCandidate.update({
       where: { id: clip.id },
-      data: { renderStatus: "processing" },
+      data: { renderStatus: "processing", renderError: null },
     });
 
     await getExportQueue().add(`export-clip-${clip.id}`, {
