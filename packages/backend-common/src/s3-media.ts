@@ -33,15 +33,34 @@ export function buildObjectKey(sessionId: string, trackSid: string): string {
   return `recordings/session_${sessionId}/track_${trackSid}.webm`;
 }
 
+export type RenderPresetKey = "vertical_9_16" | "landscape_16_9" | "episode_mp3";
+
+function renderSuffix(preset: RenderPresetKey): string {
+  return preset === "vertical_9_16" ? "9x16" : preset === "landscape_16_9" ? "16x9" : "episode";
+}
+
+function renderExtension(preset: RenderPresetKey): string {
+  return preset === "episode_mp3" ? "mp3" : "mp4";
+}
+
 export function buildClipRenderKey(
   sessionId: string,
   clipId: string,
-  preset: "vertical_9_16" | "landscape_16_9" | "episode_mp3",
+  preset: RenderPresetKey,
 ): string {
-  const suffix =
-    preset === "vertical_9_16" ? "9x16" : preset === "landscape_16_9" ? "16x9" : "episode";
-  const ext = preset === "episode_mp3" ? "mp3" : "mp4";
+  const suffix = renderSuffix(preset);
+  const ext = renderExtension(preset);
   return `recordings/session_${sessionId}/renders/clip_${clipId}_${suffix}.${ext}`;
+}
+
+/** Full-session export (no clip trim). */
+export function buildSessionRenderKey(
+  sessionId: string,
+  preset: "landscape_16_9" | "episode_mp3",
+): string {
+  const suffix = renderSuffix(preset);
+  const ext = renderExtension(preset);
+  return `recordings/session_${sessionId}/renders/session_${suffix}.${ext}`;
 }
 
 export function parseS3KeyFromReference(reference: string): string {

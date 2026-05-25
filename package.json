@@ -55,7 +55,7 @@
       "oxfmt"
     ],
     "*.prisma": [
-      "prisma format"
+      "bash -c 'cd packages/store && bunx prisma format'"
     ]
   },
   "engines": {

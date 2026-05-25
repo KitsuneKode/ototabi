@@ -35,13 +35,16 @@ export interface ClipsJobResult {
   candidates: number;
 }
 
+export type ExportPreset = "vertical_9_16" | "landscape_16_9" | "episode_mp3";
+
 export interface ExportJobData {
   sessionId: string;
   clipId?: string;
-  preset: "vertical_9_16" | "episode_mp3";
+  preset: ExportPreset;
 }
 
 export interface ExportJobResult {
-  status: "queued" | "ready";
+  status: "queued" | "ready" | "failed";
   outputKey?: string;
+  errorMessage?: string;
 }

@@ -19,7 +19,38 @@ function deriveAiStatus(
   return "processing";
 }
 
-export function mapSessionReview(session: SessionRecord, bundle: BundleRecord) {
+function deriveTranscriptStatus(
+  session: SessionRecord,
+  bundle: BundleRecord,
+  micReady: boolean,
+): "none" | "queued" | "ready" | "waiting_upload" {
+  if (bundle.transcriptSegments.length > 0) return "ready";
+  if (session.status !== "COMPLETED") return "none";
+  if (!micReady) return "waiting_upload";
+  return "queued";
+}
+
+type ExportFields = {
+  episodeMp3Status: string;
+  episodeMp3S3Key: string | null;
+  episodeMp3Error: string | null;
+  landscapeStatus: string;
+  landscapeS3Key: string | null;
+  landscapeError: string | null;
+} | null;
+
+export function mapSessionReview(
+  session: SessionRecord,
+  bundle: BundleRecord,
+  exportFields?: ExportFields,
+) {
+  const micReady = session.tracks.some(
+    (t) =>
+      t.type === "MICROPHONE" &&
+      t.status === "COMPLETED" &&
+      (t.s3Key.length > 0 || t.s3Url != null),
+  );
+
   return {
     session: {
       id: session.id,
@@ -56,6 +87,19 @@ export function mapSessionReview(session: SessionRecord, bundle: BundleRecord) {
     chapters: bundle.chapters,
     showNotes: bundle.showNotes,
     clipCandidates: bundle.clipCandidates,
+    exports: {
+      episodeMp3: {
+        status: exportFields?.episodeMp3Status ?? "pending",
+        s3Key: exportFields?.episodeMp3S3Key ?? null,
+        error: exportFields?.episodeMp3Error ?? null,
+      },
+      landscape: {
+        status: exportFields?.landscapeStatus ?? "pending",
+        s3Key: exportFields?.landscapeS3Key ?? null,
+        error: exportFields?.landscapeError ?? null,
+      },
+    },
     aiStatus: deriveAiStatus(session, bundle),
+    transcriptStatus: deriveTranscriptStatus(session, bundle, micReady),
   };
 }

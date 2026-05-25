@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 import { ClipRenderActions } from "@/components/clips/clip-render-actions";
+import { SessionExportActions } from "@/components/clips/session-export-actions";
 import { TimelineLite } from "@/components/editor/timeline-lite";
 import { TranscriptEditor } from "@/components/editor/transcript-editor";
 import { AppShell } from "@/components/layout/app-shell";
@@ -15,6 +16,7 @@ import {
   mapTrackStatusToUploadDisplay,
   UploadStatusBadge,
 } from "@/components/patterns/upload-status-badge";
+import { TranscriptRetryActions } from "@/components/session-review/transcript-retry-actions";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { Led, LedInline } from "@/components/ui/led";
 import { MonoLabel, PanelTitle, StatusBadge, MechButton } from "@/components/ui/retro-primitives";
@@ -49,6 +51,8 @@ export default function RecordingSessionPage() {
     showNotes,
     clipCandidates,
     aiStatus,
+    transcriptStatus,
+    exports,
     timelineEvents,
     allUploaded,
     aggregateUploadStatus,
@@ -324,6 +328,7 @@ export default function RecordingSessionPage() {
                       clipId={clip.id}
                       renderStatus={clip.renderStatus}
                       renderS3Key={clip.renderS3Key}
+                      renderError={clip.renderError}
                       onQueued={() => void query.refetch()}
                     />
                   </div>
@@ -360,12 +365,47 @@ export default function RecordingSessionPage() {
           </div>
         ) : null}
 
+        {exports ? (
+          <div className="space-y-4">
+            <PanelTitle label="Cloud worker" title="Full-session exports" />
+            <AnalogInset className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <MonoLabel>Episode MP3 (full mic/camera audio)</MonoLabel>
+              <SessionExportActions
+                sessionId={sessionId}
+                preset="episode_mp3"
+                label="episode MP3"
+                downloadLabel="Download MP3"
+                exportSlot={exports.episodeMp3}
+                onQueued={() => void query.refetch()}
+              />
+            </AnalogInset>
+            <AnalogInset className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <MonoLabel>Landscape 16:9 (full session)</MonoLabel>
+              <SessionExportActions
+                sessionId={sessionId}
+                preset="landscape_16_9"
+                label="landscape"
+                downloadLabel="Download 16:9"
+                exportSlot={exports.landscape}
+                onQueued={() => void query.refetch()}
+              />
+            </AnalogInset>
+          </div>
+        ) : null}
+
         {query.isSuccess && (transcriptSegments?.length ?? 0) === 0 ? (
-          <AnalogCard className="p-8 text-center">
+          <AnalogCard className="flex flex-col items-center gap-4 p-8 text-center">
             <MonoLabel className="text-muted-foreground">
               No transcript yet. Stop a session with uploaded audio, Redis, worker, and
               OPENAI_API_KEY configured to generate one.
             </MonoLabel>
+            {transcriptStatus ? (
+              <TranscriptRetryActions
+                sessionId={sessionId}
+                transcriptStatus={transcriptStatus}
+                onQueued={() => void query.refetch()}
+              />
+            ) : null}
           </AnalogCard>
         ) : null}
 

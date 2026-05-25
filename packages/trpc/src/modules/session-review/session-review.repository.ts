@@ -85,10 +85,25 @@ export const sessionReviewRepository = {
             layout: true,
             renderStatus: true,
             renderS3Key: true,
+            renderError: true,
           },
         }),
       ]);
 
     return { events, syncMarkers, transcriptSegments, chapters, showNotes, clipCandidates };
+  },
+
+  async getSessionExportFields(sessionId: string) {
+    return prisma.recordingSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        episodeMp3Status: true,
+        episodeMp3S3Key: true,
+        episodeMp3Error: true,
+        landscapeStatus: true,
+        landscapeS3Key: true,
+        landscapeError: true,
+      },
+    });
   },
 };

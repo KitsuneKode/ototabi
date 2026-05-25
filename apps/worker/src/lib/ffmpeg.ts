@@ -96,6 +96,83 @@ export async function renderClipToFile(params: {
   }
 }
 
+export async function renderLandscapeEpisodeToFile(params: {
+  inputPath: string;
+  outputPath: string;
+  audioOnly?: boolean;
+}): Promise<void> {
+  const args: string[] = ["-y"];
+
+  if (params.audioOnly) {
+    args.push(
+      "-f",
+      "lavfi",
+      "-i",
+      "color=c=0x0a0a0a:s=1920x1080:d=1",
+      "-i",
+      params.inputPath,
+      "-vf",
+      LANDSCAPE_FILTER,
+      "-c:v",
+      "libx264",
+      "-preset",
+      "fast",
+      "-crf",
+      "23",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "128k",
+      "-shortest",
+      params.outputPath,
+    );
+  } else {
+    args.push(
+      "-i",
+      params.inputPath,
+      "-vf",
+      LANDSCAPE_FILTER,
+      "-c:v",
+      "libx264",
+      "-preset",
+      "fast",
+      "-crf",
+      "23",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "128k",
+      params.outputPath,
+    );
+  }
+
+  const exit = await runProcess("ffmpeg", args);
+  if (exit !== 0) {
+    throw new Error(`ffmpeg exited with code ${exit}`);
+  }
+}
+
+export async function renderEpisodeMp3ToFile(params: {
+  inputPath: string;
+  outputPath: string;
+}): Promise<void> {
+  const args = [
+    "-y",
+    "-i",
+    params.inputPath,
+    "-vn",
+    "-acodec",
+    "libmp3lame",
+    "-q:a",
+    "2",
+    params.outputPath,
+  ];
+  const exit = await runProcess("ffmpeg", args);
+  if (exit !== 0) {
+    throw new Error(`ffmpeg exited with code ${exit}`);
+  }
+}
+
 export async function withTempDir<T>(prefix: string, fn: (dir: string) => Promise<T>): Promise<T> {
   const dir = join(tmpdir(), `${prefix}-${crypto.randomUUID()}`);
   await mkdir(dir, { recursive: true });
