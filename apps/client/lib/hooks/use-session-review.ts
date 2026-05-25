@@ -24,7 +24,15 @@ export function useSessionReview(sessionId: string) {
         refetchInterval: (q) => {
           const status = q.state.data?.aiStatus;
           const sessionStatus = q.state.data?.session?.status;
-          if (status === "processing" || (sessionStatus === "COMPLETED" && status === "pending")) {
+          const transcriptEmpty = (q.state.data?.transcriptSegments?.length ?? 0) === 0;
+          const clipRendering = (q.state.data?.clipCandidates ?? []).some(
+            (c) => c.renderStatus === "processing",
+          );
+          if (
+            status === "processing" ||
+            clipRendering ||
+            (sessionStatus === "COMPLETED" && (status === "pending" || transcriptEmpty))
+          ) {
             return 8_000;
           }
           return false;

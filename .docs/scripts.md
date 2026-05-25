@@ -38,7 +38,7 @@
 | Script        | Description                          |
 | ------------- | ------------------------------------ |
 | `db:generate` | `prisma generate`                    |
-| `db:migrate`  | `prisma migrate dev`                 |
+| `db:migrate`  | `prisma migrate deploy`              |
 | `db:seed`     | Run seed script                      |
 | `db:studio`   | `prisma studio`                      |
 | `db:deploy`   | `prisma migrate deploy` (production) |

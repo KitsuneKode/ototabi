@@ -1,5 +1,6 @@
 export { backendConfigSchema } from "./config";
 export {
+  buildClipRenderKey,
   buildObjectKey,
   getSignedGetUrl,
   getS3Client,
@@ -7,4 +8,5 @@ export {
   parseS3KeyFromReference,
   resolveMediaFetchUrl,
   s3BucketName,
+  uploadObjectFromFile,
 } from "./s3-media";

@@ -1,5 +1,6 @@
-import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { readFile } from "node:fs/promises";
 
 const accessKeyId =
   process.env.AWS_ACCESS_KEY_ID || process.env.MINIO_ACCESS_KEY || process.env.MINIO_ROOT_USER;
@@ -32,6 +33,17 @@ export function buildObjectKey(sessionId: string, trackSid: string): string {
   return `recordings/session_${sessionId}/track_${trackSid}.webm`;
 }
 
+export function buildClipRenderKey(
+  sessionId: string,
+  clipId: string,
+  preset: "vertical_9_16" | "landscape_16_9" | "episode_mp3",
+): string {
+  const suffix =
+    preset === "vertical_9_16" ? "9x16" : preset === "landscape_16_9" ? "16x9" : "episode";
+  const ext = preset === "episode_mp3" ? "mp3" : "mp4";
+  return `recordings/session_${sessionId}/renders/clip_${clipId}_${suffix}.${ext}`;
+}
+
 export function parseS3KeyFromReference(reference: string): string {
   if (!reference.startsWith("http")) return reference;
   try {
@@ -61,4 +73,24 @@ export async function resolveMediaFetchUrl(reference: string): Promise<string> {
   }
   const signed = await getSignedGetUrl(key);
   return signed ?? reference;
+}
+
+export async function uploadObjectFromFile(params: {
+  key: string;
+  filePath: string;
+  contentType?: string;
+}): Promise<void> {
+  const client = getS3Client();
+  if (!client) {
+    throw new Error("S3 is not configured — cannot upload rendered media");
+  }
+  const body = await readFile(params.filePath);
+  await client.send(
+    new PutObjectCommand({
+      Bucket: s3BucketName,
+      Key: params.key,
+      Body: body,
+      ContentType: params.contentType ?? "video/mp4",
+    }),
+  );
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
+import { ClipRenderActions } from "@/components/clips/clip-render-actions";
 import { TimelineLite } from "@/components/editor/timeline-lite";
 import { TranscriptEditor } from "@/components/editor/transcript-editor";
 import { AppShell } from "@/components/layout/app-shell";
@@ -32,8 +32,6 @@ import {
   Film,
   BookOpen,
 } from "@/lib/icons";
-import { useTRPC } from "@/trpc/client";
-
 const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
   MICROPHONE: Mic,
   CAMERA: Video,
@@ -43,8 +41,6 @@ const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }
 export default function RecordingSessionPage() {
   const { sessionId } = useParams() as { sessionId: string };
   const router = useRouter();
-  const trpc = useTRPC();
-
   const {
     query,
     session,
@@ -58,12 +54,6 @@ export default function RecordingSessionPage() {
     aggregateUploadStatus,
     isBootingAuth,
   } = useSessionReview(sessionId);
-
-  const queueClipRender = useMutation(
-    trpc.clips.queueVerticalRender.mutationOptions({
-      onSuccess: () => query.refetch(),
-    }),
-  );
 
   if (isBootingAuth || query.isLoading) {
     return (
@@ -329,12 +319,13 @@ export default function RecordingSessionPage() {
                         {clip.rationale}
                       </p>
                     </div>
-                    <MechButton
-                      disabled={queueClipRender.isPending || clip.renderStatus === "processing"}
-                      onClick={() => queueClipRender.mutate({ sessionId, clipId: clip.id })}
-                    >
-                      {clip.renderStatus === "ready" ? "9:16 ready" : "Queue 9:16 export"}
-                    </MechButton>
+                    <ClipRenderActions
+                      sessionId={sessionId}
+                      clipId={clip.id}
+                      renderStatus={clip.renderStatus}
+                      renderS3Key={clip.renderS3Key}
+                      onQueued={() => void query.refetch()}
+                    />
                   </div>
                 </AnalogInset>
               ))}

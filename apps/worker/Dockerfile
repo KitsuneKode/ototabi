@@ -8,6 +8,10 @@ COPY apps/worker/package.json ./apps/worker/
 COPY apps/client/package.json ./apps/client/
 COPY packages ./packages
 
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ffmpeg \
+  && rm -rf /var/lib/apt/lists/*
+
 RUN bun install --frozen-lockfile
 
 RUN bun run db:generate

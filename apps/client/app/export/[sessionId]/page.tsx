@@ -5,6 +5,7 @@ import { toBlobURL, fetchFile } from "@ffmpeg/util";
 import { useParams, useRouter } from "next/navigation";
 import { useRef, useCallback } from "react";
 
+import { ClipRenderActions } from "@/components/clips/clip-render-actions";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { SessionStatusRail } from "@/components/layout/session-status-rail";
@@ -105,6 +106,7 @@ export default function ExportSessionPage() {
     query,
     session,
     transcriptSegments,
+    clipCandidates,
     syncMarkers,
     timelineEvents,
     allUploaded,
@@ -735,6 +737,31 @@ export default function ExportSessionPage() {
             </div>
           )}
         </div>
+
+        {clipCandidates && clipCandidates.length > 0 ? (
+          <div className="space-y-4">
+            <PanelTitle label="Cloud worker" title="9:16 clip renders" />
+            <div className="space-y-3">
+              {clipCandidates.map((clip) => (
+                <AnalogInset key={clip.id} className="p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <MonoLabel>
+                      {formatTimestamp(clip.startTime)} – {formatTimestamp(clip.endTime)} &bull;
+                      score {(clip.score * 100).toFixed(0)}%
+                    </MonoLabel>
+                    <ClipRenderActions
+                      sessionId={sessionId}
+                      clipId={clip.id}
+                      renderStatus={clip.renderStatus}
+                      renderS3Key={clip.renderS3Key}
+                      onQueued={() => void query.refetch()}
+                    />
+                  </div>
+                </AnalogInset>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {/* ── Text-Based Editing ─────────────────────────────────────────── */}
         {transcriptSegments && transcriptSegments.length > 0 && completedTracks.length > 0 ? (
