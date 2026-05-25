@@ -71,6 +71,7 @@ export function useSessionReview(sessionId: string) {
     aiStatus: data?.aiStatus,
     transcriptStatus: data?.transcriptStatus,
     exports: data?.exports,
+    pipeline: data?.pipeline,
     timelineEvents,
     allUploaded,
     aggregateUploadStatus,

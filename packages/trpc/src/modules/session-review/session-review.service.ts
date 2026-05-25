@@ -4,6 +4,7 @@ import { getExportQueue } from "@ototabi/jobs/queues";
 import { prisma } from "@ototabi/store";
 import { TRPCError } from "@trpc/server";
 
+import { scheduleLlmRegenForSession } from "../../lib/schedule-llm-regen";
 import { scheduleTranscriptForSession } from "../../lib/schedule-transcript";
 import { mapSessionReview } from "./session-review.mapper";
 import { sessionReviewPolicy } from "./session-review.policy";
@@ -66,5 +67,33 @@ export const sessionReviewService = {
     });
 
     return { status: "processing" as const };
+  },
+
+  async regenerateLlm(params: { actorId: string; sessionId: string }) {
+    await assertCanViewSession(params.actorId, params.sessionId);
+    const result = await scheduleLlmRegenForSession(params.sessionId);
+    if (result.status === "blocked") {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: result.message });
+    }
+    return { status: "queued" as const };
+  },
+
+  async updateShowNotesSummary(params: { actorId: string; sessionId: string; summary: string }) {
+    await assertCanViewSession(params.actorId, params.sessionId);
+    const existing = await prisma.showNotes.findUnique({
+      where: { sessionId: params.sessionId },
+      select: { id: true },
+    });
+    if (!existing) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Show notes not found — generate AI artifacts first",
+      });
+    }
+    await prisma.showNotes.update({
+      where: { sessionId: params.sessionId },
+      data: { summary: params.summary },
+    });
+    return { ok: true as const };
   },
 };

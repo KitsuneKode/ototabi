@@ -8,6 +8,15 @@ export const retryTranscriptSchema = z.object({
   sessionId: z.string().min(1),
 });
 
+export const regenerateLlmSchema = z.object({
+  sessionId: z.string().min(1),
+});
+
+export const updateShowNotesSchema = z.object({
+  sessionId: z.string().min(1),
+  summary: z.string().min(1).max(20_000),
+});
+
 /**
  * `sessionReview.get` response contract (Stream D: consume only — do not change field names
  * without coordinating a DTO freeze break).

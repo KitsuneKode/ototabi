@@ -219,3 +219,55 @@ Out of scope: undo/redo stack v1, waveform canvas, multi-cam switch persistence.
 ### Smoke steps
 
 [try-local-smoke.md](./try-local-smoke.md) §7 — scrub timeline, drag trim handles on active lane, confirm preview video + trim fields update.
+
+---
+
+## Wave 5 Stream 8 — AI regen, deploy doc, Capture spec (PR8)
+
+| Field             | Value                                                               |
+| ----------------- | ------------------------------------------------------------------- |
+| **Wave / stream** | Wave 5 — AI regen (Plan 06), staging deploy checklist, Capture spec |
+| **Branch**        | `feat/parity-stream8-wave5`                                         |
+| **Plan refs**     | `.plans/06`, `.plans/28`, `.plans/29`                               |
+
+### Scope
+
+Shipped: `sessionReview.regenerateLlm` + `updateShowNotes`; pipeline status rail; regen actions on recordings + export; editable show notes summary; `ai-regen.policy` + tests; Capture companion spec (`.plans/29`); parity staging checklist in deploy doc. Playwright scaffold under `e2e/` (manual, not CI gate).
+
+Out of scope: actual Railway deploy (no credentials assumed); Capture desktop app code; filler-word removal UI.
+
+### Files touched
+
+- `packages/trpc/src/lib/ai-pipeline-reset.ts`, `schedule-llm-regen.ts`
+- `packages/trpc/src/modules/session-review/` — router, service, dto, `ai-regen.policy.ts` + test
+- `apps/client/components/session-review/` — `ai-pipeline-status`, `ai-artifact-actions`, `show-notes-editor`
+- `apps/client/app/(site)/recordings/[sessionId]/page.tsx`, `export/[sessionId]/page.tsx`
+- `apps/client/lib/hooks/use-session-review.ts`
+- `.plans/29-ototabi-capture-companion.md`, `.docs/deploy-railway.md`, `.docs/subagent-handoff.md`
+- `e2e/` — Playwright scaffold + README (manual, outside turbo test)
+
+### Tests added / updated
+
+| Package         | Tests                               |
+| --------------- | ----------------------------------- |
+| `@ototabi/trpc` | `ai-regen.policy.test.ts` (6 cases) |
+
+**Gate:** `bun fmt && bun lint && bun typecheck && bun run test`
+
+### Smoke steps
+
+1. Complete session with transcript → open `/recordings/{id}` → verify pipeline rail (transcript / LLM / clips).
+2. **Regenerate chapters & show notes** → chapters/notes refresh after worker (~30s).
+3. Edit show notes summary → Save → reload persists.
+4. **Regenerate clip candidates** (Creator+) → new clip rows appear.
+5. Repeat regen + show notes on `/export/{id}`.
+6. Staging: follow `.docs/deploy-railway.md` §4 parity checklist when credentials available.
+
+### Blockers / merge recommendation
+
+| Item             | Detail                                                                                |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| Merge base       | Rebase onto `feat/parity-stream7-timeline` or integration branch after Wave 4 merge   |
+| User merge order | `stream7-timeline` → `stream8-wave5` → optional `integration/parity-v1` → `main`      |
+| E2E              | Run `e2e/` only with live preview URL; keep out of `bun run check` until CI job added |
+| Capture app      | Spec only — implementation tracked in Plan 29 (~6–8w)                                 |

@@ -17,6 +17,9 @@ import { PageHeader } from "@/components/layout/page-header";
 import { SessionStatusRail } from "@/components/layout/session-status-rail";
 import { AnalogLoadingPanel, AnalogStatePanel } from "@/components/patterns/analog-state-panel";
 import { SessionTimeline } from "@/components/patterns/session-timeline";
+import { AiArtifactActions } from "@/components/session-review/ai-artifact-actions";
+import { AiPipelineStatus } from "@/components/session-review/ai-pipeline-status";
+import { ShowNotesEditor } from "@/components/session-review/show-notes-editor";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { Led, LedInline } from "@/components/ui/led";
 import { MonoLabel, PanelTitle, StatusBadge, MechButton } from "@/components/ui/retro-primitives";
@@ -167,7 +170,12 @@ export default function ExportSessionPage() {
     query,
     session,
     transcriptSegments,
+    chapters,
+    showNotes,
     clipCandidates,
+    aiStatus,
+    transcriptStatus,
+    pipeline,
     exports,
     syncMarkers,
     timelineEvents,
@@ -704,6 +712,47 @@ export default function ExportSessionPage() {
 
         <SessionStatusRail uploadStatus={aggregateUploadStatus} syncOk={allUploaded} />
 
+        {pipeline ? (
+          <AiPipelineStatus pipeline={pipeline} aiStatus={aiStatus ?? "pending"} />
+        ) : null}
+
+        {(transcriptSegments?.length ?? 0) > 0 && pipeline ? (
+          <AiArtifactActions
+            sessionId={sessionId}
+            hasTranscript={(transcriptSegments?.length ?? 0) > 0}
+            transcriptStatus={transcriptStatus ?? "none"}
+            pipeline={pipeline}
+            onQueued={() => void query.refetch()}
+          />
+        ) : null}
+
+        {showNotes ? (
+          <ShowNotesEditor
+            sessionId={sessionId}
+            showNotes={showNotes}
+            onSaved={() => void query.refetch()}
+          />
+        ) : null}
+
+        {chapters && chapters.length > 0 ? (
+          <AnalogCard className="p-6">
+            <PanelTitle label="AI producer" title="Chapters" />
+            <div className="mt-3 space-y-1">
+              {chapters.map((ch) => (
+                <div
+                  key={ch.id}
+                  className="border-border bg-popover flex items-center gap-3 rounded border px-3 py-2"
+                >
+                  <MonoLabel className="text-accent shrink-0">
+                    {formatTimestamp(ch.startTime)}
+                  </MonoLabel>
+                  <span className="text-foreground font-mono text-xs">{ch.title}</span>
+                </div>
+              ))}
+            </div>
+          </AnalogCard>
+        ) : null}
+
         {/* ── Session Meta Card ─────────────────────────────────────────── */}
         <AnalogCard className="p-6">
           <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
@@ -855,7 +904,7 @@ export default function ExportSessionPage() {
 
         {clipCandidates && clipCandidates.length > 0 ? (
           <div className="space-y-4">
-            <PanelTitle label="Cloud worker" title="9:16 clip renders" />
+            <PanelTitle label="Magic clips" title="Vertical clip pack" />
             <div className="space-y-3">
               {clipCandidates.map((clip) => (
                 <AnalogInset key={clip.id} className="p-4">

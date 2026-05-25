@@ -17,6 +17,9 @@ import {
   mapTrackStatusToUploadDisplay,
   UploadStatusBadge,
 } from "@/components/patterns/upload-status-badge";
+import { AiArtifactActions } from "@/components/session-review/ai-artifact-actions";
+import { AiPipelineStatus } from "@/components/session-review/ai-pipeline-status";
+import { ShowNotesEditor } from "@/components/session-review/show-notes-editor";
 import { TranscriptRetryActions } from "@/components/session-review/transcript-retry-actions";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { Led, LedInline } from "@/components/ui/led";
@@ -53,6 +56,7 @@ export default function RecordingSessionPage() {
     clipCandidates,
     aiStatus,
     transcriptStatus,
+    pipeline,
     exports,
     timelineEvents,
     allUploaded,
@@ -113,6 +117,20 @@ export default function RecordingSessionPage() {
         />
 
         <SessionStatusRail uploadStatus={aggregateUploadStatus} syncOk={allUploaded} />
+
+        {pipeline ? (
+          <AiPipelineStatus pipeline={pipeline} aiStatus={aiStatus ?? "pending"} />
+        ) : null}
+
+        {(transcriptSegments?.length ?? 0) > 0 && pipeline ? (
+          <AiArtifactActions
+            sessionId={sessionId}
+            hasTranscript={(transcriptSegments?.length ?? 0) > 0}
+            transcriptStatus={transcriptStatus ?? "none"}
+            pipeline={pipeline}
+            onQueued={() => void query.refetch()}
+          />
+        ) : null}
 
         {/* ── Session Meta Card ─────────────────────────────────────────── */}
         <AnalogCard className="p-6">
@@ -280,21 +298,11 @@ export default function RecordingSessionPage() {
         />
 
         {showNotes ? (
-          <AnalogCard className="space-y-4 p-6">
-            <PanelTitle label="AI producer" title="Show notes" />
-            <p className="text-foreground/90 font-mono text-sm leading-relaxed">
-              {showNotes.summary}
-            </p>
-            {Array.isArray(showNotes.keywords) && showNotes.keywords.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {(showNotes.keywords as string[]).map((kw) => (
-                  <StatusBadge key={kw} variant="default" className="text-[10px]">
-                    {kw}
-                  </StatusBadge>
-                ))}
-              </div>
-            ) : null}
-          </AnalogCard>
+          <ShowNotesEditor
+            sessionId={sessionId}
+            showNotes={showNotes}
+            onSaved={() => void query.refetch()}
+          />
         ) : aiStatus === "processing" ? (
           <AnalogCard className="p-6 text-center">
             <MonoLabel>AI processing transcript, chapters, and clips…</MonoLabel>

@@ -86,7 +86,43 @@ OAuth providers (GitHub/Google): add the Vercel callback URL in the provider con
 
 ---
 
-## 4. Operator smoke test (staging)
+## 4. Parity v1 staging checklist (Riverside milestone)
+
+Use after merging Waves 1–5 (usage caps, studio trust, health, export polish, demo v1.1, worker export, timeline MVP, AI regen). **Do not deploy** until Railway + Vercel credentials exist.
+
+### Pre-deploy
+
+- [ ] `bun run check` green on integration branch (`feat/parity-stream8-wave5` or merged `integration/parity-v1`)
+- [ ] `railway run bun run db:deploy` against staging Postgres
+- [ ] API + worker share: `DATABASE_URL`, `REDIS_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `FRONTEND_URL`, `ALLOWED_ORIGINS`
+- [ ] Worker: `OPENAI_API_KEY` (AI path), S3/R2 keys, LiveKit keys if testing studio
+- [ ] Optional billing: `DODO_PAYMENTS_API_KEY` + product IDs for plan-gate smoke
+
+### Vercel preview
+
+- [ ] `NEXT_PUBLIC_API_URL` → Railway API public URL
+- [ ] `NEXT_PUBLIC_APP_URL` → this preview origin
+- [ ] `NEXT_PUBLIC_LIVEKIT_URL` → LiveKit WSS (studio smoke)
+- [ ] Redeploy client after any `NEXT_PUBLIC_*` change
+
+### Post-deploy smoke URLs
+
+| Step    | Route                         | Pass criteria                                                                               |
+| ------- | ----------------------------- | ------------------------------------------------------------------------------------------- |
+| Auth    | `/auth` → sign-in             | Session cookie; dashboard loads                                                             |
+| Studio  | `/chat/{roomId}` or preflight | Preflight warn path; short record + upload                                                  |
+| Review  | `/recordings/{sessionId}`     | Pipeline rail; regen buttons; editable show notes                                           |
+| Export  | `/export/{sessionId}`         | Timeline scrub; Pro cut gate; clip regen                                                    |
+| Billing | Trial host                    | 2nd transcript blocked; export cut CTA (see [try-billing-smoke.md](./try-billing-smoke.md)) |
+| AI      | Worker logs                   | transcript → LLM → clips ([try-ai-pipeline.md](./try-ai-pipeline.md))                       |
+
+### Optional E2E (Phase 2)
+
+Scaffold: `e2e/` — run manually with `PLAYWRIGHT_BASE_URL` set to the Vercel preview URL (see `e2e/README.md`). Not part of CI gate yet.
+
+---
+
+## 5. Operator smoke test (staging)
 
 Run in order; stop on first failure and fix env before continuing.
 
@@ -101,13 +137,13 @@ Document the URLs you used in your team notes; redeploy API/worker after changin
 
 ---
 
-## 5. Production promotion
+## 6. Production promotion
 
 Same layout as staging; use Production env scopes on Vercel and production service variables on Railway. Promote a validated preview with `vercel promote <deployment-url>` only after the smoke checklist passes on that preview.
 
 ---
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
 | Symptom               | Likely cause                               | Fix                                                          |
 | --------------------- | ------------------------------------------ | ------------------------------------------------------------ |

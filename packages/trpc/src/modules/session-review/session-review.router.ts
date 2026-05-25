@@ -3,7 +3,12 @@ import type { TRPCRouterRecord } from "@trpc/server";
 import { z } from "zod";
 
 import { hostProcedure, hostProProcedure } from "../../trpc";
-import { getSessionReviewSchema, retryTranscriptSchema } from "./session-review.dto";
+import {
+  getSessionReviewSchema,
+  regenerateLlmSchema,
+  retryTranscriptSchema,
+  updateShowNotesSchema,
+} from "./session-review.dto";
 import { sessionReviewService } from "./session-review.service";
 
 const queueSessionExportSchema = z.object({
@@ -31,6 +36,21 @@ export const sessionReviewRouter = {
       actorId: ctx.session.user.id,
       sessionId: input.sessionId,
       preset: input.preset,
+    }),
+  ),
+
+  regenerateLlm: hostProProcedure.input(regenerateLlmSchema).mutation(({ input, ctx }) =>
+    sessionReviewService.regenerateLlm({
+      actorId: ctx.session.user.id,
+      sessionId: input.sessionId,
+    }),
+  ),
+
+  updateShowNotes: hostProProcedure.input(updateShowNotesSchema).mutation(({ input, ctx }) =>
+    sessionReviewService.updateShowNotesSummary({
+      actorId: ctx.session.user.id,
+      sessionId: input.sessionId,
+      summary: input.summary,
     }),
   ),
 } satisfies TRPCRouterRecord;
