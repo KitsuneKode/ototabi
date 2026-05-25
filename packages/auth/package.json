@@ -9,14 +9,12 @@
     "./guest-session": "./src/guest-session.ts"
   },
   "dependencies": {
-    "@ototabi/store": "*",
-    "better-auth": "^1.2.12"
+    "@ototabi/store": "workspace:*",
+    "better-auth": "catalog:"
   },
   "devDependencies": {
-    "@ototabi/typescript-config": "*",
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5.9.3"
+    "@ototabi/typescript-config": "workspace:*",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
   }
 }

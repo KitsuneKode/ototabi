@@ -1,7 +1,7 @@
 import type { TRPCRouterRecord } from "@trpc/server";
 
+import { createCheckoutLink } from "@ototabi/billing/checkout";
 import { prisma } from "@ototabi/store";
-import { createCheckoutLink } from "billing/checkout";
 import { z } from "zod";
 
 import { memberProcedure } from "../trpc";

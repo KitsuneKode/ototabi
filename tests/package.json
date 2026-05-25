@@ -9,12 +9,10 @@
     "test:coverage": "bun test --coverage"
   },
   "dependencies": {
-    "@ototabi/common": "*"
+    "@ototabi/common": "workspace:*"
   },
   "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
   }
 }

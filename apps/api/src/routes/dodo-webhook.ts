@@ -1,5 +1,5 @@
 import { Webhooks } from "@dodopayments/express";
-import { handleDodoWebhook } from "billing/webhook";
+import { handleDodoWebhook } from "@ototabi/billing/webhook";
 import { Router } from "express";
 
 const dodoWebhookRouter = Router();

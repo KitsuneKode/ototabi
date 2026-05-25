@@ -14,23 +14,21 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.864.0",
     "@aws-sdk/s3-request-presigner": "^3.864.0",
-    "@ototabi/auth": "*",
-    "@ototabi/backend-common": "*",
-    "@ototabi/common": "*",
-    "@ototabi/jobs": "*",
-    "@ototabi/store": "*",
-    "@trpc/server": "^11.4.3",
-    "archiver": "^7.0.1",
-    "billing": "*",
+    "@ototabi/auth": "workspace:*",
+    "@ototabi/backend-common": "workspace:*",
+    "@ototabi/billing": "workspace:*",
+    "@ototabi/common": "workspace:*",
+    "@ototabi/jobs": "workspace:*",
+    "@ototabi/store": "workspace:*",
+    "@trpc/server": "catalog:",
+    "archiver": "^8.0.0",
     "superjson": "^2.2.2",
-    "zod": "^4.4.3"
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@ototabi/typescript-config": "*",
-    "@types/archiver": "^6.0.3",
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5.9.3"
+    "@ototabi/typescript-config": "workspace:*",
+    "@types/archiver": "^7.0.0",
+    "@types/bun": "catalog:",
+    "typescript": "catalog:"
   }
 }

@@ -10,15 +10,15 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@ototabi/backend-common": "*",
-    "@ototabi/common": "*",
-    "@ototabi/jobs": "*",
-    "@ototabi/store": "*",
-    "bullmq": "^5.51.0",
+    "@ototabi/backend-common": "workspace:*",
+    "@ototabi/common": "workspace:*",
+    "@ototabi/jobs": "workspace:*",
+    "@ototabi/store": "workspace:*",
+    "bullmq": "^5.77.3",
     "ioredis": "^5.6.1"
   },
   "devDependencies": {
-    "@ototabi/typescript-config": "*",
-    "typescript": "6.0.3"
+    "@ototabi/typescript-config": "workspace:*",
+    "typescript": "catalog:"
   }
 }

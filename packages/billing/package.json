@@ -1,19 +1,23 @@
 {
-  "name": "billing",
+  "name": "@ototabi/billing",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
     "./checkout": "./src/checkout.ts",
-    "./webhook": "./src/webhook.ts"
+    "./webhook": "./src/webhook.ts",
+    "./plan-policy": "./src/plan-policy.ts"
+  },
+  "scripts": {
+    "test": "bun test"
   },
   "dependencies": {
-    "@ototabi/store": "*",
+    "@ototabi/store": "workspace:*",
     "dodopayments": "^2.10.2"
   },
   "devDependencies": {
-    "@ototabi/typescript-config": "*",
-    "typescript": "6.0.3"
+    "@ototabi/typescript-config": "workspace:*",
+    "typescript": "catalog:"
   }
 }

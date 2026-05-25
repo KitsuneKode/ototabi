@@ -21,14 +21,12 @@
   "dependencies": {
     "date-fns": "^4.1.0",
     "winston": "^3.17.0",
-    "zod": "^4.4.3"
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@ototabi/typescript-config": "*",
-    "@types/bun": "latest",
-    "@types/winston": "^2.4.4"
-  },
-  "peerDependencies": {
-    "typescript": "^5.9.3"
+    "@ototabi/typescript-config": "workspace:*",
+    "@types/bun": "catalog:",
+    "@types/winston": "^2.4.4",
+    "typescript": "catalog:"
   }
 }
