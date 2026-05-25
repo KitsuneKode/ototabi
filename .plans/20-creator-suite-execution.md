@@ -33,15 +33,15 @@
 
 ## Batch map (execute in order)
 
-| Batch | File                                                       | Goal                                                   | Gate before next                       |
-| ----- | ---------------------------------------------------------- | ------------------------------------------------------ | -------------------------------------- |
-| **0** | [20-batch-0-trust.md](20-batch-0-trust.md)                 | Plan 13 Phase 0–1 slice (OPFS, upload auth, sync)      | E2E smoke: record → upload → recovery  |
-| **1** | [20-batch-1-dashboard.md](20-batch-1-dashboard.md)         | Dashboard UX + tRPC perf + `dashboard.getSummary`      | Host-only shared rooms UX correct      |
-| **2** | [20-batch-2-deploy.md](20-batch-2-deploy.md)               | Vercel client + Railway API/worker + docs              | Preview URL auth + tRPC works          |
-| **3** | [20-batch-3-ai-clips.md](20-batch-3-ai-clips.md)           | Transcript harden + show notes + magic clips           | One 9:16 clip export from real session |
-| **4** | [20-batch-4-polish-export.md](20-batch-4-polish-export.md) | Plan 16 landing + hybrid export worker + timeline-lite | `bun` gates + manual UX pass           |
-| **5** | (future) `20-batch-5-demo.md`                              | Browser demo mode                                      | After Batch 0 gate                     |
-| **6** | (future) `20-batch-6-reels.md`                             | Native JSON preset packs                               | After Batch 3                          |
+| Batch | File                                                       | Goal                                                   | Gate before next                        |
+| ----- | ---------------------------------------------------------- | ------------------------------------------------------ | --------------------------------------- |
+| **0** | [20-batch-0-trust.md](20-batch-0-trust.md)                 | Plan 13 Phase 0–1 slice (OPFS, upload auth, sync)      | **done** (May 2026)                     |
+| **1** | [20-batch-1-dashboard.md](20-batch-1-dashboard.md)         | Dashboard UX + tRPC perf + `dashboard.getSummary`      | **done**                                |
+| **2** | [20-batch-2-deploy.md](20-batch-2-deploy.md)               | Vercel client + Railway API/worker + docs              | **done** (scaffolding; live deploy TBD) |
+| **3** | [20-batch-3-ai-clips.md](20-batch-3-ai-clips.md)           | Transcript harden + show notes + magic clips           | **done**                                |
+| **4** | [20-batch-4-polish-export.md](20-batch-4-polish-export.md) | Plan 16 landing + hybrid export worker + timeline-lite | **done**                                |
+| **5** | [Plan 24](24-demo-mode-browser.md)                         | Browser demo mode                                      | **done** (May 2026)                     |
+| **6** | (future) `20-batch-6-reels.md`                             | Native JSON preset packs                               | After Batch 3                           |
 
 ---
 

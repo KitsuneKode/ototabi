@@ -1,3 +1,4 @@
+/** Browser demo mode API contracts — see `.plans/24-demo-mode-browser.md`. */
 import { z } from "zod/v4";
 
 export const cursorEventSchema = z.object({
