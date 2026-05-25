@@ -8,6 +8,7 @@ import { useRef, useState, useCallback } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
+import { SessionTimeline } from "@/components/patterns/session-timeline";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { Led, LedInline } from "@/components/ui/led";
 import { MonoLabel, PanelTitle, StatusBadge, MechButton } from "@/components/ui/retro-primitives";
@@ -23,7 +24,10 @@ import {
   Scissors,
   Combine,
 } from "@/lib/icons";
+import { getSyncMarkerOffsetMs, mergeSessionTimelineEvents } from "@/lib/merge-session-timeline";
+import { resolveTrackDownloadUrl } from "@/lib/resolve-track-download";
 import { useTRPC } from "@/trpc/client";
+import { trpcClient } from "@/trpc/vanilla";
 
 const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
   MICROPHONE: Mic,
@@ -44,6 +48,24 @@ async function downloadFile(ffmpeg: FFmpeg, filename: string, downloadName: stri
   a.click();
   URL.revokeObjectURL(url);
   await ffmpeg.deleteFile(filename);
+}
+
+function TrackDownloadButton({ mediaRef }: { mediaRef: string }) {
+  const handleDownload = async () => {
+    const url = await resolveTrackDownloadUrl(trpcClient, mediaRef);
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <MechButton
+      type="button"
+      onClick={() => void handleDownload()}
+      className="text-secondary-foreground inline-flex items-center gap-1.5 px-3 py-1.5 text-xs"
+    >
+      <Download className="h-3.5 w-3.5" />
+      Download
+    </MechButton>
+  );
 }
 
 function TrackStatusBadge({ status }: { status: string }) {
@@ -96,6 +118,17 @@ export default function ExportSessionPage() {
   const transcript = useQuery(
     trpc.transcript.getSegments.queryOptions({ sessionId }, { enabled: !!sessionId }),
   );
+
+  const recordingEvents = useQuery(
+    trpc.recordingEvents.listBySession.queryOptions({ sessionId }, { enabled: !!sessionId }),
+  );
+
+  const syncMarkers = useQuery(
+    trpc.syncMarkers.listBySession.queryOptions({ sessionId }, { enabled: !!sessionId }),
+  );
+
+  const timelineEvents = mergeSessionTimelineEvents(recordingEvents.data, syncMarkers.data);
+  const syncOffsetMs = getSyncMarkerOffsetMs(syncMarkers.data);
 
   const authState = useQuery(trpc.auth.getSession.queryOptions());
 
@@ -163,7 +196,7 @@ export default function ExportSessionPage() {
   const handleMerge = useCallback(async () => {
     if (!session.data) return;
     const tracks = session.data.tracks.filter(
-      (t) => selectedTracks.has(t.id) && t.status === "COMPLETED" && t.s3Url,
+      (t) => selectedTracks.has(t.id) && t.status === "COMPLETED" && (t.s3Url || t.s3Key),
     );
     if (tracks.length < 2) return;
 
@@ -179,12 +212,18 @@ export default function ExportSessionPage() {
       let content = "";
       for (let i = 0; i < tracks.length; i++) {
         const name = `input_${i}.mp4`;
-        const data = await fetchFile(tracks[i]!.s3Url!);
+        const mediaRef = tracks[i]!.s3Url ?? tracks[i]!.s3Key;
+        const downloadUrl = await resolveTrackDownloadUrl(trpcClient, mediaRef);
+        if (!downloadUrl) throw new Error(`Could not resolve download URL for track ${i + 1}`);
+        const data = await fetchFile(downloadUrl);
         await ffmpeg.writeFile(name, data);
         content += `file '${name}'\n`;
       }
 
       await ffmpeg.writeFile("concat_list.txt", new TextEncoder().encode(content));
+      const audioFilters: string[] = [];
+      if (noiseReduction) audioFilters.push("afftdn");
+      if (syncOffsetMs > 0) audioFilters.push(`adelay=${syncOffsetMs}|${syncOffsetMs}`);
       const mergeArgs = [
         "-f",
         "concat",
@@ -192,10 +231,10 @@ export default function ExportSessionPage() {
         "0",
         "-i",
         "concat_list.txt",
-        ...(noiseReduction ? ["-af", "afftdn"] : []),
+        ...(audioFilters.length > 0 ? ["-af", audioFilters.join(",")] : []),
         "-c:v",
         "copy",
-        ...(noiseReduction ? ["-c:a", "aac"] : ["-c:a", "copy"]),
+        ...(audioFilters.length > 0 ? ["-c:a", "aac"] : ["-c:a", "copy"]),
         "output.mp4",
       ];
       await ffmpeg.exec(mergeArgs);
@@ -212,13 +251,13 @@ export default function ExportSessionPage() {
       setProcessingStatus("error");
       setErrorMessage(err instanceof Error ? err.message : "Merge failed");
     }
-  }, [session.data, selectedTracks, loadFfmpeg, sessionId, noiseReduction]);
+  }, [session.data, selectedTracks, loadFfmpeg, sessionId, noiseReduction, syncOffsetMs]);
 
   const handleExportRes = useCallback(
     async (resolution: "720p" | "1080p") => {
       if (!session.data) return;
       const tracks = session.data.tracks.filter(
-        (t) => selectedTracks.has(t.id) && t.status === "COMPLETED" && t.s3Url,
+        (t) => selectedTracks.has(t.id) && t.status === "COMPLETED" && (t.s3Url || t.s3Key),
       );
       if (tracks.length === 0) return;
 
@@ -237,12 +276,18 @@ export default function ExportSessionPage() {
 
         for (let i = 0; i < tracks.length; i++) {
           const name = `input_${i}.mp4`;
-          const data = await fetchFile(tracks[i]!.s3Url!);
+          const mediaRef = tracks[i]!.s3Url ?? tracks[i]!.s3Key;
+          const downloadUrl = await resolveTrackDownloadUrl(trpcClient, mediaRef);
+          if (!downloadUrl) throw new Error(`Could not resolve download URL for track ${i + 1}`);
+          const data = await fetchFile(downloadUrl);
           await ffmpeg.writeFile(name, data);
           content += `file '${name}'\n`;
         }
 
         await ffmpeg.writeFile("concat_list.txt", new TextEncoder().encode(content));
+        const audioFilters: string[] = [];
+        if (noiseReduction) audioFilters.push("afftdn");
+        if (syncOffsetMs > 0) audioFilters.push(`adelay=${syncOffsetMs}|${syncOffsetMs}`);
         const exportArgs = [
           "-f",
           "concat",
@@ -250,7 +295,7 @@ export default function ExportSessionPage() {
           "0",
           "-i",
           "concat_list.txt",
-          ...(noiseReduction ? ["-af", "afftdn"] : []),
+          ...(audioFilters.length > 0 ? ["-af", audioFilters.join(",")] : []),
           "-vf",
           `scale=${scale}`,
           "-c:v",
@@ -284,7 +329,7 @@ export default function ExportSessionPage() {
         setErrorMessage(err instanceof Error ? err.message : `${resolution} export failed`);
       }
     },
-    [session.data, selectedTracks, loadFfmpeg, sessionId, noiseReduction],
+    [session.data, selectedTracks, loadFfmpeg, sessionId, noiseReduction, syncOffsetMs],
   );
 
   const handleTrim = useCallback(async () => {
@@ -300,9 +345,13 @@ export default function ExportSessionPage() {
       const ffmpeg = ffmpegRef.current;
 
       const track = session.data?.tracks.find((t) => t.id === trimTrackId);
-      if (!track?.s3Url) throw new Error("Track not found");
+      const mediaRef = track?.s3Url ?? track?.s3Key;
+      if (!mediaRef) throw new Error("Track not found");
 
-      const data = await fetchFile(track.s3Url);
+      const downloadUrl = await resolveTrackDownloadUrl(trpcClient, mediaRef);
+      if (!downloadUrl) throw new Error("Could not resolve track download URL");
+
+      const data = await fetchFile(downloadUrl);
       await ffmpeg.writeFile("input.mp4", data);
 
       const args = ["-i", "input.mp4"];
@@ -346,16 +395,22 @@ export default function ExportSessionPage() {
       const ffmpeg = ffmpegRef.current;
 
       // Get first completed track as source
-      const track = session.data.tracks.find((t) => t.status === "COMPLETED" && t.s3Url);
-      if (!track?.s3Url) throw new Error("No completed track to cut from");
+      const track = session.data.tracks.find(
+        (t) => t.status === "COMPLETED" && (t.s3Url || t.s3Key),
+      );
+      const mediaRef = track?.s3Url ?? track?.s3Key;
+      if (!mediaRef) throw new Error("No completed track to cut from");
 
-      const data = await fetchFile(track.s3Url);
+      const downloadUrl = await resolveTrackDownloadUrl(trpcClient, mediaRef);
+      if (!downloadUrl) throw new Error("Could not resolve track download URL");
+
+      const data = await fetchFile(downloadUrl);
       await ffmpeg.writeFile("input.mp4", data);
 
       // Build filter: trim to keep everything EXCEPT cut segments
       const allSegments = transcript.data ?? [];
       // Sort cut segments by start time
-      const sortedCuts = segments.sort((a, b) => a.startTime - b.startTime);
+      const sortedCuts = segments.toSorted((a, b) => a.startTime - b.startTime);
 
       // Build keep ranges (segments between cut segments)
       const keepRanges: Array<{ start: number; end: number }> = [];
@@ -555,7 +610,7 @@ export default function ExportSessionPage() {
             <div className="space-y-2">
               {data.tracks.map((track) => {
                 const Icon = TRACK_TYPE_ICON[track.type] ?? Mic;
-                const isCompleted = track.status === "COMPLETED" && !!track.s3Url;
+                const isCompleted = track.status === "COMPLETED" && !!(track.s3Url || track.s3Key);
                 const checked = selectedTracks.has(track.id);
 
                 return (
@@ -586,14 +641,7 @@ export default function ExportSessionPage() {
                         <TrackStatusBadge status={track.status} />
 
                         {isCompleted ? (
-                          <a
-                            href={track.s3Url!}
-                            download
-                            className="btn-mechanical text-secondary-foreground inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-bold tracking-wider uppercase"
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                            Download
-                          </a>
+                          <TrackDownloadButton mediaRef={track.s3Url ?? track.s3Key} />
                         ) : track.status === "UPLOADING" ? (
                           <div className="text-muted-foreground flex items-center gap-1.5 font-mono text-[10px]">
                             <RefreshCw className="h-3 w-3 animate-spin" />
@@ -667,6 +715,19 @@ export default function ExportSessionPage() {
             )}
           </AnalogCard>
         )}
+
+        <div className="space-y-4">
+          <PanelTitle label="Sync Tape" title="Session Timeline" />
+          {syncOffsetMs > 0 ? (
+            <MonoLabel className="text-accent block text-[10px]">
+              Sync baseline: {syncOffsetMs}ms — applied to merge/export audio when processing
+            </MonoLabel>
+          ) : null}
+          <SessionTimeline
+            events={timelineEvents}
+            isLoading={recordingEvents.isLoading || syncMarkers.isLoading}
+          />
+        </div>
 
         {/* ── Merge / Export Section ────────────────────────────────────── */}
         {completedTracks.length > 0 && (

@@ -28,6 +28,7 @@ import {
   Film,
   BookOpen,
 } from "@/lib/icons";
+import { mergeSessionTimelineEvents } from "@/lib/merge-session-timeline";
 import { useTRPC } from "@/trpc/client";
 
 const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -58,6 +59,12 @@ export default function RecordingSessionPage() {
   const events = useQuery(
     trpc.recordingEvents.listBySession.queryOptions({ sessionId }, { enabled: !!sessionId }),
   );
+
+  const syncMarkers = useQuery(
+    trpc.syncMarkers.listBySession.queryOptions({ sessionId }, { enabled: !!sessionId }),
+  );
+
+  const timelineEvents = mergeSessionTimelineEvents(events.data, syncMarkers.data);
 
   // ── Auth Gate ──────────────────────────────────────────────────────────
   if (!authState.isLoading && !authState.data) {
@@ -294,7 +301,10 @@ export default function RecordingSessionPage() {
 
         <div className="space-y-4">
           <PanelTitle label="Event Tape" title="Recording Timeline" />
-          <SessionTimeline events={events.data} isLoading={events.isLoading} />
+          <SessionTimeline
+            events={timelineEvents}
+            isLoading={events.isLoading || syncMarkers.isLoading}
+          />
         </div>
 
         {/* ── Transcript Section ────────────────────────────────────────── */}
@@ -346,12 +356,27 @@ export default function RecordingSessionPage() {
           </div>
         )}
 
-        {transcript.isLoading && (
+        {transcript.isLoading ? (
           <AnalogCard className="flex items-center justify-center gap-3 p-12">
             <RefreshCw className="text-accent h-5 w-5 animate-spin" />
             <MonoLabel className="animate-pulse">Transcription in progress...</MonoLabel>
           </AnalogCard>
-        )}
+        ) : null}
+
+        {transcript.isFetched && !transcript.isLoading && (transcript.data?.length ?? 0) === 0 ? (
+          <AnalogCard className="p-8 text-center">
+            <MonoLabel className="text-muted-foreground">
+              No transcript yet. Stop a session with uploaded audio, Redis, worker, and
+              OPENAI_API_KEY configured to generate one.
+            </MonoLabel>
+          </AnalogCard>
+        ) : null}
+
+        {transcript.isError ? (
+          <AnalogCard className="p-8 text-center">
+            <MonoLabel className="text-led-on">Failed to load transcript</MonoLabel>
+          </AnalogCard>
+        ) : null}
 
         {/* ── Session Footer Note ───────────────────────────────────────── */}
         <AnalogCard className="flex items-start gap-3 p-5">

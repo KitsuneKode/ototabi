@@ -2,6 +2,12 @@ import { TRPCError } from "@trpc/server";
 
 import { syncMarkersRepository } from "./sync-markers.repository";
 
+/**
+ * Sync markers capture browser `performance.now()` at emit time while recording.
+ * Future: align with LiveKit RTP timestamps (see Plan 03) for sub-frame export alignment.
+ * Until then, export uses the earliest marker's localTime as a coarse offset (adelay).
+ */
+
 export const syncMarkersService = {
   async submit(params: {
     actorId: string;

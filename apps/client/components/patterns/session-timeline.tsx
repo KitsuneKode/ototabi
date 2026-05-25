@@ -18,6 +18,7 @@ export type SessionTimelineEvent = {
 function eventLedColor(type: string): "green" | "red" | "amber" {
   if (type === "START" || type === "UPLOAD_COMPLETED") return "green";
   if (type === "STOP" || type === "LEAVE") return "red";
+  if (type === "SYNC_MARKER") return "amber";
   return "amber";
 }
 
