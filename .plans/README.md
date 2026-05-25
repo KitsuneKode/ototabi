@@ -21,15 +21,17 @@ Each file is a scoped engineering initiative, implementable in one PR.
 | 15  | `15-premium-ux-master-plan.md`             | in-progress | P1       |
 | 16  | `16-retro-analog-v3-product-grade.md`      | in-progress | P0       |
 | 17  | `17-handoff-remainder.md`                  | done        | P0       |
+| 18  | `18-session-data-layer.md`                 | done        | P0       |
 
 ## Current focus (product-grade)
 
-Phases A–F from **Plan 17** are implemented. Next: P2 backlog (Plans 02, 05–11).
+**Plan 18** (bundled session review API) is done. **Plan 16** UI polish continues. Next: P2 backlog (Plans 02, 05–11).
 
-1. **Plan 02** — OPFS-primary recovery hardening
-2. **Plan 05** — Text-based editing
-3. **Plan 07** — Multi-track timeline editor
-4. **Plan 03** — LiveKit RTP alignment (markers + export offset shipped; RTP TBD)
+1. **Plan 16** — `/demo` walkthrough, mockups banner, export status rail, landing polish (CRT, comparison)
+2. **Plan 02** — OPFS-primary recovery hardening
+3. **Plan 05** — Text-based editing (export cuts started)
+4. **Plan 07** — Multi-track timeline editor
+5. **Plan 03** — LiveKit RTP alignment (coarse baseline shipped; RTP TBD)
 
 ## Convention
 

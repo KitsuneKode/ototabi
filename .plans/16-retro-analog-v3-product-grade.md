@@ -11,9 +11,9 @@ Retro Analog v2 shipped shells and a richer landing, but the product still does 
 1. **Auth broken in dev** — Client on `:3000`, API on `:8080` → session cookies never attach to tRPC (gated dashboard, console errors).
 2. **Register drift** — Marketing uses `ProductShell`; studio/join/recording review pages still use one-off layouts (`min-h-screen`, duplicate gates).
 3. **Plan README stale** — Plans 12–15 status does not match shipped work (AppShell, landing pricing, recording events).
-4. **Missing pages** — No dedicated `/pricing`, `/demo` polish, or comparison content for evaluators.
+4. **Missing pages** — `/pricing` and `/demo` walkthrough shipped; comparison strip + CRT loop still TBD.
 5. **Token leaks** — Some pages use raw `h-screen`, duplicate auth gates, inconsistent empty/error states.
-6. **Mockups confuse** — `/mockups` explores non-product aesthetics; no banner that production = Retro Analog only.
+6. **Mockups confuse** — `/mockups` has exploratory banner; production = Retro Analog only.
 
 ## Retro Analog v3 direction
 
@@ -62,8 +62,8 @@ Migrate remaining surfaces to shared shells and designed states:
 | `/rooms/[id]/join`     | JoinShell (new)   | guest + host paths      |
 | `/chat/[id]`           | StudioShell (new) | preflight + studio      |
 | `/rooms/[id]/settings` | AppShell          | invites                 |
-| `/pricing`             | ProductShell      | new dedicated page      |
-| `/demo`                | ProductShell      | scripted walkthrough    |
+| `/pricing`             | ProductShell      | done                    |
+| `/demo`                | ProductShell      | done (walkthrough)      |
 
 Extract `JoinShell` / `StudioShell` from inline page layout (no inline components).
 
@@ -78,7 +78,7 @@ Extract `JoinShell` / `StudioShell` from inline page layout (no inline component
 
 - `SessionTimeline` — shared across recordings + export
 - `UploadStatusBadge` — unified states from Plan 13
-- `EmptyState` / `ErrorState` pattern components (chassis + mono copy + action)
+- `AnalogStatePanel` / `AnalogLoadingPanel` — shared chassis states (done)
 - Concentric radius audit on all `AnalogCard` > `AnalogInset` nests
 - Replace `h-screen` with `min-h-[100dvh]` on product pages
 
