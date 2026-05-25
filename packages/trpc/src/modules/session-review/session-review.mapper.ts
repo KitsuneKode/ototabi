@@ -23,6 +23,7 @@ export function mapSessionReview(session: SessionRecord, bundle: BundleRecord) {
   return {
     session: {
       id: session.id,
+      mode: session.mode,
       status: session.status,
       startedAt: session.startedAt,
       endedAt: session.endedAt,
