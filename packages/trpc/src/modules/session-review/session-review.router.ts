@@ -14,6 +14,7 @@ import { sessionReviewService } from "./session-review.service";
 const queueSessionExportSchema = z.object({
   sessionId: z.string().min(1),
   preset: z.enum(["landscape_16_9", "episode_mp3"]),
+  force: z.boolean().optional(),
 });
 
 export const sessionReviewRouter = {
@@ -31,11 +32,12 @@ export const sessionReviewRouter = {
     }),
   ),
 
-  queueSessionExport: hostProcedure.input(queueSessionExportSchema).mutation(({ input, ctx }) =>
+  queueSessionExport: hostProProcedure.input(queueSessionExportSchema).mutation(({ input, ctx }) =>
     sessionReviewService.queueSessionExport({
       actorId: ctx.session.user.id,
       sessionId: input.sessionId,
       preset: input.preset,
+      force: input.force,
     }),
   ),
 

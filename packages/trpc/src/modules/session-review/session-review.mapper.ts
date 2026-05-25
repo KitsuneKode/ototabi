@@ -1,3 +1,4 @@
+import type { SessionExportMetrics, SessionExportRoute } from "@ototabi/common/export-routing";
 import type { PipelineStatus } from "@ototabi/common/pipeline-status";
 
 import type { sessionReviewRepository } from "./session-review.repository";
@@ -118,6 +119,10 @@ export function mapSessionReview(
   bundle: BundleRecord,
   exportFields?: ExportFields,
   pipeline?: PipelineFields | null,
+  exportRouting?: {
+    route: SessionExportRoute;
+    metrics: SessionExportMetrics;
+  },
 ) {
   const micReady = session.tracks.some(
     (t) =>
@@ -181,6 +186,14 @@ export function mapSessionReview(
         s3Key: exportFields?.landscapeS3Key ?? null,
         error: exportFields?.landscapeError ?? null,
       },
+      routing: exportRouting
+        ? {
+            route: exportRouting.route,
+            preferWorker: exportRouting.route === "worker",
+            durationSec: exportRouting.metrics.durationSec,
+            completedTrackCount: exportRouting.metrics.completedTrackCount,
+          }
+        : null,
     },
     pipeline: {
       transcript: {
