@@ -2,17 +2,20 @@
 
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL, fetchFile } from "@ffmpeg/util";
-import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useCallback } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
+import { SessionStatusRail } from "@/components/layout/session-status-rail";
+import { AnalogLoadingPanel, AnalogStatePanel } from "@/components/patterns/analog-state-panel";
 import { SessionTimeline } from "@/components/patterns/session-timeline";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { Led, LedInline } from "@/components/ui/led";
 import { MonoLabel, PanelTitle, StatusBadge, MechButton } from "@/components/ui/retro-primitives";
 import { formatDateTime, formatTimestamp } from "@/lib/date-utils";
+import { useExportConsole } from "@/lib/hooks/use-export-console";
+import { useSessionReview } from "@/lib/hooks/use-session-review";
 import {
   ArrowLeft,
   Download,
@@ -24,9 +27,8 @@ import {
   Scissors,
   Combine,
 } from "@/lib/icons";
-import { getSyncMarkerOffsetMs, mergeSessionTimelineEvents } from "@/lib/merge-session-timeline";
+import { getSyncMarkerOffsetMs } from "@/lib/merge-session-timeline";
 import { resolveTrackDownloadUrl } from "@/lib/resolve-track-download";
-import { useTRPC } from "@/trpc/client";
 import { trpcClient } from "@/trpc/vanilla";
 
 const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -34,9 +36,6 @@ const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }
   CAMERA: Video,
   SCREENSHARE: Monitor,
 };
-
-type ProcessingStatus = "idle" | "loading-ffmpeg" | "processing" | "done" | "error";
-type ProcessingMode = "merge" | "trim" | "720p" | "1080p" | "cuts" | null;
 
 async function downloadFile(ffmpeg: FFmpeg, filename: string, downloadName: string) {
   const fileData = await ffmpeg.readFile(filename);
@@ -96,58 +95,46 @@ function TrackStatusBadge({ status }: { status: string }) {
 export default function ExportSessionPage() {
   const { sessionId } = useParams() as { sessionId: string };
   const router = useRouter();
-  const trpc = useTRPC();
+
+  const {
+    query,
+    session,
+    transcriptSegments,
+    syncMarkers,
+    timelineEvents,
+    allUploaded,
+    aggregateUploadStatus,
+    isBootingAuth,
+  } = useSessionReview(sessionId);
+  const syncOffsetMs = getSyncMarkerOffsetMs(syncMarkers);
+
+  const {
+    ffmpegLoaded,
+    processingStatus,
+    processingMode,
+    progress,
+    selectedTrackIds,
+    cutSegmentIds,
+    trimStart,
+    trimEnd,
+    trimTrackId,
+    errorMessage,
+    noiseReduction,
+    setFfmpegLoaded,
+    beginProcessing,
+    setProcessingStatus,
+    setProgress,
+    setErrorMessage,
+    setNoiseReduction,
+    setTrimStart,
+    setTrimEnd,
+    setTrimTrackId,
+    toggleTrack,
+    toggleCutSegment,
+    clearCutSegments,
+  } = useExportConsole(sessionId);
 
   const ffmpegRef = useRef(new FFmpeg());
-  const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
-  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>("idle");
-  const [processingMode, setProcessingMode] = useState<ProcessingMode>(null);
-  const [progress, setProgress] = useState(0);
-  const [selectedTracks, setSelectedTracks] = useState<Set<string>>(new Set());
-  const [trimStart, setTrimStart] = useState("");
-  const [trimEnd, setTrimEnd] = useState("");
-  const [trimTrackId, setTrimTrackId] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [noiseReduction, setNoiseReduction] = useState(false);
-  const [cutSegments, setCutSegments] = useState<Set<string>>(new Set());
-
-  const session = useQuery(
-    trpc.rooms.getRecordingSessionById.queryOptions({ sessionId }, { enabled: !!sessionId }),
-  );
-
-  const transcript = useQuery(
-    trpc.transcript.getSegments.queryOptions({ sessionId }, { enabled: !!sessionId }),
-  );
-
-  const recordingEvents = useQuery(
-    trpc.recordingEvents.listBySession.queryOptions({ sessionId }, { enabled: !!sessionId }),
-  );
-
-  const syncMarkers = useQuery(
-    trpc.syncMarkers.listBySession.queryOptions({ sessionId }, { enabled: !!sessionId }),
-  );
-
-  const timelineEvents = mergeSessionTimelineEvents(recordingEvents.data, syncMarkers.data);
-  const syncOffsetMs = getSyncMarkerOffsetMs(syncMarkers.data);
-
-  const authState = useQuery(trpc.auth.getSession.queryOptions());
-
-  // ── Auth Gate ──────────────────────────────────────────────────────────
-  if (!authState.isLoading && !authState.data) {
-    return (
-      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
-        <AnalogCard className="w-full max-w-sm p-8 text-center">
-          <AlertTriangle className="text-led-on mx-auto mb-4 h-12 w-12" />
-          <p className="text-led-on mb-2 text-sm font-bold tracking-wider uppercase">
-            Authentication Required
-          </p>
-          <MechButton onClick={() => router.push("/auth/signin")} className="w-full justify-center">
-            Sign In
-          </MechButton>
-        </AnalogCard>
-      </div>
-    );
-  }
 
   const loadFfmpeg = useCallback(async () => {
     if (ffmpegLoaded) return;
@@ -173,37 +160,16 @@ export default function ExportSessionPage() {
       setProcessingStatus("error");
       setErrorMessage(err instanceof Error ? err.message : "Failed to load FFmpeg");
     }
-  }, [ffmpegLoaded]);
-
-  const toggleTrack = useCallback((trackId: string) => {
-    setSelectedTracks((prev) => {
-      const next = new Set(prev);
-      if (next.has(trackId)) next.delete(trackId);
-      else next.add(trackId);
-      return next;
-    });
-  }, []);
-
-  const toggleCutSegment = useCallback((segId: string) => {
-    setCutSegments((prev) => {
-      const next = new Set(prev);
-      if (next.has(segId)) next.delete(segId);
-      else next.add(segId);
-      return next;
-    });
-  }, []);
+  }, [ffmpegLoaded, setErrorMessage, setFfmpegLoaded, setProcessingStatus, setProgress]);
 
   const handleMerge = useCallback(async () => {
-    if (!session.data) return;
-    const tracks = session.data.tracks.filter(
-      (t) => selectedTracks.has(t.id) && t.status === "COMPLETED" && (t.s3Url || t.s3Key),
+    if (!session) return;
+    const tracks = session.tracks.filter(
+      (t) => selectedTrackIds.includes(t.id) && t.status === "COMPLETED" && (t.s3Url || t.s3Key),
     );
     if (tracks.length < 2) return;
 
-    setProcessingMode("merge");
-    setProcessingStatus("processing");
-    setProgress(0);
-    setErrorMessage("");
+    beginProcessing("merge");
 
     try {
       await loadFfmpeg();
@@ -251,21 +217,28 @@ export default function ExportSessionPage() {
       setProcessingStatus("error");
       setErrorMessage(err instanceof Error ? err.message : "Merge failed");
     }
-  }, [session.data, selectedTracks, loadFfmpeg, sessionId, noiseReduction, syncOffsetMs]);
+  }, [
+    session,
+    selectedTrackIds,
+    beginProcessing,
+    loadFfmpeg,
+    sessionId,
+    noiseReduction,
+    syncOffsetMs,
+    setErrorMessage,
+    setProcessingStatus,
+  ]);
 
   const handleExportRes = useCallback(
     async (resolution: "720p" | "1080p") => {
-      if (!session.data) return;
-      const tracks = session.data.tracks.filter(
-        (t) => selectedTracks.has(t.id) && t.status === "COMPLETED" && (t.s3Url || t.s3Key),
+      if (!session) return;
+      const tracks = session.tracks.filter(
+        (t) => selectedTrackIds.includes(t.id) && t.status === "COMPLETED" && (t.s3Url || t.s3Key),
       );
       if (tracks.length === 0) return;
 
       const mode = resolution === "720p" ? "720p" : "1080p";
-      setProcessingMode(mode);
-      setProcessingStatus("processing");
-      setProgress(0);
-      setErrorMessage("");
+      beginProcessing(mode);
 
       try {
         await loadFfmpeg();
@@ -329,22 +302,29 @@ export default function ExportSessionPage() {
         setErrorMessage(err instanceof Error ? err.message : `${resolution} export failed`);
       }
     },
-    [session.data, selectedTracks, loadFfmpeg, sessionId, noiseReduction, syncOffsetMs],
+    [
+      session,
+      selectedTrackIds,
+      beginProcessing,
+      loadFfmpeg,
+      sessionId,
+      noiseReduction,
+      syncOffsetMs,
+      setErrorMessage,
+      setProcessingStatus,
+    ],
   );
 
   const handleTrim = useCallback(async () => {
     if (!trimTrackId || (!trimStart && !trimEnd)) return;
 
-    setProcessingMode("trim");
-    setProcessingStatus("processing");
-    setProgress(0);
-    setErrorMessage("");
+    beginProcessing("trim");
 
     try {
       await loadFfmpeg();
       const ffmpeg = ffmpegRef.current;
 
-      const track = session.data?.tracks.find((t) => t.id === trimTrackId);
+      const track = session?.tracks.find((t) => t.id === trimTrackId);
       const mediaRef = track?.s3Url ?? track?.s3Key;
       if (!mediaRef) throw new Error("Track not found");
 
@@ -378,26 +358,32 @@ export default function ExportSessionPage() {
       setProcessingStatus("error");
       setErrorMessage(err instanceof Error ? err.message : "Trim failed");
     }
-  }, [trimTrackId, trimStart, trimEnd, session.data, loadFfmpeg, sessionId, noiseReduction]);
+  }, [
+    trimTrackId,
+    trimStart,
+    trimEnd,
+    session,
+    beginProcessing,
+    loadFfmpeg,
+    sessionId,
+    noiseReduction,
+    setErrorMessage,
+    setProcessingStatus,
+  ]);
 
   const handleCuts = useCallback(async () => {
-    if (!session.data || cutSegments.size === 0) return;
-    const segments = transcript.data?.filter((s) => cutSegments.has(s.id));
+    if (!session || cutSegmentIds.length === 0) return;
+    const segments = transcriptSegments?.filter((s) => cutSegmentIds.includes(s.id));
     if (!segments?.length) return;
 
-    setProcessingMode("cuts");
-    setProcessingStatus("processing");
-    setProgress(0);
-    setErrorMessage("");
+    beginProcessing("cuts");
 
     try {
       await loadFfmpeg();
       const ffmpeg = ffmpegRef.current;
 
       // Get first completed track as source
-      const track = session.data.tracks.find(
-        (t) => t.status === "COMPLETED" && (t.s3Url || t.s3Key),
-      );
+      const track = session.tracks.find((t) => t.status === "COMPLETED" && (t.s3Url || t.s3Key));
       const mediaRef = track?.s3Url ?? track?.s3Key;
       if (!mediaRef) throw new Error("No completed track to cut from");
 
@@ -408,9 +394,9 @@ export default function ExportSessionPage() {
       await ffmpeg.writeFile("input.mp4", data);
 
       // Build filter: trim to keep everything EXCEPT cut segments
-      const allSegments = transcript.data ?? [];
+      const allSegments = transcriptSegments ?? [];
       // Sort cut segments by start time
-      const sortedCuts = segments.toSorted((a, b) => a.startTime - b.startTime);
+      const sortedCuts = [...segments].toSorted((a, b) => a.startTime - b.startTime);
 
       // Build keep ranges (segments between cut segments)
       const keepRanges: Array<{ start: number; end: number }> = [];
@@ -470,12 +456,22 @@ export default function ExportSessionPage() {
       await ffmpeg.deleteFile("concat_list.txt");
 
       setProcessingStatus("done");
-      setCutSegments(new Set());
+      clearCutSegments();
     } catch (err) {
       setProcessingStatus("error");
       setErrorMessage(err instanceof Error ? err.message : "Cut edit failed");
     }
-  }, [session.data, cutSegments, transcript.data, loadFfmpeg, sessionId]);
+  }, [
+    session,
+    cutSegmentIds,
+    transcriptSegments,
+    beginProcessing,
+    loadFfmpeg,
+    sessionId,
+    clearCutSegments,
+    setErrorMessage,
+    setProcessingStatus,
+  ]);
 
   const procColor =
     processingStatus === "processing" || processingStatus === "loading-ffmpeg"
@@ -498,40 +494,29 @@ export default function ExportSessionPage() {
             : "STANDBY";
 
   // ── Loading ──────────────────────────────────────────────────────────────
-  if (session.isLoading) {
+  if (isBootingAuth || query.isLoading) {
     return (
-      <div className="bg-background flex min-h-screen items-center justify-center font-sans">
-        <div className="flex flex-col items-center gap-3">
-          <div className="border-border border-t-accent h-8 w-8 animate-spin rounded-full border-2" />
-          <span className="animate-pulse font-mono text-xs font-bold tracking-widest uppercase">
-            Initializing Export Console...
-          </span>
-        </div>
+      <AppShell maxWidth="max-w-5xl">
+        <AnalogLoadingPanel label="Initializing export console..." />
+      </AppShell>
+    );
+  }
+
+  if (query.error || !session) {
+    return (
+      <div className="bg-background flex min-h-[100dvh] flex-col items-center justify-center px-4 font-sans">
+        <AnalogStatePanel
+          title="Session not found"
+          message={`Export session "${sessionId.slice(-8).toUpperCase()}" could not be located.`}
+          actionLabel="Return to dashboard"
+          onAction={() => router.push("/dashboard")}
+          icon={<AlertTriangle className="text-led-on h-12 w-12" />}
+        />
       </div>
     );
   }
 
-  // ── Error ────────────────────────────────────────────────────────────────
-  if (session.error || !session.data) {
-    return (
-      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
-        <AnalogCard className="w-full max-w-sm p-8 text-center">
-          <AlertTriangle className="text-led-on mx-auto mb-4 h-12 w-12" />
-          <p className="text-led-on mb-2 text-sm font-bold tracking-wider uppercase">
-            Session Not Found
-          </p>
-          <p className="text-muted-foreground mb-6 font-mono text-xs leading-normal">
-            Export session &ldquo;{sessionId.slice(-8).toUpperCase()}&rdquo; could not be located.
-          </p>
-          <MechButton onClick={() => router.push("/dashboard")} className="w-full justify-center">
-            Return to Dashboard
-          </MechButton>
-        </AnalogCard>
-      </div>
-    );
-  }
-
-  const data = session.data;
+  const data = session;
   const completedTracks = data.tracks.filter((t) => t.status === "COMPLETED");
 
   return (
@@ -568,6 +553,8 @@ export default function ExportSessionPage() {
             </>
           }
         />
+
+        <SessionStatusRail uploadStatus={aggregateUploadStatus} syncOk={allUploaded} />
 
         {/* ── Session Meta Card ─────────────────────────────────────────── */}
         <AnalogCard className="p-6">
@@ -611,7 +598,7 @@ export default function ExportSessionPage() {
               {data.tracks.map((track) => {
                 const Icon = TRACK_TYPE_ICON[track.type] ?? Mic;
                 const isCompleted = track.status === "COMPLETED" && !!(track.s3Url || track.s3Key);
-                const checked = selectedTracks.has(track.id);
+                const checked = selectedTrackIds.includes(track.id);
 
                 return (
                   <AnalogInset key={track.id} className="p-4">
@@ -660,7 +647,7 @@ export default function ExportSessionPage() {
         </div>
 
         {/* ── Text-Based Editing ─────────────────────────────────────────── */}
-        {transcript.data && transcript.data.length > 0 && completedTracks.length > 0 && (
+        {transcriptSegments && transcriptSegments.length > 0 && completedTracks.length > 0 ? (
           <AnalogCard className="p-6">
             <PanelTitle label="AI Transcript Editor" title="Text-Based Editing" className="mb-4" />
             <MonoLabel className="mb-4 block">
@@ -669,8 +656,8 @@ export default function ExportSessionPage() {
             </MonoLabel>
 
             <div className="max-h-[300px] space-y-1 overflow-y-auto pr-2">
-              {transcript.data.map((seg) => {
-                const selected = cutSegments.has(seg.id);
+              {transcriptSegments.map((seg) => {
+                const selected = cutSegmentIds.includes(seg.id);
                 return (
                   <button
                     key={seg.id}
@@ -697,14 +684,15 @@ export default function ExportSessionPage() {
             <MechButton
               onClick={handleCuts}
               disabled={
-                cutSegments.size === 0 ||
+                cutSegmentIds.length === 0 ||
                 processingStatus === "processing" ||
                 processingStatus === "loading-ffmpeg"
               }
               className="mt-4 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Scissors className="h-3.5 w-3.5" />
-              Remove {cutSegments.size} Selected Segment{cutSegments.size !== 1 ? "s" : ""}
+              Remove {cutSegmentIds.length} Selected Segment
+              {cutSegmentIds.length !== 1 ? "s" : ""}
             </MechButton>
 
             {errorMessage && processingMode === "cuts" && (
@@ -714,7 +702,7 @@ export default function ExportSessionPage() {
               </div>
             )}
           </AnalogCard>
-        )}
+        ) : null}
 
         <div className="space-y-4">
           <PanelTitle label="Sync Tape" title="Session Timeline" />
@@ -723,10 +711,7 @@ export default function ExportSessionPage() {
               Sync baseline: {syncOffsetMs}ms — applied to merge/export audio when processing
             </MonoLabel>
           ) : null}
-          <SessionTimeline
-            events={timelineEvents}
-            isLoading={recordingEvents.isLoading || syncMarkers.isLoading}
-          />
+          <SessionTimeline events={timelineEvents} isLoading={query.isFetching && !query.data} />
         </div>
 
         {/* ── Merge / Export Section ────────────────────────────────────── */}
@@ -762,7 +747,7 @@ export default function ExportSessionPage() {
               <MechButton
                 onClick={handleMerge}
                 disabled={
-                  selectedTracks.size < 2 ||
+                  selectedTrackIds.length < 2 ||
                   processingStatus === "processing" ||
                   processingStatus === "loading-ffmpeg"
                 }
@@ -775,7 +760,7 @@ export default function ExportSessionPage() {
               <MechButton
                 onClick={() => handleExportRes("720p")}
                 disabled={
-                  selectedTracks.size === 0 ||
+                  selectedTrackIds.length === 0 ||
                   processingStatus === "processing" ||
                   processingStatus === "loading-ffmpeg"
                 }
@@ -788,7 +773,7 @@ export default function ExportSessionPage() {
               <MechButton
                 onClick={() => handleExportRes("1080p")}
                 disabled={
-                  selectedTracks.size === 0 ||
+                  selectedTrackIds.length === 0 ||
                   processingStatus === "processing" ||
                   processingStatus === "loading-ffmpeg"
                 }
