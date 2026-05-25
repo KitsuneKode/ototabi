@@ -171,6 +171,41 @@ export const roomsRouter = {
     .input(z.object({ roomId: z.string() }))
     .query(({ input }) => roomsService.getRoomParticipants(input.roomId)),
 
+  getStudioContext: protectedProcedure
+    .input(z.object({ roomId: z.string() }))
+    .query(({ input, ctx }) =>
+      roomsService.getStudioContext({ userId: ctx.session.user.id, roomId: input.roomId }),
+    ),
+
+  acknowledgeRecordingConsent: protectedProcedure
+    .input(z.object({ roomId: z.string() }))
+    .mutation(({ input, ctx }) =>
+      roomsService.acknowledgeRecordingConsent({
+        userId: ctx.session.user.id,
+        roomId: input.roomId,
+      }),
+    ),
+
+  removeGuest: hostProcedure
+    .input(z.object({ roomId: z.string(), targetUserId: z.string() }))
+    .mutation(({ input, ctx }) =>
+      roomsService.removeGuest({
+        actorId: ctx.session.user.id,
+        roomId: input.roomId,
+        targetUserId: input.targetUserId,
+      }),
+    ),
+
+  requestParticipantMute: hostProcedure
+    .input(z.object({ roomId: z.string(), targetUserId: z.string() }))
+    .mutation(({ input, ctx }) =>
+      roomsService.requestParticipantMute({
+        actorId: ctx.session.user.id,
+        roomId: input.roomId,
+        targetUserId: input.targetUserId,
+      }),
+    ),
+
   startRecordingSession: hostProcedure
     .input(z.object({ roomId: z.string() }))
     .mutation(({ input, ctx }) =>

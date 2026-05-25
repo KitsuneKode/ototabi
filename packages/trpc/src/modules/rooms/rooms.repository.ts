@@ -162,6 +162,22 @@ export const roomsRepository = {
     });
   },
 
+  async setRecordingConsent(roomId: string, userId: string, consentedAt: Date) {
+    return prisma.roomParticipant.upsert({
+      where: { roomId_userId: { roomId, userId } },
+      update: { recordingConsentedAt: consentedAt },
+      create: { roomId, userId, recordingConsentedAt: consentedAt },
+    });
+  },
+
+  async getRecordingConsent(roomId: string, userId: string) {
+    const row = await prisma.roomParticipant.findUnique({
+      where: { roomId_userId: { roomId, userId } },
+      select: { recordingConsentedAt: true },
+    });
+    return row?.recordingConsentedAt ?? null;
+  },
+
   async createInvite(data: {
     roomId: string;
     tokenHash: string;

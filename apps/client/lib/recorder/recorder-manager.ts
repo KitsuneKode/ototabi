@@ -38,17 +38,22 @@ export class RecorderManager {
   private trackCompletedParts: Map<string, Set<number>> = new Map();
   private chunkWritePromises: Map<string, Set<Promise<void>>> = new Map();
   private onLocalProgress?: (trackSid: string, progress: number) => void;
+  private assertRecordingConsent?: () => Promise<boolean>;
 
   constructor({
     room,
     onLocalProgress,
+    assertRecordingConsent,
   }: {
     room: Room;
     onLocalProgress?: (trackSid: string, progress: number) => void;
+    /** When set, local MediaRecorder does not start until this resolves true. */
+    assertRecordingConsent?: () => Promise<boolean>;
   }) {
     this.room = room;
     this.localParticipant = room.localParticipant;
     this.onLocalProgress = onLocalProgress;
+    this.assertRecordingConsent = assertRecordingConsent;
 
     this.handleTrackPublished = this.handleTrackPublished.bind(this);
     this.handleTrackUnpublished = this.handleTrackUnpublished.bind(this);
@@ -69,6 +74,12 @@ export class RecorderManager {
    */
   public async startRecording(sessionId: string) {
     if (this.state === "recording") return;
+    if (this.assertRecordingConsent) {
+      const allowed = await this.assertRecordingConsent();
+      if (!allowed) {
+        throw new Error("RECORDING_CONSENT_REQUIRED");
+      }
+    }
     this.state = "recording";
     this.sessionId = sessionId;
 

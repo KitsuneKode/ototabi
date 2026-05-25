@@ -1,50 +1,66 @@
 # Studio trust — local smoke
 
-Riverside parity **Wave B / Wave 1 Stream 2** (Plan 13 Phase 2). Many steps are **placeholders** until preflight, consent, and health ship.
+Riverside parity **Wave 1 Stream 2** (Plan 13 Phase 2). Verifies preflight, consent, co-host policy, and host controls v1.
 
 ## Prerequisites
 
 | Check        | Detail                                                                  |
 | ------------ | ----------------------------------------------------------------------- |
 | Infra        | Postgres, Redis, MinIO — see [try-local-smoke.md](./try-local-smoke.md) |
+| Migration    | `bun run db:migrate` (adds `room_participant.recordingConsentedAt`)     |
 | Two browsers | Host + guest accounts (or incognito guest)                              |
-| Room         | Host creates room, optional **Studio Gate** lock                        |
+| Room         | Host creates room; optional **Studio Gate** lock on room settings       |
 
-## 1. Preflight (placeholder)
+## 1. Preflight
 
-**Target:** `/studio/preflight` or gate before `enterStudio` — mic, camera, storage, network.
+1. Host opens room join: `/rooms/{code}/join` → configure devices → **Connect Studio Deck**.
+2. URL should land on `/chat/{code}/preflight?...` with readiness findings (ok / warn / block).
+3. **Warn path:** disable camera in join, continue — preflight shows `no_camera` or `camera_denied` as **warn**, **Enter studio** still enabled.
+4. **Block path (optional):** use HTTP (non-localhost) or deny mic when audio enabled — **Enter studio** disabled until fixed.
+5. Click **Enter studio** → `/chat/{code}?preflight=done&...` and studio connects.
 
-**Today:** enter studio directly from room/chat link.
+## 2. Recording consent
 
-- [ ] Document baseline: studio loads without dedicated preflight route
-- [ ] After implementation: failing mic blocks enter with clear copy
+1. Host enters studio (preflight done).
+2. Host clicks **Start Recording** → consent modal appears if first time in room.
+3. Accept consent → recording starts; header shows **REC** timer for host.
+4. Guest browser: on host record start, guest sees **REC** and consent modal if not yet acknowledged.
+5. Guest must accept before local MediaRecorder arms (check upload queue only after consent).
+6. Decline consent → host record may run server session but guest local capture does not start until accepted.
 
-## 2. Recording consent (placeholder)
+**API check:** `rooms.acknowledgeRecordingConsent` then `rooms.getStudioContext` → `hasRecordingConsent: true`.
 
-**Target:** all participants acknowledge local capture before record.
+## 3. Co-host policy
 
-**Today:** verify record start without consent modal (gap).
+1. Room creator invites member with role **host** (email invite from room settings).
+2. Co-host signs in, joins studio via invite.
+3. Co-host can **Admit** / **Deny** on locked room (settings → Studio Gate) — same as creator.
+4. Co-host sees **CO-HOST** badge and **Start Recording** / pause / stop when `canControlStudio` is true.
+5. Editor member cannot admit or start recording (policy tests enforce).
 
-- [ ] Host starts record → guest sees recording indicator only
-- [ ] After implementation: guest must accept before capture arms
+## 4. Host controls v1
 
-## 3. Co-host / guest policy (partial — shippable now)
+1. With guest connected, host/co-host opens sidebar roster.
+2. **Mute req** on guest → guest mic mutes (LiveKit data `mute_request`).
+3. **Remove** on guest → participant row removed server-side (`rooms.removeGuest`).
+4. **REC** indicator visible to all participants while session is recording (not host-only).
 
-1. Host enables **Lock** on room settings.
-2. Guest with invite joins → queued until **Admit**.
-3. Host **mute request** / **remove guest** — exercise join-request flows if exposed in UI.
-4. Policy tests: `packages/trpc/src/modules/rooms/rooms.policy.test.ts` (`bun run test --filter=@ototabi/trpc`).
+## 5. Automated tests
 
-## 4. Session health panel (placeholder)
+```bash
+bun fmt && bun lint && bun typecheck && bun run test
+```
 
-**Target:** host sees per-participant connection, OPFS, upload queue, devices.
-
-**Today:** use studio upload LEDs / part progress as informal health.
-
-- [ ] No dedicated health drawer — note in handoff
-- [ ] After `readiness.ts` + panel: host opens health → sees participant rows
+| Package | Tests                                                                  |
+| ------- | ---------------------------------------------------------------------- |
+| client  | `apps/client/lib/studio/readiness.test.ts`                             |
+| trpc    | `packages/trpc/src/modules/rooms/rooms.policy.test.ts`                 |
+| trpc    | `packages/trpc/src/modules/rooms/enter-studio.test.ts` (no regression) |
 
 ## Sign-off
 
-- [ ] Lock + admit path works (existing)
-- [ ] Preflight / consent / health marked pass or explicitly deferred in [subagent-handoff.md](./subagent-handoff.md)
+- [ ] Preflight warn + block paths behave as above
+- [ ] Consent blocks local capture until ack; persisted per participant
+- [ ] Co-host admit + record controls work
+- [ ] Mute request + remove guest + REC for all
+- [ ] `bun run check` green on integration branch
