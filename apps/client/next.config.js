@@ -2,8 +2,8 @@
 const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 const nextConfig = {
-  /** Enables Cache Components / PPR when we add RSC marketing shells (Plan 16). */
-  cacheComponents: true,
+  /** Disabled until client Providers are PPR-safe (CI prerender useContext on null). */
+  // cacheComponents: true,
   transpilePackages: ["@ototabi/ui", "@ototabi/auth", "@ototabi/trpc", "@ototabi/store"],
   logging: {
     level: "verbose",
