@@ -33,6 +33,7 @@ jobs:
       BETTER_AUTH_URL: http://localhost:3000
       FRONTEND_URL: http://localhost:3000
       LIVEKIT_URL: wss://ci-test.livekit.cloud
+      NEXT_PUBLIC_LIVEKIT_URL: wss://ci-test.livekit.cloud
       LIVEKIT_API_KEY: ci-test-key
       LIVEKIT_API_SECRET: ci-test-secret
       PORT: 8080
