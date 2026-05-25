@@ -117,8 +117,12 @@ function HeroDeviceMockup() {
           {HERO_WAVEFORM_HEIGHTS.map((height, index) => (
             <div
               key={index}
-              className="bg-accent/80 flex-1 rounded-t-sm"
-              style={{ height: `${height}%` }}
+              className="bg-accent/80 flex-1 rounded-t-sm motion-safe:animate-pulse"
+              style={{
+                height: `${height}%`,
+                animationDelay: `${index * 80}ms`,
+                animationDuration: "1.4s",
+              }}
             />
           ))}
         </div>
@@ -247,6 +251,78 @@ function FeaturesBento() {
           );
         })}
       </div>
+    </section>
+  );
+}
+
+const COMPARISON_ROWS = [
+  {
+    capability: "Per-participant local masters",
+    stream: "Single mixed stream",
+    riverside: "Local tracks",
+    ototabi: "Local tracks + recovery",
+  },
+  {
+    capability: "Crash upload resume",
+    stream: "No",
+    riverside: "Partial",
+    ototabi: "OPFS + IndexedDB console",
+  },
+  {
+    capability: "AI clips + 9:16 export",
+    stream: "No",
+    riverside: "Pro tier",
+    ototabi: "Worker + WASM hybrid",
+  },
+  {
+    capability: "Self-host stack",
+    stream: "No",
+    riverside: "No",
+    ototabi: "MIT core + your infra",
+  },
+] as const;
+
+function ComparisonStrip() {
+  return (
+    <section className="border-border scroll-mt-24 border-t py-16 md:py-20">
+      <AnalogReveal>
+        <div className="mb-8 max-w-2xl">
+          <MonoLabel>Compare</MonoLabel>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight uppercase md:text-4xl">
+            Stream tools vs local masters
+          </h2>
+        </div>
+        <AnalogCard className="overflow-x-auto p-0">
+          <table className="w-full min-w-[640px] border-collapse font-mono text-[11px]">
+            <thead>
+              <tr className="border-border border-b">
+                <th className="text-muted-foreground p-4 text-left font-bold tracking-widest uppercase">
+                  Capability
+                </th>
+                <th className="text-muted-foreground p-4 text-left font-bold tracking-widest uppercase">
+                  Stream tools
+                </th>
+                <th className="text-muted-foreground p-4 text-left font-bold tracking-widest uppercase">
+                  Riverside-class
+                </th>
+                <th className="text-accent p-4 text-left font-bold tracking-widest uppercase">
+                  Ototabi
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {COMPARISON_ROWS.map((row) => (
+                <tr key={row.capability} className="border-border border-b last:border-0">
+                  <td className="text-foreground p-4 font-bold">{row.capability}</td>
+                  <td className="text-muted-foreground p-4">{row.stream}</td>
+                  <td className="text-muted-foreground p-4">{row.riverside}</td>
+                  <td className="text-foreground p-4">{row.ototabi}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </AnalogCard>
+      </AnalogReveal>
     </section>
   );
 }
@@ -467,6 +543,7 @@ export function LandingPage() {
       </section>
 
       <SignalStrip />
+      <ComparisonStrip />
       <ProofSection />
       <WorkflowSection />
       <FeaturesBento />

@@ -21,7 +21,16 @@ Browser-based remote recording for podcasters and creator teams. Each participan
 - See recording and upload health during and after the session.
 - Recover from tab crash or weak network without losing masters.
 - Review sessions and export aligned multi-track assets.
-- (Future) Generate editable AI artifacts (chapters, clips, show notes).
+- Generate editable AI artifacts (transcripts, chapters, show notes, magic clips).
+
+## Creator suite roadmap (staged)
+
+| Stage                        | Shipped / in progress                                                | Notes                                       |
+| ---------------------------- | -------------------------------------------------------------------- | ------------------------------------------- |
+| **Now — Recording producer** | Trust studio, dashboard, recovery, private uploads                   | Riverside-class reliability without hosting |
+| **Next — AI surface**        | Transcript hardening, show notes, clip candidates, 9:16 export queue | Hybrid WASM + Railway worker                |
+| **Later — Demo mode**        | Browser screen capture + cursor log                                  | Spec: `.plans/24-demo-mode-browser.md`      |
+| **Later — Reels presets**    | Native JSON packs in repo                                            | After magic clips engine                    |
 
 ## Tone
 

@@ -22,16 +22,18 @@ Each file is a scoped engineering initiative, implementable in one PR.
 | 16  | `16-retro-analog-v3-product-grade.md`      | in-progress | P0       |
 | 17  | `17-handoff-remainder.md`                  | done        | P0       |
 | 18  | `18-session-data-layer.md`                 | done        | P0       |
+| 19  | `19-creator-suite-vision.md`               | in-progress | P0       |
+| 20  | `20-creator-suite-execution.md` + batches  | in-progress | P0       |
 
 ## Current focus (product-grade)
 
-**Plan 18** (bundled session review API) is done. **Plan 16** UI polish continues. Next: P2 backlog (Plans 02, 05–11).
+**Plan 18** done. **Plan 19** = strategy. **Plan 20** = Superpowers execution protocol + batch plans (`20-batch-0` trust, `20-batch-1` dashboard, `20-batch-2` deploy). Implement via `executing-plans` + `verification-before-completion` (no push unless asked).
 
-1. **Plan 16** — `/demo` walkthrough, mockups banner, export status rail, landing polish (CRT, comparison)
-2. **Plan 02** — OPFS-primary recovery hardening
-3. **Plan 05** — Text-based editing (export cuts started)
-4. **Plan 07** — Multi-track timeline editor
-5. **Plan 03** — LiveKit RTP alignment (coarse baseline shipped; RTP TBD)
+1. **Plan 13 Phase 0–1** — recording trust + sync (gates suite lanes)
+2. **Dashboard + deploy** — UX fixes, Vercel client, Railway API/worker
+3. **Plan 04 + magic clips** — transcript harden, 9:16 clip moat
+4. **Plan 16** — landing polish (CRT, comparison)
+5. **Plan 20+** (future files) — browser demo mode, reels presets (after 0–1)
 
 ## Convention
 

@@ -26,15 +26,15 @@ Recordings and export pages fired **5 parallel tRPC queries** per session (`getR
 
 ### Client
 
-| File                        | Role                                                     |
-| --------------------------- | -------------------------------------------------------- |
-| `use-session-review.ts`     | TanStack Query + `useMemo` / `session-review-utils`      |
-| `export-console-store.ts`   | Zustand — export UI (selection, trim, FFmpeg)            |
-| `recording-store.ts`        | Zustand — studio REC / pause                             |
-| `date-utils.ts`             | date-fns — all formatted dates/timers                    |
-| `analog-state-panel.tsx`    | Shared loading / empty / error chassis                   |
-| `require-auth.tsx`          | Auth gate for host layouts                               |
-| Recordings + export layouts | `RequireAuth` → `RequireHost`                            |
+| File                        | Role                                                |
+| --------------------------- | --------------------------------------------------- |
+| `use-session-review.ts`     | TanStack Query + `useMemo` / `session-review-utils` |
+| `export-console-store.ts`   | Zustand — export UI (selection, trim, FFmpeg)       |
+| `recording-store.ts`        | Zustand — studio REC / pause                        |
+| `date-utils.ts`             | date-fns — all formatted dates/timers               |
+| `analog-state-panel.tsx`    | Shared loading / empty / error chassis              |
+| `require-auth.tsx`          | Auth gate for host layouts                          |
+| Recordings + export layouts | `RequireAuth` → `RequireHost`                       |
 
 **State split:** React Query = server/cache; Zustand = client UI shared across siblings; no custom Context mirrors.
 
