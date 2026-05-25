@@ -47,6 +47,12 @@ export const uploadsRouter = {
       uploadsService.completeUpload({ ...input, userId: ctx.session.user.id }),
     ),
 
+  getSignedDownloadUrl: protectedProcedure
+    .input(z.object({ key: z.string() }))
+    .mutation(({ input, ctx }) =>
+      uploadsService.getSignedDownloadUrl({ key: input.key, userId: ctx.session.user.id }),
+    ),
+
   getUploadStatus: protectedProcedure
     .input(z.object({ trackId: z.string() }))
     .query(({ input, ctx }) =>

@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ototabi/backend-common": "*",
     "@ototabi/jobs": "*",
     "@ototabi/store": "*",
     "bullmq": "^5.51.0",

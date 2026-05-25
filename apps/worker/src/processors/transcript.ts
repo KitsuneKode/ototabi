@@ -1,6 +1,7 @@
 import type { TranscriptJobData, TranscriptJobResult } from "@ototabi/jobs/types";
 import type { Job } from "bullmq";
 
+import { resolveMediaFetchUrl } from "@ototabi/backend-common/s3-media";
 import { getLlmQueue } from "@ototabi/jobs/queues";
 import { prisma } from "@ototabi/store";
 
@@ -35,8 +36,8 @@ export async function processTranscriptJob(
     formData.append("response_format", "verbose_json");
     formData.append("timestamp_granularities[]", "word");
 
-    // Fetch the audio from S3
-    const audioResponse = await fetch(audioTrackS3Key);
+    const fetchUrl = await resolveMediaFetchUrl(audioTrackS3Key);
+    const audioResponse = await fetch(fetchUrl);
     if (!audioResponse.ok) {
       throw new Error(`Failed to fetch audio from S3: ${audioResponse.status}`);
     }

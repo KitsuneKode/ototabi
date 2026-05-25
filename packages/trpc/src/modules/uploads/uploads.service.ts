@@ -2,50 +2,31 @@ import {
   CompleteMultipartUploadCommand,
   CreateMultipartUploadCommand,
   ListPartsCommand,
-  S3Client,
   UploadPartCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import {
+  buildObjectKey,
+  getS3Client,
+  getSignedGetUrl,
+  isS3Configured,
+  parseS3KeyFromReference,
+  s3BucketName,
+} from "@ototabi/backend-common/s3-media";
 import { TRPCError } from "@trpc/server";
 
 import { recordingEventsService } from "../recording-events/recording-events.service";
 import { uploadsRepository } from "./uploads.repository";
 
-const accessKeyId =
-  process.env.AWS_ACCESS_KEY_ID || process.env.MINIO_ACCESS_KEY || process.env.MINIO_ROOT_USER;
-const secretAccessKey =
-  process.env.AWS_SECRET_ACCESS_KEY ||
-  process.env.MINIO_SECRET_KEY ||
-  process.env.MINIO_ROOT_PASSWORD;
-const bucketName = process.env.AWS_S3_BUCKET_NAME || process.env.MINIO_BUCKET_NAME || "mock-bucket";
-const region = process.env.AWS_S3_REGION || "us-east-1";
-const endpoint = process.env.AWS_S3_ENDPOINT || process.env.MINIO_ENDPOINT || undefined;
+const s3Client = getS3Client();
 
-const isS3Configured = !!(accessKeyId && secretAccessKey && bucketName);
-
-let s3Client: S3Client | null = null;
-
-if (isS3Configured) {
-  s3Client = new S3Client({
-    region,
-    ...(endpoint ? { endpoint, forcePathStyle: true } : {}),
-    credentials: { accessKeyId: accessKeyId!, secretAccessKey: secretAccessKey! },
-  });
-} else {
+if (!isS3Configured) {
   console.warn("[Uploads] S3/MinIO not configured, using mock fallback");
 }
 
-function buildS3Key(sessionId: string, trackSid: string): string {
-  return `recordings/session_${sessionId}/track_${trackSid}.webm`;
-}
-
-function buildFinalUrl(key: string): string {
-  if (!isS3Configured) return `/mock-uploads/${key}`;
-  return process.env.S3_PUBLIC_URL
-    ? `${process.env.S3_PUBLIC_URL}/${key}`
-    : endpoint
-      ? `${endpoint}/${bucketName}/${key}`
-      : `https://${bucketName}.s3.${region}.amazonaws.com/${key}`;
+/** Persist object key only — playback uses signed GET URLs. */
+function buildStoredMediaRef(key: string): string {
+  return key;
 }
 
 export const uploadsService = {
@@ -73,13 +54,13 @@ export const uploadsService = {
     });
     if (existing) return { uploadId: existing.uploadId, key: existing.s3Key };
 
-    const key = buildS3Key(params.sessionId, params.trackSid);
+    const key = buildObjectKey(params.sessionId, params.trackSid);
     let uploadId = `mock-upload-id-${Date.now()}`;
 
     if (s3Client && isS3Configured) {
       try {
         const command = new CreateMultipartUploadCommand({
-          Bucket: bucketName,
+          Bucket: s3BucketName,
           Key: key,
           ContentType: "video/webm",
         });
@@ -140,7 +121,7 @@ export const uploadsService = {
 
     try {
       const command = new UploadPartCommand({
-        Bucket: bucketName,
+        Bucket: s3BucketName,
         Key: params.key,
         UploadId: params.uploadId,
         PartNumber: params.partNumber,
@@ -164,7 +145,7 @@ export const uploadsService = {
     }
     try {
       const command = new ListPartsCommand({
-        Bucket: bucketName,
+        Bucket: s3BucketName,
         Key: params.key,
         UploadId: params.uploadId,
       });
@@ -187,7 +168,7 @@ export const uploadsService = {
     if (s3Client && isS3Configured && !params.uploadId.startsWith("mock-upload-id")) {
       try {
         const command = new CompleteMultipartUploadCommand({
-          Bucket: bucketName,
+          Bucket: s3BucketName,
           Key: params.key,
           UploadId: params.uploadId,
           MultipartUpload: { Parts: params.parts },
@@ -203,7 +184,7 @@ export const uploadsService = {
       }
     }
 
-    const finalUrl = buildFinalUrl(params.key);
+    const finalUrl = buildStoredMediaRef(params.key);
 
     try {
       await uploadsRepository.markTrackComplete(params.key, finalUrl);
@@ -234,6 +215,29 @@ export const uploadsService = {
     const track = await uploadsRepository.findTrackById(params.trackId);
     if (!track) throw new TRPCError({ code: "NOT_FOUND", message: "Track not found" });
     return track;
+  },
+
+  async getSignedDownloadUrl(params: { key: string; userId: string }) {
+    const track = await uploadsRepository.findTrackByS3Key(params.key);
+    if (!track) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Track not found" });
+    }
+    const canAccess = await uploadsRepository.canUserAccessTrack(track.id, params.userId);
+    if (!canAccess) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to access this track" });
+    }
+    const objectKey = parseS3KeyFromReference(params.key);
+    if (!isS3Configured) {
+      return { url: `/mock-uploads/${objectKey}` };
+    }
+    const url = await getSignedGetUrl(objectKey);
+    if (!url) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Could not generate download URL",
+      });
+    }
+    return { url };
   },
 
   async retryUpload(params: { trackId: string; userId: string }) {

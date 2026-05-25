@@ -113,6 +113,13 @@ export const uploadsRepository = {
     return prisma.recordingTrack.findUnique({ where: { id: trackId } });
   },
 
+  async findTrackByS3Key(key: string) {
+    return prisma.recordingTrack.findFirst({
+      where: { OR: [{ s3Key: key }, { s3Url: key }] },
+      select: { id: true, s3Key: true, s3Url: true },
+    });
+  },
+
   async resetTrackStatus(trackId: string) {
     return prisma.recordingTrack.update({
       where: { id: trackId },

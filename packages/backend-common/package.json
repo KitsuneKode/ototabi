@@ -9,12 +9,15 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./config": "./src/config.ts"
+    "./config": "./src/config.ts",
+    "./s3-media": "./src/s3-media.ts"
   },
   "scripts": {
     "test": "bun -e \"process.exit(0)\""
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.864.0",
+    "@aws-sdk/s3-request-presigner": "^3.864.0",
     "@ototabi/common": "*"
   },
   "devDependencies": {
