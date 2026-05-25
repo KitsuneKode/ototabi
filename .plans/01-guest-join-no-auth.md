@@ -1,6 +1,6 @@
 # Plan 01: Guest Join Without Authentication
 
-**Status:** in-progress (guest session cookies fixed; invite link required per Plan 13)  
+**Status:** done (guest cookies, invite link, host lockout, studio guest label, lobby invite)  
 **Priority:** P0
 
 ## Problem

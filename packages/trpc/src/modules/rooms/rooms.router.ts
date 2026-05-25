@@ -2,23 +2,23 @@ import type { TRPCRouterRecord } from "@trpc/server";
 
 import { z } from "zod";
 
-import { protectedProcedure, publicProcedure } from "../../trpc";
+import { hostProcedure, protectedProcedure, publicProcedure } from "../../trpc";
 import { roomsService } from "./rooms.service";
 
 export const roomsRouter = {
-  createRoom: protectedProcedure
+  createRoom: hostProcedure
     .input(z.object({ name: z.string().min(1) }))
     .mutation(({ input, ctx }) =>
       roomsService.createRoom({ userId: ctx.session.user.id, name: input.name }),
     ),
 
-  updateRoom: protectedProcedure
+  updateRoom: hostProcedure
     .input(z.object({ id: z.string(), name: z.string().min(1).optional() }))
     .mutation(({ input, ctx }) =>
       roomsService.updateRoom({ userId: ctx.session.user.id, roomId: input.id, name: input.name }),
     ),
 
-  deleteRoom: protectedProcedure
+  deleteRoom: hostProcedure
     .input(z.object({ id: z.string() }))
     .mutation(({ input, ctx }) =>
       roomsService.deleteRoom({ userId: ctx.session.user.id, roomId: input.id }),
@@ -32,13 +32,13 @@ export const roomsRouter = {
     .input(z.object({ code: z.string() }))
     .query(({ input }) => roomsService.getRoom({ code: input.code })),
 
-  listRooms: protectedProcedure.query(({ ctx }) => roomsService.listRooms(ctx.session.user.id)),
+  listRooms: hostProcedure.query(({ ctx }) => roomsService.listRooms(ctx.session.user.id)),
 
-  listSharedRooms: protectedProcedure.query(({ ctx }) =>
+  listSharedRooms: hostProcedure.query(({ ctx }) =>
     roomsService.listSharedRooms(ctx.session.user.id),
   ),
 
-  inviteMember: protectedProcedure
+  inviteMember: hostProcedure
     .input(z.object({ roomId: z.string(), email: z.string().email(), role: z.string().optional() }))
     .mutation(({ input, ctx }) =>
       roomsService.inviteMember({
@@ -49,7 +49,7 @@ export const roomsRouter = {
       }),
     ),
 
-  removeMember: protectedProcedure
+  removeMember: hostProcedure
     .input(z.object({ roomId: z.string(), targetUserId: z.string() }))
     .mutation(({ input, ctx }) =>
       roomsService.removeMember({
@@ -59,11 +59,11 @@ export const roomsRouter = {
       }),
     ),
 
-  getRoomMembers: protectedProcedure
+  getRoomMembers: hostProcedure
     .input(z.object({ roomId: z.string() }))
     .query(({ input }) => roomsService.getRoomMembers(input.roomId)),
 
-  createInvite: protectedProcedure
+  createInvite: hostProcedure
     .input(
       z.object({
         roomId: z.string(),
@@ -84,13 +84,13 @@ export const roomsRouter = {
       }),
     ),
 
-  listInvites: protectedProcedure
+  listInvites: hostProcedure
     .input(z.object({ roomId: z.string() }))
     .query(({ input, ctx }) =>
       roomsService.listInvites({ actorId: ctx.session.user.id, roomId: input.roomId }),
     ),
 
-  revokeInvite: protectedProcedure
+  revokeInvite: hostProcedure
     .input(z.object({ roomId: z.string(), inviteId: z.string() }))
     .mutation(({ input, ctx }) =>
       roomsService.revokeInvite({
@@ -124,13 +124,13 @@ export const roomsRouter = {
     .input(z.object({ roomId: z.string() }))
     .query(({ input }) => roomsService.getRoomParticipants(input.roomId)),
 
-  startRecordingSession: protectedProcedure
+  startRecordingSession: hostProcedure
     .input(z.object({ roomId: z.string() }))
     .mutation(({ input, ctx }) =>
       roomsService.startRecordingSession({ actorId: ctx.session.user.id, roomId: input.roomId }),
     ),
 
-  stopRecordingSession: protectedProcedure
+  stopRecordingSession: hostProcedure
     .input(z.object({ sessionId: z.string() }))
     .mutation(({ input, ctx }) =>
       roomsService.stopRecordingSession({
@@ -139,15 +139,15 @@ export const roomsRouter = {
       }),
     ),
 
-  getRecordingSessions: protectedProcedure
+  getRecordingSessions: hostProcedure
     .input(z.object({ roomId: z.string() }))
     .query(({ input }) => roomsService.getRecordingSessions(input.roomId)),
 
-  getRecordingSessionById: protectedProcedure
+  getRecordingSessionById: hostProcedure
     .input(z.object({ sessionId: z.string() }))
     .query(({ input }) => roomsService.getRecordingSessionById(input.sessionId)),
 
-  listRecentSessions: protectedProcedure.query(({ ctx }) =>
+  listRecentSessions: hostProcedure.query(({ ctx }) =>
     roomsService.listRecentSessions(ctx.session.user.id),
   ),
 } satisfies TRPCRouterRecord;

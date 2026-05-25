@@ -11,18 +11,15 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import type { RecorderManager } from "@/lib/recorder/recorder-manager";
 
 import { SessionStatusRail } from "@/components/layout/session-status-rail";
+import { StudioShell } from "@/components/layout/studio-shell";
 import { StudioChatPanel } from "@/components/studio/studio-chat-panel";
+import { StudioParticipantRoster } from "@/components/studio/studio-participant-roster";
 import { StudioVideoGrid } from "@/components/studio/studio-video-grid";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { KeyboardShortcutsOverlay } from "@/components/ui/keyboard-shortcuts-overlay";
 import { Led, LedInline } from "@/components/ui/led";
-import {
-  MonoLabel,
-  PanelTitle,
-  StatusBadge,
-  NoiseBackground,
-  MechButton,
-} from "@/components/ui/retro-primitives";
+import { MonoLabel, PanelTitle, StatusBadge, MechButton } from "@/components/ui/retro-primitives";
+import { formatParticipantLabel } from "@/lib/guest-display";
 import { useKeyboardShortcuts } from "@/lib/hooks/use-keyboard-shortcuts";
 import { useStudioConnection } from "@/lib/hooks/use-studio-connection";
 import { useTimer, formatTimer } from "@/lib/hooks/use-timer";
@@ -69,6 +66,14 @@ export default function StudioPage() {
 
   const authState = useQuery(trpc.auth.getSession.queryOptions());
   const sessionUser = authState.data?.user;
+  const sessionRole = authState.data?.user?.role;
+  const operatorLabel = sessionUser
+    ? formatParticipantLabel({
+        name: sessionUser.name,
+        email: sessionUser.email,
+        isLocalGuest: sessionRole === "guest",
+      })
+    : "";
 
   const roomInfo = useQuery(
     trpc.rooms.getRoom.queryOptions({ code: roomId }, { enabled: !!roomId }),
@@ -311,11 +316,9 @@ export default function StudioPage() {
   // ─── Studio Main UI ──────────────────────────────────────────────────────────
   return (
     <RoomContext.Provider value={room}>
-      <NoiseBackground />
-
-      <div className="bg-background text-foreground relative z-10 flex h-screen flex-col overflow-hidden font-sans">
+      <StudioShell>
         {/* ── Header ─────────────────────────────────────────────────────────── */}
-        <header className="border-border bg-card z-10 flex shrink-0 items-center justify-between border-b-2 px-5 py-3 shadow-[0_4px_0_0_var(--color-border)]">
+        <header className="border-border bg-card z-10 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b-2 px-3 py-3 shadow-[0_4px_0_0_var(--color-border)] sm:px-5">
           <div className="flex items-center gap-4">
             <MechButton
               onClick={() => router.push("/dashboard")}
@@ -332,7 +335,7 @@ export default function StudioPage() {
               <div className="mt-0.5 flex items-center gap-1.5">
                 <MonoLabel>
                   Join Code: <span className="text-foreground">{roomDetails.code}</span>
-                  {" | "}Op: {sessionUser?.name}
+                  {" | "}Op: {operatorLabel}
                 </MonoLabel>
                 {isHost && (
                   <StatusBadge variant="ok" className="text-[8px]">
@@ -520,6 +523,12 @@ export default function StudioPage() {
               </button>
             </div>
 
+            <StudioParticipantRoster
+              localUserName={sessionUser?.name ?? ""}
+              localUserEmail={sessionUser?.email}
+              localRole={sessionRole}
+            />
+
             {sidebarTab === "uploads" ? (
               <div className="flex-1 overflow-y-auto p-4">
                 {isHost ? (
@@ -633,12 +642,12 @@ export default function StudioPage() {
         </div>
 
         {/* ── Control Footer ──────────────────────────────────────────────────── */}
-        <footer className="border-border bg-card z-10 flex h-16 shrink-0 items-center justify-center border-t-2 shadow-[0_-4px_0_0_var(--color-border)]">
+        <footer className="border-border bg-card z-10 flex h-16 shrink-0 items-center justify-center border-t-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_0_0_var(--color-border)]">
           <ControlBar variation="minimal" />
         </footer>
-      </div>
 
-      <KeyboardShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+        <KeyboardShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      </StudioShell>
     </RoomContext.Provider>
   );
 }

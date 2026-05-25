@@ -1,10 +1,7 @@
-import type { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Dashboard — OtoTabi Studio",
-  description: "Manage your recording rooms and sessions.",
-};
+import { RequireHost } from "@/components/auth/require-host";
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return children;
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return <RequireHost>{children}</RequireHost>;
 }

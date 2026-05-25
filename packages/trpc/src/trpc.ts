@@ -82,3 +82,18 @@ export const protectedProcedure = t.procedure.use(timingMiddleware).use(({ ctx, 
     },
   });
 });
+
+/** Host accounts only — blocks Better Auth guest sessions from host console APIs. */
+export const hostProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  const user = await prisma.user.findUnique({
+    where: { id: ctx.session.user.id },
+    select: { role: true },
+  });
+  if (user?.role === "guest") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Guest accounts cannot access the host console",
+    });
+  }
+  return next({ ctx });
+});

@@ -217,8 +217,13 @@ export const roomsRepository = {
 
   async findFirstAudioTrack(sessionId: string) {
     return prisma.recordingTrack.findFirst({
-      where: { sessionId, type: "MICROPHONE", status: "COMPLETED", s3Url: { not: null } },
-      select: { s3Url: true },
+      where: {
+        sessionId,
+        type: "MICROPHONE",
+        status: "COMPLETED",
+        OR: [{ s3Key: { not: "" } }, { s3Url: { not: null } }],
+      },
+      select: { s3Key: true, s3Url: true },
     });
   },
 

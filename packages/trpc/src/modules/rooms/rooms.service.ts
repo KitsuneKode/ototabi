@@ -18,11 +18,24 @@ function hashInviteToken(token: string): string {
 export const roomsService = {
   async createRoom(params: { userId: string; name: string }) {
     const code = await roomsRepository.generateUniqueCode();
-    return roomsRepository.create({
+    const room = await roomsRepository.create({
       name: params.name,
       code,
       creatorId: params.userId,
     });
+
+    const lobbyToken = createInviteToken();
+    await roomsRepository.createInvite({
+      roomId: room.id,
+      tokenHash: hashInviteToken(lobbyToken),
+      role: "participant",
+      createdBy: params.userId,
+      maxUses: undefined,
+      expiresAt: undefined,
+      email: undefined,
+    });
+
+    return { ...room, lobbyInviteToken: lobbyToken };
   },
 
   async updateRoom(params: { userId: string; roomId: string; name?: string }) {
@@ -278,10 +291,10 @@ export const roomsService = {
     // Queue background jobs
     try {
       const audioTrack = await roomsRepository.findFirstAudioTrack(params.sessionId);
-      if (audioTrack?.s3Url) {
+      if (audioTrack?.s3Key) {
         await getTranscriptQueue().add(`transcript-${params.sessionId}`, {
           sessionId: params.sessionId,
-          audioTrackS3Key: audioTrack.s3Url,
+          audioTrackS3Key: audioTrack.s3Key,
         });
       } else {
         // Queue without audio URL — worker will retry until upload completes

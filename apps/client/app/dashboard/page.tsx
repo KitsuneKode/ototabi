@@ -60,9 +60,15 @@ export default function DashboardPage() {
 
   const createRoomMutation = useMutation(
     trpc.rooms.createRoom.mutationOptions({
-      onSuccess: () => {
+      onSuccess: (room) => {
         setNewRoomName("");
         roomsList.refetch();
+        if (room.lobbyInviteToken) {
+          const inviteLink = `${window.location.origin}/rooms/${room.code}/join?invite=${room.lobbyInviteToken}`;
+          void navigator.clipboard.writeText(inviteLink);
+          setCopiedRoomCode(room.code);
+          setTimeout(() => setCopiedRoomCode(null), 3000);
+        }
       },
     }),
   );
@@ -90,8 +96,10 @@ export default function DashboardPage() {
     [newRoomName, createRoomMutation],
   );
 
-  const handleCopyLink = useCallback((code: string) => {
-    const link = `${window.location.origin}/rooms/${code}/join`;
+  const handleCopyLink = useCallback((code: string, inviteToken?: string) => {
+    const link = inviteToken
+      ? `${window.location.origin}/rooms/${code}/join?invite=${inviteToken}`
+      : `${window.location.origin}/rooms/${code}/join`;
     navigator.clipboard.writeText(link);
     setCopiedRoomCode(code);
     setTimeout(() => setCopiedRoomCode(null), 2000);
