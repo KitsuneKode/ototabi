@@ -60,7 +60,7 @@ packages/
 bun fmt:check     # oxfmt (0 deps, native speed)
 bun lint          # oxlint (0 errors enforced)
 bun typecheck     # TypeScript across all packages
-bun run test      # Vitest
+bun run test      # Bun test (turbo)
 bun run build     # Next.js + API + worker
 ```
 

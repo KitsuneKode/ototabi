@@ -20,7 +20,16 @@ Run on **localhost** after `bun dev` + `docker compose up -d` + `bun run db:migr
 
 1. Create room → open studio (`/chat/{code}`).
 2. Start recording → speak 10–20s → stop.
-3. Wait for mic track **COMPLETED** on `/recordings/{sessionId}` (upload to MinIO if S3 env set).
+3. During upload, studio LEDs / progress use **part-level** counts (`uploadedParts` / `totalParts`) — progress should not hit 100% until all parts are on S3.
+4. Wait for mic track **COMPLETED** on `/recordings/{sessionId}` (upload to MinIO if S3 env set).
+
+**Upload pool:** concurrent part uploads per track (see `apps/client/lib/uploader/upload-worker-pool.ts`). After stop, the pool drains remaining chunks before `complete()` runs.
+
+## 2b. Studio lock & admit (optional)
+
+1. Room host → `/rooms/{roomId}/settings` → **Studio Gate** → enable **Lock**.
+2. Guest signs in → tries studio join → should see waiting / denied until host **Admits** (or guest is already a room member).
+3. LiveKit token path consumes invite when applicable (`enterStudio` / `enterStudioForLiveKit`).
 
 ## 3. Recovery (optional)
 
@@ -30,11 +39,12 @@ Follow [try-recovery-smoke.md](./try-recovery-smoke.md) if testing tab-kill reco
 
 Requires `OPENAI_API_KEY` + `REDIS_URL`. See [try-ai-pipeline.md](./try-ai-pipeline.md).
 
-1. Transcript segments appear on session review.
-2. **Regenerate clips** if empty; wait for clip candidates.
-3. **Queue 9:16 export** per clip → status `processing` → `ready`.
-4. **Download 9:16** when ready.
-5. **Reels preset** (after base render ready): pick `bold-captions` or `minimal-lower-third` → re-render → download.
+1. On `/recordings/{sessionId}`, **pipeline** block shows `transcript` / `llm` / `clips` each as `pending` → `processing` → `ready` or `failed` (with error text when failed).
+2. Transcript segments appear when transcript is `ready`.
+3. **Regenerate clips** if empty; wait for clip candidates.
+4. **Queue 9:16 export** per clip → status `processing` → `ready` (worker throws on hard failures so BullMQ can retry).
+5. **Download 9:16** when ready.
+6. **Reels preset** (after base render ready): pick `bold-captions` or `minimal-lower-third` → re-render → download.
 
 ## 5. Session exports
 
@@ -42,6 +52,14 @@ On session review / export page:
 
 - Queue **landscape 16:9** and **episode MP3** when tracks are complete.
 - Retry transcript if failed (when exposed in UI).
+
+## 5b. Export bundles
+
+On `/recordings/{sessionId}` or `/export/{sessionId}` → **Export bundle**:
+
+1. **List exportable assets** — tracks, transcript, clips, session renders (only `ready` items are selectable).
+2. Select assets → **Download ZIP** or individual URLs from `createExportBundle`.
+3. Presets **All tracks** / **Post-production** when offered in the picker.
 
 ## 6. Demo mode
 

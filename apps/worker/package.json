@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "bun --watch run ./src/index.ts",
     "start": "bun ./src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "@ototabi/backend-common": "*",

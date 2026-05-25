@@ -10,7 +10,7 @@
 | `fmt`         | `oxfmt`                                     | Format all files           |
 | `fmt:check`   | `oxfmt --check`                             | Check formatting (CI)      |
 | `typecheck`   | `turbo run typecheck`                       | TypeScript checks          |
-| `test`        | `turbo run test`                            | Run all tests (Vitest)     |
+| `test`        | `turbo run test`                            | Run all tests (Bun test)   |
 | `db:generate` | `turbo run db:generate`                     | Generate Prisma client     |
 | `db:migrate`  | `turbo run db:migrate`                      | Run Prisma migrations      |
 | `db:studio`   | `turbo run db:studio`                       | Open Prisma Studio         |

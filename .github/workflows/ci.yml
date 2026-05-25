@@ -27,6 +27,16 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       DATABASE_URL: "postgresql://user:password@localhost:5432/ototabi?schema=public"
       BETTER_AUTH_SECRET: ci-test-secret-do-not-use-in-production
@@ -67,8 +77,8 @@ jobs:
       - name: Run migrations
         run: cd packages/store && bun run prisma migrate deploy
 
-      - name: Type check (affected only)
-        run: bunx turbo run typecheck --affected
+      - name: Type check (API + worker)
+        run: bunx turbo run typecheck --filter=@ototabi/api --filter=@ototabi/worker
 
       - name: Build client (prerender + Next compile)
         env:
