@@ -4,7 +4,7 @@ import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL, fetchFile } from "@ffmpeg/util";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect, useMemo } from "react";
 
 import { ClipRenderActions } from "@/components/clips/clip-render-actions";
 import { SessionExportActions } from "@/components/clips/session-export-actions";
@@ -18,6 +18,7 @@ import { SessionTimeline } from "@/components/patterns/session-timeline";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { Led, LedInline } from "@/components/ui/led";
 import { MonoLabel, PanelTitle, StatusBadge, MechButton } from "@/components/ui/retro-primitives";
+import { computeKeepRanges, summarizeCutPreview } from "@/lib/cut-preview";
 import { formatDateTime, formatTimestamp } from "@/lib/date-utils";
 import {
   DEMO_ASPECT_LABELS,
@@ -38,7 +39,11 @@ import {
   Scissors,
   Combine,
 } from "@/lib/icons";
-import { getSyncConfidenceWarning, getSyncMarkerOffsetMs } from "@/lib/merge-session-timeline";
+import {
+  countDistinctSyncMarkerTracks,
+  getSyncAlignmentWarnings,
+  getSyncMarkerOffsetMs,
+} from "@/lib/merge-session-timeline";
 import { resolveTrackDownloadUrl } from "@/lib/resolve-track-download";
 import { useTRPC } from "@/trpc/client";
 import { trpcClient } from "@/trpc/vanilla";
@@ -170,9 +175,11 @@ export default function ExportSessionPage() {
   const syncOffsetMs = getSyncMarkerOffsetMs(syncMarkers);
   const completedTrackCount =
     session?.tracks.filter((t) => t.status === "COMPLETED" && (t.s3Url || t.s3Key)).length ?? 0;
-  const syncConfidenceWarning = getSyncConfidenceWarning({
+  const distinctMarkerTrackCount = countDistinctSyncMarkerTracks(syncMarkers);
+  const syncAlignmentWarnings = getSyncAlignmentWarnings({
     syncMarkerCount: syncMarkers?.length ?? 0,
     completedTrackCount,
+    distinctMarkerTrackCount,
   });
 
   const {
@@ -202,6 +209,24 @@ export default function ExportSessionPage() {
     previewCutRange,
     setPreviewCutRange,
   } = useExportConsole(sessionId);
+
+  const cutPreviewSummary = useMemo(() => {
+    if (!transcriptSegments?.length || cutSegmentIds.length === 0) return null;
+    const cuts = transcriptSegments.filter(
+      (s): s is typeof s & { startTime: number; endTime: number } =>
+        cutSegmentIds.includes(s.id ?? "") && s.id != null,
+    );
+    const totalDuration = transcriptSegments[transcriptSegments.length - 1]?.endTime ?? 0;
+    return summarizeCutPreview(cuts, totalDuration);
+  }, [transcriptSegments, cutSegmentIds]);
+
+  useEffect(() => {
+    if (!cutPreviewSummary?.previewEnvelope) {
+      if (cutSegmentIds.length === 0) setPreviewCutRange(null);
+      return;
+    }
+    setPreviewCutRange(cutPreviewSummary.previewEnvelope);
+  }, [cutPreviewSummary, cutSegmentIds.length, setPreviewCutRange]);
 
   const ffmpegRef = useRef(new FFmpeg());
 
@@ -510,18 +535,8 @@ export default function ExportSessionPage() {
       const allSegments = transcriptSegments ?? [];
       const sortedCuts = [...segments].toSorted((a, b) => a.startTime - b.startTime);
 
-      const keepRanges: Array<{ start: number; end: number }> = [];
-      let currentStart = 0;
-      for (const cut of sortedCuts) {
-        if (cut.startTime > currentStart) {
-          keepRanges.push({ start: currentStart, end: cut.startTime - 0.1 });
-        }
-        currentStart = cut.endTime + 0.1;
-      }
       const totalDuration = allSegments[allSegments.length - 1]?.endTime ?? 9999;
-      if (currentStart < totalDuration) {
-        keepRanges.push({ start: currentStart, end: totalDuration });
-      }
+      const keepRanges = computeKeepRanges(sortedCuts, totalDuration);
       if (keepRanges.length === 0) throw new Error("Cannot cut entire video");
 
       for (let trackIndex = 0; trackIndex < targetTracks.length; trackIndex++) {
@@ -864,14 +879,28 @@ export default function ExportSessionPage() {
                 cutSegmentIds={cutSegmentIds}
                 onToggleCutSegment={toggleCutSegment}
                 previewRange={previewCutRange}
+                cutPreviewSummary={cutPreviewSummary}
+                onPreviewSelectedCuts={() => {
+                  if (cutPreviewSummary?.previewEnvelope) {
+                    setPreviewCutRange(cutPreviewSummary.previewEnvelope);
+                  }
+                }}
                 onPreviewRange={(startTime, endTime) => setPreviewCutRange({ startTime, endTime })}
               />
-              {previewCutRange ? (
-                <AnalogInset className="p-3">
+              {cutPreviewSummary ? (
+                <AnalogInset className="space-y-2 p-3">
                   <MonoLabel className="text-[9px]">
-                    Preview range {formatTimestamp(previewCutRange.startTime)} –{" "}
-                    {formatTimestamp(previewCutRange.endTime)} (click segment to change)
+                    Will remove {formatTimestamp(cutPreviewSummary.removedSeconds)} — keep{" "}
+                    {cutPreviewSummary.keepRanges.length} segment
+                    {cutPreviewSummary.keepRanges.length !== 1 ? "s" : ""} (
+                    {formatTimestamp(cutPreviewSummary.keptSeconds)})
                   </MonoLabel>
+                  {previewCutRange ? (
+                    <MonoLabel className="text-muted-foreground text-[9px]">
+                      Highlight {formatTimestamp(previewCutRange.startTime)} –{" "}
+                      {formatTimestamp(previewCutRange.endTime)}
+                    </MonoLabel>
+                  ) : null}
                 </AnalogInset>
               ) : null}
               <MechButton
@@ -909,14 +938,15 @@ export default function ExportSessionPage() {
               Sync baseline: {syncOffsetMs}ms — applied to merge/export audio when processing
             </MonoLabel>
           ) : null}
-          {syncConfidenceWarning ? (
-            <div className="border-led-on/30 bg-led-on/5 flex items-start gap-2 rounded border p-3">
+          {syncAlignmentWarnings.map((warning) => (
+            <div
+              key={warning}
+              className="border-led-on/30 bg-led-on/5 flex items-start gap-2 rounded border p-3"
+            >
               <AlertTriangle className="text-led-on mt-0.5 h-4 w-4 shrink-0" />
-              <p className="text-led-on font-mono text-[10px] leading-relaxed">
-                {syncConfidenceWarning}
-              </p>
+              <p className="text-led-on font-mono text-[10px] leading-relaxed">{warning}</p>
             </div>
-          ) : null}
+          ))}
           <SessionTimeline events={timelineEvents} isLoading={query.isFetching && !query.data} />
         </div>
 
@@ -924,6 +954,16 @@ export default function ExportSessionPage() {
         {completedTracks.length > 0 && (
           <AnalogCard className="p-6">
             <PanelTitle label="Mastering Suite" title="Merge & Export" className="mb-5" />
+
+            {syncAlignmentWarnings.map((warning) => (
+              <div
+                key={`merge-${warning}`}
+                className="border-led-on/30 bg-led-on/5 mb-4 flex items-start gap-2 rounded border p-3"
+              >
+                <AlertTriangle className="text-led-on mt-0.5 h-4 w-4 shrink-0" />
+                <p className="text-led-on font-mono text-[10px] leading-relaxed">{warning}</p>
+              </div>
+            ))}
 
             {errorMessage && !processingMode && (
               <div className="border-led-on/30 bg-led-on/5 mb-4 flex items-start gap-2 rounded border p-3">

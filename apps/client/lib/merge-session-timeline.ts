@@ -50,12 +50,53 @@ export function getSyncMarkerOffsetMs(syncMarkers: SyncMarkerInput[] | undefined
   return sorted[0]?.localTime ?? 0;
 }
 
-/** Warn when multi-track export has no sync baseline. */
-export function getSyncConfidenceWarning(params: {
+export type SyncAlignmentWarningInput = {
   syncMarkerCount: number;
   completedTrackCount: number;
-}): string | null {
-  if (params.completedTrackCount < 2) return null;
-  if (params.syncMarkerCount > 0) return null;
-  return "No sync markers recorded — multi-track merge/export may be out of phase. Use clock pulses in the studio before exporting.";
+  distinctMarkerTrackCount?: number;
+};
+
+/** Plan 03 slice: export-page alignment warnings before multi-track merge. */
+export function getSyncAlignmentWarnings(params: SyncAlignmentWarningInput): string[] {
+  if (params.completedTrackCount < 2) return [];
+
+  const warnings: string[] = [];
+
+  if (params.syncMarkerCount === 0) {
+    warnings.push(
+      "No sync markers recorded — multi-track merge/export may be out of phase. Use clock pulses in the studio before exporting.",
+    );
+    return warnings;
+  }
+
+  if (params.syncMarkerCount < 3) {
+    warnings.push(
+      "Few sync pulses recorded — alignment confidence is low. Re-export after a session with steady clock markers.",
+    );
+  }
+
+  const distinctTracks = params.distinctMarkerTrackCount ?? 0;
+  if (
+    distinctTracks > 0 &&
+    distinctTracks < params.completedTrackCount &&
+    params.completedTrackCount >= 2
+  ) {
+    warnings.push(
+      `Sync markers cover ${distinctTracks} of ${params.completedTrackCount} tracks — some sources may drift relative to the baseline.`,
+    );
+  }
+
+  return warnings;
+}
+
+export function getSyncConfidenceWarning(params: SyncAlignmentWarningInput): string | null {
+  return getSyncAlignmentWarnings(params)[0] ?? null;
+}
+
+export function countDistinctSyncMarkerTracks(syncMarkers: SyncMarkerInput[] | undefined): number {
+  const trackSids = new Set<string>();
+  for (const marker of syncMarkers ?? []) {
+    if (marker.trackSid) trackSids.add(marker.trackSid);
+  }
+  return trackSids.size;
 }

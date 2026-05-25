@@ -102,3 +102,35 @@ Out of scope: studio preflight/consent (Stream 2), settings trial banner, worker
 
 - None from usage module. Stream 2 may proceed in parallel; avoid editing `rooms.policy.ts` co-host extensions per ownership split.
 - Stream 3 health panel still merges after Stream 2 on `chat/[roomId]/page.tsx`.
+
+## Wave 2 Stream 4 — Export polish (PR4)
+
+| Field             | Value                                             |
+| ----------------- | ------------------------------------------------- |
+| **Wave / stream** | Wave 2 — Export preview + sync alignment warnings |
+| **Branch**        | `feat/parity-stream4-export`                      |
+| **Plan refs**     | Plan 05 preview, Plan 03 sync warnings slice      |
+
+### Scope
+
+Shipped: cut preview before apply (`cut-preview.ts`, `summarizeCutPreview`, transcript highlight + keep/remove stats); `getSyncAlignmentWarnings` on timeline + merge/export; `computeKeepRanges` shared with `handleCuts`.
+
+Out of scope: chat studio, rooms.policy co-host, timeline MVP.
+
+### Files touched
+
+- `apps/client/app/(site)/export/[sessionId]/page.tsx`
+- `apps/client/components/editor/transcript-editor.tsx`
+- `apps/client/lib/cut-preview.ts`, `cut-preview.test.ts`
+- `apps/client/lib/merge-session-timeline.ts`, `merge-session-timeline.test.ts`
+
+### Tests added
+
+- `apps/client/lib/cut-preview.test.ts`
+- `apps/client/lib/merge-session-timeline.test.ts`
+
+**Gate:** `bun fmt && bun lint && bun typecheck && bun run test` — pass.
+
+### Smoke steps
+
+[try-local-smoke.md](./try-local-smoke.md) §7 — mark segments → preview stats/highlight → apply cuts; multi-track export shows sync warnings when markers missing/sparse.
