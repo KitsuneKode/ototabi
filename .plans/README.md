@@ -20,14 +20,17 @@ Each file is a scoped engineering initiative, implementable in one PR.
 | 14  | `14-retro-analog-v2-product-shell.md`      | done        | P1       |
 | 15  | `15-premium-ux-master-plan.md`             | in-progress | P1       |
 | 16  | `16-retro-analog-v3-product-grade.md`      | in-progress | P0       |
+| 17  | `17-handoff-remainder.md`                    | active      | P0       |
 
 ## Current focus (product-grade)
 
-1. **Plan 01** — Guest join: signed Better Auth cookies + join UX (invite link required)
-2. **Plan 16** — Retro Analog v3: `/pricing`, shell parity (`JoinShell`/`StudioShell`), marketing polish
-3. **Plan 03** — Sync markers + RTP alignment
-4. **Plan 04** — Transcript pipeline (Whisper worker)
-5. **Plan 13 Phase 1+** — Timeline truth, private media, distribution prep
+See **`17-handoff-remainder.md`** for ordered next steps.
+
+1. **Plan 01** — Guest dashboard lockout + studio guest label
+2. **Plan 16** — `/pricing`, `JoinShell`/`StudioShell`, shell parity
+3. **Plan 13** — Private S3, upload status UI, worker media access
+4. **Plan 03** — Sync marker timeline + export alignment
+5. **Plan 04** — Transcript pipeline end-to-end
 
 ## Convention
 
