@@ -9,6 +9,7 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./export-routing": "./src/export-routing.ts",
     "./pipeline-status": "./src/pipeline-status.ts",
     "./reels-presets": "./src/reels-presets.ts",
     "./types": "./src/types/zod-schema.ts",
@@ -16,7 +17,7 @@
     "./logger": "./src/utils/logger.ts"
   },
   "scripts": {
-    "test": "bun -e \"process.exit(0)\""
+    "test": "bun test"
   },
   "dependencies": {
     "date-fns": "^4.1.0",

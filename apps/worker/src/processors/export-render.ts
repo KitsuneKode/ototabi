@@ -8,6 +8,7 @@ import {
   resolveMediaFetchUrl,
   uploadObjectFromFile,
 } from "@ototabi/backend-common/s3-media";
+import { exportSessionJobId } from "@ototabi/common/export-routing";
 import { assertReelsPresetId } from "@ototabi/common/reels-presets";
 import { prisma } from "@ototabi/store";
 import { join } from "node:path";
@@ -45,6 +46,23 @@ async function findSourceTrack(sessionId: string) {
 
 function clipPresetToRender(preset: ExportPreset): ClipRenderPreset {
   return preset === "vertical_9_16" ? "vertical_9_16" : "landscape_16_9";
+}
+
+async function markSessionExportProcessing(
+  sessionId: string,
+  preset: "landscape_16_9" | "episode_mp3",
+) {
+  if (preset === "episode_mp3") {
+    await prisma.recordingSession.update({
+      where: { id: sessionId },
+      data: { episodeMp3Status: "processing", episodeMp3Error: null },
+    });
+    return;
+  }
+  await prisma.recordingSession.update({
+    where: { id: sessionId },
+    data: { landscapeStatus: "processing", landscapeError: null },
+  });
 }
 
 async function markSessionExportFailed(
@@ -94,8 +112,9 @@ async function markSessionExportReady(
 async function processSessionExport(
   sessionId: string,
   preset: "landscape_16_9" | "episode_mp3",
-  force?: boolean,
+  options?: { force?: boolean; preferWorker?: boolean },
 ): Promise<ExportJobResult> {
+  const force = options?.force;
   const session = await prisma.recordingSession.findUnique({
     where: { id: sessionId },
     select: {
@@ -115,6 +134,13 @@ async function processSessionExport(
     console.log(`[Export] Session ${sessionId} ${preset} already ready, skipping`);
     return { status: "ready", outputKey: existingKey };
   }
+
+  await markSessionExportProcessing(sessionId, preset);
+
+  const routeLabel = options?.preferWorker ? "worker-first" : "worker";
+  console.log(
+    `[Export] Session ${sessionId} ${preset} (${routeLabel}) job=${exportSessionJobId(sessionId, preset)}`,
+  );
 
   const source = await findSourceTrack(sessionId);
   if (!source) {
@@ -291,7 +317,7 @@ export async function processExportJob(job: Job<ExportJobData>): Promise<ExportJ
     if (preset !== "episode_mp3" && preset !== "landscape_16_9") {
       throw new Error(`Session export requires episode_mp3 or landscape_16_9, got ${preset}`);
     }
-    return processSessionExport(sessionId, preset, force);
+    return processSessionExport(sessionId, preset, { force, preferWorker: job.data.preferWorker });
   }
 
   return processClipExport(sessionId, clipId, preset, { force });

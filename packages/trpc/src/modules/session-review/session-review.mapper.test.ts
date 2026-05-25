@@ -1,6 +1,7 @@
+import { resolveSessionExportRoute } from "@ototabi/common/export-routing";
 import { describe, expect, test } from "bun:test";
 
-import { mapAiUiStatus, mapTranscriptUiStatus } from "./session-review.mapper";
+import { mapAiUiStatus, mapSessionReview, mapTranscriptUiStatus } from "./session-review.mapper";
 
 describe("mapTranscriptUiStatus", () => {
   test("prefers segments over db pending", () => {
@@ -94,5 +95,67 @@ describe("mapAiUiStatus", () => {
         hasAiArtifacts: false,
       }),
     ).toBe("processing");
+  });
+});
+
+describe("mapSessionReview export routing", () => {
+  const baseSession = {
+    id: "sess-1",
+    mode: "STUDIO",
+    status: "COMPLETED",
+    startedAt: new Date("2026-05-01T10:00:00Z"),
+    endedAt: new Date("2026-05-01T11:00:00Z"),
+    createdAt: new Date("2026-05-01T10:00:00Z"),
+    updatedAt: new Date("2026-05-01T11:00:00Z"),
+    roomId: "room-1",
+    room: { id: "room-1", name: "Test", code: "ABC" },
+    tracks: [
+      {
+        id: "t1",
+        trackSid: "sid-1",
+        type: "MICROPHONE",
+        status: "COMPLETED",
+        s3Key: "k1",
+        s3Url: null,
+        sessionId: "sess-1",
+        userId: "u1",
+        createdAt: new Date("2026-05-01T10:00:00Z"),
+        updatedAt: new Date("2026-05-01T11:00:00Z"),
+        user: { id: "u1", name: "Host" },
+      },
+    ],
+  };
+
+  test("includes routing hints for refresh-safe export UI", () => {
+    const metrics = { durationSec: 3600, completedTrackCount: 1 };
+    const mapped = mapSessionReview(
+      baseSession,
+      {
+        events: [],
+        syncMarkers: [],
+        transcriptSegments: [],
+        chapters: [],
+        showNotes: null,
+        clipCandidates: [],
+      },
+      {
+        episodeMp3Status: "processing",
+        episodeMp3S3Key: null,
+        episodeMp3Error: null,
+        landscapeStatus: "pending",
+        landscapeS3Key: null,
+        landscapeError: null,
+      },
+      null,
+      { route: resolveSessionExportRoute(metrics), metrics },
+    );
+
+    expect(mapped.exports.episodeMp3.status).toBe("processing");
+    expect(mapped.exports.routing).toEqual({
+      route: "worker",
+      preferWorker: true,
+      durationSec: 3600,
+      completedTrackCount: 1,
+    });
   });
 });

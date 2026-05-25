@@ -45,6 +45,8 @@ export interface ExportJobData {
   reelsPresetId?: string;
   /** Re-run export even when output is already marked ready. */
   force?: boolean;
+  /** Snapshot from queue time — long sessions should always run on the export worker. */
+  preferWorker?: boolean;
 }
 
 export interface ExportJobResult {
