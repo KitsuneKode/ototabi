@@ -55,23 +55,19 @@ export default function RecoveryPage() {
     async function loadLocalTracks() {
       try {
         const sessions = await db.uploadSessions.toArray();
-        const tracks = await Promise.all(
-          sessions.map(async (s) => {
-            const chunkCount = await db.chunks
-              .where("trackSid")
-              .equals(s.trackSid)
-              .filter((c) => c.status === "pending" || c.status === "failed")
-              .count();
-            return {
-              trackSid: s.trackSid,
-              sessionId: s.sessionId,
-              s3Key: s.s3Key,
-              type: s.type,
-              uploadId: s.uploadId,
-              pendingChunks: chunkCount,
-            };
-          }),
-        );
+        const pendingChunks = await db.chunks.where("status").anyOf("pending", "failed").toArray();
+        const chunkCountByTrack = new Map<string, number>();
+        for (const chunk of pendingChunks) {
+          chunkCountByTrack.set(chunk.trackSid, (chunkCountByTrack.get(chunk.trackSid) ?? 0) + 1);
+        }
+        const tracks = sessions.map((s) => ({
+          trackSid: s.trackSid,
+          sessionId: s.sessionId,
+          s3Key: s.s3Key,
+          type: s.type,
+          uploadId: s.uploadId,
+          pendingChunks: chunkCountByTrack.get(s.trackSid) ?? 0,
+        }));
         setPendingTracks(tracks);
       } catch {
         setLocalError("Failed to read local IndexedDB storage.");

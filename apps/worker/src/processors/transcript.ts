@@ -11,7 +11,8 @@ const WHISPER_MODEL = process.env.WHISPER_MODEL || "whisper-1";
 export async function processTranscriptJob(
   job: Job<TranscriptJobData>,
 ): Promise<TranscriptJobResult> {
-  const { sessionId, audioTrackS3Key } = job.data;
+  const { sessionId } = job.data;
+  let { audioTrackS3Key } = job.data;
 
   // Check if already processed
   const existing = await prisma.transcriptSegment.findFirst({
@@ -25,6 +26,25 @@ export async function processTranscriptJob(
   if (!OPENAI_API_KEY) {
     console.log(`[Transcript] No OPENAI_API_KEY set, skipping session ${sessionId}`);
     return { segments: [] };
+  }
+
+  if (!audioTrackS3Key) {
+    const audioTrack = await prisma.recordingTrack.findFirst({
+      where: {
+        sessionId,
+        type: "MICROPHONE",
+        status: "COMPLETED",
+        OR: [{ s3Key: { not: "" } }, { s3Url: { not: null } }],
+      },
+      select: { s3Key: true },
+    });
+    audioTrackS3Key = audioTrack?.s3Key ?? "";
+  }
+
+  if (!audioTrackS3Key) {
+    throw new Error(
+      `No completed microphone track for session ${sessionId} — retry after upload finishes`,
+    );
   }
 
   console.log(`[Transcript] Transcribing session ${sessionId}...`);

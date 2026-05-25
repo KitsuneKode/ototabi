@@ -97,6 +97,14 @@ Without S3 vars, uploads fall back to **mock URLs** — recording works locally 
 
 Next.js **rewrites** (client `:3000`) proxy `/api/auth`, `/api/trpc`, `/api/guest-auth`, `/api/token` → `:8080` so cookies stay on `:3000`.
 
+### Recording trust smoke (Plan 13)
+
+1. Host signs in → create room → open studio (`/chat/{code}`).
+2. Start/stop recording; confirm final chunk uploads (mic track `COMPLETED` in session review).
+3. Kill browser tab mid-upload → open **Recovery** → retry pending chunks.
+4. Guest join requires `?invite=` token (Room Settings → create invite).
+5. Export page applies sync marker offset when markers exist.
+
 ### Smoke test (backend)
 
 ```bash
