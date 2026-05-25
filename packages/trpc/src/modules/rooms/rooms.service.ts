@@ -304,6 +304,37 @@ export const roomsService = {
     };
   },
 
+  async getStudioHealth(params: { userId: string; roomId: string }) {
+    const room = await roomsRepository.findById(params.roomId);
+    if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
+    const { member, participant } = await roomsRepository.findAccessContext(
+      params.roomId,
+      params.userId,
+    );
+    if (
+      !roomsPolicy.canJoinRoom({
+        room,
+        userId: params.userId,
+        member,
+        participant,
+        inviteUsable: false,
+      })
+    ) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized in this room" });
+    }
+
+    const rows = await roomsRepository.listParticipants(params.roomId);
+    return {
+      participants: rows.map((row) => ({
+        userId: row.userId,
+        name: row.user.name,
+        email: row.user.email,
+        hasRecordingConsent: !!row.recordingConsentedAt,
+        recordingConsentedAt: row.recordingConsentedAt,
+      })),
+    };
+  },
+
   async acknowledgeRecordingConsent(params: { userId: string; roomId: string }) {
     const room = await roomsRepository.findById(params.roomId);
     if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });

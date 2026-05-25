@@ -177,6 +177,12 @@ export const roomsRouter = {
       roomsService.getStudioContext({ userId: ctx.session.user.id, roomId: input.roomId }),
     ),
 
+  getStudioHealth: protectedProcedure
+    .input(z.object({ roomId: z.string() }))
+    .query(({ input, ctx }) =>
+      roomsService.getStudioHealth({ userId: ctx.session.user.id, roomId: input.roomId }),
+    ),
+
   acknowledgeRecordingConsent: protectedProcedure
     .input(z.object({ roomId: z.string() }))
     .mutation(({ input, ctx }) =>

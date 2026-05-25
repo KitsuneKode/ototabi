@@ -243,7 +243,7 @@ export const roomsRepository = {
     return prisma.roomParticipant.findMany({
       where: { roomId },
       include: {
-        user: { select: { id: true, name: true, image: true } },
+        user: { select: { id: true, name: true, email: true, image: true } },
       },
       orderBy: { joinedAt: "asc" },
     });
