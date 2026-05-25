@@ -1,6 +1,6 @@
 # Plan 04: Transcript Pipeline (Whisper)
 
-**Status:** pending  
+**Status:** done (Creator Suite batch 3 — re-queue on upload, worker DB fallback, session review polling)  
 **Priority:** P1
 
 ## Problem
