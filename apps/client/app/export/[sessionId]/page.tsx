@@ -33,7 +33,7 @@ import {
   Scissors,
   Combine,
 } from "@/lib/icons";
-import { getSyncMarkerOffsetMs } from "@/lib/merge-session-timeline";
+import { getSyncConfidenceWarning, getSyncMarkerOffsetMs } from "@/lib/merge-session-timeline";
 import { resolveTrackDownloadUrl } from "@/lib/resolve-track-download";
 import { trpcClient } from "@/trpc/vanilla";
 
@@ -140,6 +140,12 @@ export default function ExportSessionPage() {
     isBootingAuth,
   } = useSessionReview(sessionId);
   const syncOffsetMs = getSyncMarkerOffsetMs(syncMarkers);
+  const completedTrackCount =
+    session?.tracks.filter((t) => t.status === "COMPLETED" && (t.s3Url || t.s3Key)).length ?? 0;
+  const syncConfidenceWarning = getSyncConfidenceWarning({
+    syncMarkerCount: syncMarkers?.length ?? 0,
+    completedTrackCount,
+  });
 
   const {
     ffmpegLoaded,
@@ -816,6 +822,14 @@ export default function ExportSessionPage() {
             <MonoLabel className="text-accent block text-[10px]">
               Sync baseline: {syncOffsetMs}ms — applied to merge/export audio when processing
             </MonoLabel>
+          ) : null}
+          {syncConfidenceWarning ? (
+            <div className="border-led-on/30 bg-led-on/5 flex items-start gap-2 rounded border p-3">
+              <AlertTriangle className="text-led-on mt-0.5 h-4 w-4 shrink-0" />
+              <p className="text-led-on font-mono text-[10px] leading-relaxed">
+                {syncConfidenceWarning}
+              </p>
+            </div>
           ) : null}
           <SessionTimeline events={timelineEvents} isLoading={query.isFetching && !query.data} />
         </div>

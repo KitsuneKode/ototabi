@@ -1,6 +1,6 @@
 # Plan 02: Local Recording Recovery (OPFS + Dual Storage)
 
-**Status:** pending  
+**Status:** done  
 **Priority:** P0
 
 ## Problem

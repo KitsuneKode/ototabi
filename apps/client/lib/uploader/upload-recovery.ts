@@ -47,5 +47,6 @@ export async function recoverPendingUpload(
   }
 
   await uploader.complete();
+  await opfsStorage.deleteTrackChunks(session.sessionId, session.trackSid);
   await db.uploadSessions.delete(session.trackSid);
 }

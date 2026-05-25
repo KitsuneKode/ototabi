@@ -60,15 +60,44 @@ export default function RecoveryPage() {
         for (const chunk of pendingChunks) {
           chunkCountByTrack.set(chunk.trackSid, (chunkCountByTrack.get(chunk.trackSid) ?? 0) + 1);
         }
-        const tracks = sessions.map((s) => ({
-          trackSid: s.trackSid,
-          sessionId: s.sessionId,
-          s3Key: s.s3Key,
-          type: s.type,
-          uploadId: s.uploadId,
-          pendingChunks: chunkCountByTrack.get(s.trackSid) ?? 0,
-        }));
-        setPendingTracks(tracks);
+
+        const opfsChunkCountByTrack = new Map<string, number>();
+        for (const ref of await opfsStorage.listAllChunks()) {
+          const key = `${ref.sessionId}:${ref.trackSid}`;
+          opfsChunkCountByTrack.set(key, (opfsChunkCountByTrack.get(key) ?? 0) + 1);
+        }
+
+        const tracksBySid = new Map<string, PendingTrack>();
+        for (const s of sessions) {
+          const opfsKey = `${s.sessionId}:${s.trackSid}`;
+          const idbPending = chunkCountByTrack.get(s.trackSid) ?? 0;
+          const opfsPending = opfsChunkCountByTrack.get(opfsKey) ?? 0;
+          tracksBySid.set(s.trackSid, {
+            trackSid: s.trackSid,
+            sessionId: s.sessionId,
+            s3Key: s.s3Key,
+            type: s.type,
+            uploadId: s.uploadId,
+            pendingChunks: Math.max(idbPending, opfsPending),
+          });
+          opfsChunkCountByTrack.delete(opfsKey);
+        }
+
+        for (const [key, opfsPending] of opfsChunkCountByTrack) {
+          if (opfsPending === 0) continue;
+          const [sessionId, trackSid] = key.split(":");
+          if (!sessionId || !trackSid) continue;
+          tracksBySid.set(trackSid, {
+            trackSid,
+            sessionId,
+            s3Key: "",
+            type: "MICROPHONE",
+            uploadId: "",
+            pendingChunks: opfsPending,
+          });
+        }
+
+        setPendingTracks(Array.from(tracksBySid.values()));
       } catch {
         setLocalError("Failed to read local IndexedDB storage.");
       } finally {
@@ -194,6 +223,7 @@ export default function RecoveryPage() {
             {pendingTracks.map((track) => {
               const isRetrying = retryingTracks.has(track.trackSid);
               const isCompleted = completedTracks.has(track.trackSid);
+              const canRetry = track.uploadId.length > 0 && track.s3Key.length > 0;
 
               return (
                 <AnalogCard key={track.trackSid} className="p-5">
@@ -226,9 +256,14 @@ export default function RecoveryPage() {
                             <LedInline color="red" size="sm" />
                             {track.pendingChunks} PENDING
                           </span>
+                          {!canRetry ? (
+                            <MonoLabel className="text-led-on text-[9px]">
+                              OPFS ONLY — RE-RECORD
+                            </MonoLabel>
+                          ) : null}
                           <MechButton
                             onClick={() => handleRetry(track)}
-                            disabled={isRetrying}
+                            disabled={isRetrying || !canRetry}
                             className="h-8 px-3 py-1.5 text-[10px]"
                           >
                             {isRetrying ? (
@@ -257,9 +292,10 @@ export default function RecoveryPage() {
               <div>
                 <MonoLabel className="mb-1 block">System Note</MonoLabel>
                 <p className="text-muted-foreground font-mono text-[10px] leading-relaxed">
-                  Tracks stored in IndexedDB with pending or failed chunks can be retried from this
-                  console. After retry, the upload process will resume from where it left off. If
-                  the track was already completed on the server, no further action is needed.
+                  Tracks stored in IndexedDB and/or OPFS with pending chunks can be retried from
+                  this console. Upload reads OPFS first, then IndexedDB. After retry, the upload
+                  process will resume from where it left off. If the track was already completed on
+                  the server, no further action is needed.
                 </p>
               </div>
             </AnalogCard>

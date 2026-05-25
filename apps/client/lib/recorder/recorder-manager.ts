@@ -252,6 +252,9 @@ export class RecorderManager {
     if (uploader) {
       try {
         await uploader.complete();
+        if (this.sessionId) {
+          await opfsStorage.deleteTrackChunks(this.sessionId, trackSid);
+        }
         // Broadcast final 100% progress
         this.broadcastUploadProgress(trackSid, 100);
         // Clean up session in DB
@@ -409,6 +412,9 @@ export class RecorderManager {
         const uploader = this.uploaders.get(trackSid);
         if (uploader) {
           await uploader.complete();
+          if (this.sessionId) {
+            await opfsStorage.deleteTrackChunks(this.sessionId, trackSid);
+          }
           this.broadcastUploadProgress(trackSid, 100);
           await db.uploadSessions.delete(trackSid);
         }
