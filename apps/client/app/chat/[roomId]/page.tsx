@@ -19,10 +19,11 @@ import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { KeyboardShortcutsOverlay } from "@/components/ui/keyboard-shortcuts-overlay";
 import { Led, LedInline } from "@/components/ui/led";
 import { MonoLabel, PanelTitle, StatusBadge, MechButton } from "@/components/ui/retro-primitives";
+import { formatTimer } from "@/lib/date-utils";
 import { formatParticipantLabel } from "@/lib/guest-display";
 import { useKeyboardShortcuts } from "@/lib/hooks/use-keyboard-shortcuts";
 import { useStudioConnection } from "@/lib/hooks/use-studio-connection";
-import { useTimer, formatTimer } from "@/lib/hooks/use-timer";
+import { useTimer } from "@/lib/hooks/use-timer";
 import { ArrowLeft, CheckCircle, AlertTriangle, Radio, PanelRight } from "@/lib/icons";
 import { useTRPC } from "@/trpc/client";
 export default function StudioPage() {
