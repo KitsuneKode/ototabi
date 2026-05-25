@@ -106,8 +106,11 @@ Ototabi should not compete as a cheaper Riverside clone. It should compete as an
 
 ### Implementation
 
-- Add room lock/unlock.
-- Add host admit/deny for guests.
+**Access model (preferred path):** Double down on **invite links** — time-limited, revocable, optional max uses, bound to room — before open room codes. Guests without a valid invite cannot join; host sees pending join requests when lock/admit is on.
+
+- Add room lock/unlock (locked room rejects or queues joiners).
+- Add host admit/deny for guests (waiting room).
+- Harden invite tokens: expiry, single-use option, audit in Room Settings.
 - Add host mute request, remove guest, and role-aware controls.
 - Add visible recording consent and recording status for all participants.
 - Add preflight checks for mic level, camera, browser support, storage quota, network, and upload configuration.

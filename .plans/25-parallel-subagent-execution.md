@@ -37,22 +37,19 @@ wave2 --> wave3
 
 ---
 
-## Wave 0 — Coordinator (1 agent, serial, blocks all)
+## Wave 0 — Coordinator
 
-**Sub-agent:** `shell` + `ci-investigator` after push.
+**Code status (May 2026):** CI green on `main`; brand + reels shipped.
 
-**Goal:** Prove the spine works on shared infra.
+**Still operator-owned:**
 
 | Step | Action |
 |------|--------|
-| 1 | Push `main` (2 local commits + any plan doc commit) |
-| 2 | `gh run watch` until [`.github/workflows/ci.yml`](.github/workflows/ci.yml) passes (`bun run db:generate`, `bunx turbo` typecheck/build, `bun run test`) |
-| 3 | Staging deploy per [`.docs/deploy-railway.md`](.docs/deploy-railway.md): Vercel preview + Railway API/worker + Postgres/Redis/S3 |
-| 4 | Smoke: sign-in → room → record → `/recordings/{id}` → transcript/clips → queue 9:16 → download ([`.docs/try-ai-pipeline.md`](.docs/try-ai-pipeline.md)) |
+| 1 | Local smoke — [`.docs/try-local-smoke.md`](../.docs/try-local-smoke.md) |
+| 2 | Optional staging deploy — [`.docs/deploy-railway.md`](../.docs/deploy-railway.md) |
+| 3 | Staging AI path — [`.docs/try-ai-pipeline.md`](../.docs/try-ai-pipeline.md) |
 
-**Done when:** CI green + one full studio+AI path on staging URLs.
-
-**Default scope:** staging/preview only (no production promotion unless you explicitly expand Stream A).
+**Done when:** You have signed off one full path (local or staging). Not blocked on more feature code.
 
 ---
 
@@ -135,19 +132,13 @@ wave2 --> wave3
 
 ---
 
-## Wave 3 — Reels (serial, after clips stable on staging)
+## Wave 3 — Reels — **done (May 2026)**
 
-### Stream F — Batch 6 reels (`generalPurpose` + `ai-architect` for preset schema)
+### Stream F — Batch 6 reels
 
-**Create:** [`.plans/20-batch-6-reels.md`](.plans/20-batch-6-reels.md) (spec file does not exist yet).
+**Shipped on `main`:** [`.plans/20-batch-6-reels.md`](20-batch-6-reels.md), `packages/common/src/reels-presets.ts`, worker `reelsPresetId` export path, `ClipReelsPresetPicker` UI.
 
-**Scope:**
-
-- Native JSON preset packs (caption style, safe zones, 9:16 template params)
-- Worker render step consuming `clipId` + `presetId`
-- UI: pick preset on recordings/export after clip `ready`
-
-**Depends on:** Stream C clip pipeline green on staging.
+**Verify:** Local/staging smoke — base 9:16 then reels preset download.
 
 ---
 
@@ -179,12 +170,19 @@ Return: PR summary, files changed, smoke steps, blockers.
 
 ---
 
-## Deferred (explicitly out of this wave)
+## Next engineering (post parallel waves)
 
-- Plan 08 billing / Polar production
-- Plan 09 distribution
+| Priority | Plan | Notes |
+| -------- | ---- | ----- |
+| P0 | [27-upload-concurrency](27-upload-concurrency.md) | Parallel multipart during + after record |
+| P0 | [13 Phase 2](13-riverside-competitive-roadmap.md) | Invite validity, room lock, admit/deny |
+| P2 | [09 distribution](09-distribution-youtube-bundles.md) | Selective export + ZIP; no YouTube/embed v1 |
+| P2 | [08 billing](08-billing-stripe-subscriptions.md) | Dodo Payments (not Polar prod) |
+
+## Deferred
+
+- Plan 09 YouTube OAuth, embed player
 - Plan 16 Phase 5 studio cockpit polish
-- Plan 13 Phase 2 full (room lock, admit/deny) — large; slice only if Stream B has capacity
 - Production promotion (unless you expand Stream A scope)
 
 ---

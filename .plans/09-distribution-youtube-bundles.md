@@ -1,40 +1,55 @@
-# Plan 09: Distribution — YouTube, ZIP Bundles, Embed Player
+# Plan 09: Distribution — Export bundles & selective downloads
 
 **Status:** pending  
-**Priority:** P2
+**Priority:** P2  
+**Updated:** May 2026 — YouTube OAuth and embed player deferred.
 
 ## Problem
 
-After exporting, users need to get their content to platforms. Currently they download a file and manually upload. Friction costs time.
+After recording, creators need packaged deliverables (tracks, merged masters, layout variants) without manual file hunting. Platform publish integrations add OAuth/legal surface area we are not taking yet.
 
-## Solution
+## In scope (v1)
 
-### YouTube Direct Publish
+### Selective session export (primary UX)
 
-OAuth flow to connect YouTube channel → resumable upload via YouTube Data API v3. Single click from export page.
+On `/export/[sessionId]` and `/recordings/[sessionId]`:
 
-### ZIP Bundle Download
+- **Pick what to download** — per-track raw, merged timeline, layout variants (9:16, 16:9, episode MP3) as checkboxes.
+- **Generate on demand** — queue worker or browser FFmpeg.wasm jobs with clear status (same patterns as clip/session exports today).
+- **Preset bundles** — quick actions: “All tracks ZIP”, “Post-production pack” (merged + transcript JSON + show notes).
 
-Download all separate tracks + merged master as a single ZIP. Server streams ZIP of all S3 objects for the session.
+### ZIP bundle download
 
-### Embed Player
+- Server-streamed ZIP of selected S3 objects (or worker-built archive uploaded once, then signed GET).
+- No YouTube API.
 
-An `<iframe>` embed with retro-styled player. Shows the merged video with transcript overlay. Hosted on the platform. Share link for social embeds.
+## Deferred (later)
 
-## Files to Create
+| Feature                                 | Why defer                                                                                     |
+| --------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **YouTube OAuth / direct publish**      | OAuth scope, quota, channel linking, takedown policy — not v1                                 |
+| **Embed player** (`/embed/[sessionId]`) | CDN/auth hotlinking, transcript sync, privacy on shared links — revisit after bundle UX ships |
 
-- `apps/client/app/api/youtube/` — OAuth callback route
-- `apps/client/components/EmbedPlayer.tsx`
-- New page: `apps/client/app/embed/[sessionId]/page.tsx`
+## Studio “all main features” (Plan 13 alignment)
 
-## Files to Change
+Distribution assumes **studio + trust path works**: invite-only join, recording, live upload progress, recovery, session review. See [Plan 13 Phase 2](13-riverside-competitive-roadmap.md) for access control (invites, expiry, lock).
 
-- `apps/client/app/export/[sessionId]/page.tsx` — YouTube publish button, ZIP download
-- `packages/trpc/src/routers/` — `publishToYouTube`, `getSessionZip` procedures
+## Files (target)
 
-## Acceptance Criteria
+- `packages/trpc/src/modules/exports/` — `createExportBundle`, `getBundleStatus`, signed URLs
+- `apps/worker` — optional `bundle-zip` job assembling keys
+- `apps/client/components/export/export-bundle-picker.tsx`
+- `apps/client/app/(site)/export/[sessionId]/page.tsx` — wire picker + ZIP CTA
 
-- YouTube OAuth flow completes and channel is linked
-- One-click publish uploads video with title + description from show notes
-- ZIP download includes all tracks + merged master
-- Embed player displays video with transcript
+## Acceptance criteria
+
+- User selects subset of assets → receives ZIP or individual signed downloads
+- Merged / layout renders respect existing session export + clip pipelines
+- Export refuses when tracks incomplete; shows per-asset status
+- `bun run check` passes
+
+## Out of scope (v1)
+
+- YouTube, Spotify, RSS publish
+- Public embed without auth model
+- CapCut project export

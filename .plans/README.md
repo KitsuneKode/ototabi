@@ -5,7 +5,7 @@ Each file is a scoped engineering initiative, implementable in one PR.
 | #   | File                                       | Status                                  | Priority |
 | --- | ------------------------------------------ | --------------------------------------- | -------- |
 | 01  | `01-guest-join-no-auth.md`                 | done                                    | P0       |
-| 02  | `02-local-recording-opfs-recovery.md`      | pending                                 | P0       |
+| 02  | `02-local-recording-opfs-recovery.md`      | done                                    | P0       |
 | 03  | `03-sync-markers-livekit-rtp.md`           | in-progress                             | P1       |
 | 04  | `04-transcript-pipeline-whisper.md`        | done                                    | P1       |
 | 05  | `05-text-based-editing.md`                 | pending                                 | P1       |
@@ -23,24 +23,23 @@ Each file is a scoped engineering initiative, implementable in one PR.
 | 17  | `17-handoff-remainder.md`                  | done                                    | P0       |
 | 18  | `18-session-data-layer.md`                 | done                                    | P0       |
 | 19  | `19-creator-suite-vision.md`               | done (strategy locked)                  | P0       |
-| 20  | `20-creator-suite-execution.md` + batches  | done (batches 0–5; batch 6 future)      | P0       |
+| 20  | `20-creator-suite-execution.md` + batches  | done (batches 0–6)                      | P0       |
 | 24  | `24-demo-mode-browser.md`                  | done                                    | P2       |
-| 25  | `25-parallel-subagent-execution.md`        | in-progress                             | P0       |
-| 26  | `20-batch-6-reels.md`                      | pending                                 | P2       |
-| 25  | `25-parallel-subagent-execution.md`        | in-progress                             | P0       |
+| 25  | `25-parallel-subagent-execution.md`        | done (waves A–F code); smoke operator   | P0       |
+| 26  | `20-batch-6-reels.md`                      | done (May 2026)                         | P2       |
+| 27  | `27-upload-concurrency.md`                 | pending                                 | P0       |
 
 ## Current focus (product-grade)
 
-**Creator Suite batches 0–5** done locally (May 2026). **Plan 24** browser demo MVP shipped (capture, editor, export presets).
+**Shipped on `main` (May 2026):** Creator Suite batches 0–6, parallel waves A–F, demo v1.1, trust/upload policy, CI, brand/OG.
 
-**Remaining:**
+**Next build order:**
 
-**Parallel execution (Plan 25):** [`.plans/25-parallel-subagent-execution.md`](25-parallel-subagent-execution.md) — Wave 0 coordinator (push, CI, staging smoke) then Streams A–F.
-
-1. **Push + prod deploy** — Vercel client + Railway API/worker (scaffolding shipped; live deploy pending)
-2. **FFmpeg worker** — hybrid export hardening on Railway worker
-3. **Plan 20 batch 6** — reels presets (after clips)
-4. **Plan 16 Phase 5** — studio cockpit polish (deferred)
+1. **[27-upload-concurrency](27-upload-concurrency.md)** — parallel multipart (no 50‑min post-stop drain)
+2. **[13 Phase 2](13-riverside-competitive-roadmap.md)** — invite validity + lock/admit
+3. **[09 distribution](09-distribution-youtube-bundles.md)** — selective export + ZIP (no YouTube/embed v1)
+4. **[08 billing](08-billing-stripe-subscriptions.md)** — Dodo Payments
+5. **Local/staging smoke** — [try-local-smoke.md](../.docs/try-local-smoke.md) (operator)
 
 ## Convention
 

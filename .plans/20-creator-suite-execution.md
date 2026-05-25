@@ -41,7 +41,7 @@
 | **3** | [20-batch-3-ai-clips.md](20-batch-3-ai-clips.md)           | Transcript harden + show notes + magic clips           | **done**                                |
 | **4** | [20-batch-4-polish-export.md](20-batch-4-polish-export.md) | Plan 16 landing + hybrid export worker + timeline-lite | **done**                                |
 | **5** | [Plan 24](24-demo-mode-browser.md)                         | Browser demo mode                                      | **done** (May 2026)                     |
-| **6** | (future) `20-batch-6-reels.md`                             | Native JSON preset packs                               | After Batch 3                           |
+| **6** | [20-batch-6-reels.md](20-batch-6-reels.md)                 | Native JSON preset packs                               | **done** (May 2026)                     |
 
 ---
 

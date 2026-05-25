@@ -6,7 +6,7 @@
 bun fmt:check    # Check formatting (oxfmt)
 bun lint         # Lint (oxlint)
 bun typecheck    # TypeScript checks (turbo)
-bun run test     # Vitest tests (turbo)
+bun run test     # Bun test (turbo)
 bun run build    # Production build (turbo)
 ```
 
