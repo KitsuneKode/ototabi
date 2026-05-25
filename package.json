@@ -17,6 +17,7 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "typecheck": "turbo run typecheck",
+    "check": "bun run fmt:check && bun lint && bun typecheck && bun run test",
     "test": "turbo run test",
     "prepare": "husky",
     "preinstall": "npx only-allow bun",

@@ -55,6 +55,32 @@ async function downloadFile(ffmpeg: FFmpeg, filename: string, downloadName: stri
   await ffmpeg.deleteFile(filename);
 }
 
+type TrackWithMedia = { s3Url?: string | null; s3Key?: string | null };
+
+/** Download tracks in parallel, then write inputs for ffmpeg concat. */
+async function writeTracksToFfmpeg(ffmpeg: FFmpeg, tracks: TrackWithMedia[]): Promise<string> {
+  const prepared = await Promise.all(
+    tracks.map(async (track, i) => {
+      const name = `input_${i}.mp4`;
+      const mediaRef = track.s3Url ?? track.s3Key;
+      if (!mediaRef) throw new Error(`Track ${i + 1} has no media reference`);
+      const downloadUrl = await resolveTrackDownloadUrl(trpcClient, mediaRef);
+      if (!downloadUrl) throw new Error(`Could not resolve download URL for track ${i + 1}`);
+      const data = await fetchFile(downloadUrl);
+      return { name, data };
+    }),
+  );
+  await Promise.all(prepared.map(({ name, data }) => ffmpeg.writeFile(name, data)));
+  return prepared.map(({ name }) => `file '${name}'\n`).join("");
+}
+
+async function removeTrackInputs(ffmpeg: FFmpeg, trackCount: number): Promise<void> {
+  await Promise.all([
+    ...Array.from({ length: trackCount }, (_, i) => ffmpeg.deleteFile(`input_${i}.mp4`)),
+    ffmpeg.deleteFile("concat_list.txt"),
+  ]);
+}
+
 function TrackDownloadButton({ mediaRef }: { mediaRef: string }) {
   const handleDownload = async () => {
     const url = await resolveTrackDownloadUrl(trpcClient, mediaRef);
@@ -182,16 +208,7 @@ export default function ExportSessionPage() {
       await loadFfmpeg();
       const ffmpeg = ffmpegRef.current;
 
-      let content = "";
-      for (let i = 0; i < tracks.length; i++) {
-        const name = `input_${i}.mp4`;
-        const mediaRef = tracks[i]!.s3Url ?? tracks[i]!.s3Key;
-        const downloadUrl = await resolveTrackDownloadUrl(trpcClient, mediaRef);
-        if (!downloadUrl) throw new Error(`Could not resolve download URL for track ${i + 1}`);
-        const data = await fetchFile(downloadUrl);
-        await ffmpeg.writeFile(name, data);
-        content += `file '${name}'\n`;
-      }
+      const content = await writeTracksToFfmpeg(ffmpeg, tracks);
 
       await ffmpeg.writeFile("concat_list.txt", new TextEncoder().encode(content));
       const audioFilters: string[] = [];
@@ -214,10 +231,7 @@ export default function ExportSessionPage() {
 
       await downloadFile(ffmpeg, "output.mp4", `session-${sessionId.slice(-8)}-merged.mp4`);
 
-      for (let i = 0; i < tracks.length; i++) {
-        await ffmpeg.deleteFile(`input_${i}.mp4`);
-      }
-      await ffmpeg.deleteFile("concat_list.txt");
+      await removeTrackInputs(ffmpeg, tracks.length);
 
       setProcessingStatus("done");
     } catch (err) {
@@ -251,18 +265,8 @@ export default function ExportSessionPage() {
         await loadFfmpeg();
         const ffmpeg = ffmpegRef.current;
 
-        let content = "";
         const scale = resolution === "720p" ? "1280:720" : "1920:1080";
-
-        for (let i = 0; i < tracks.length; i++) {
-          const name = `input_${i}.mp4`;
-          const mediaRef = tracks[i]!.s3Url ?? tracks[i]!.s3Key;
-          const downloadUrl = await resolveTrackDownloadUrl(trpcClient, mediaRef);
-          if (!downloadUrl) throw new Error(`Could not resolve download URL for track ${i + 1}`);
-          const data = await fetchFile(downloadUrl);
-          await ffmpeg.writeFile(name, data);
-          content += `file '${name}'\n`;
-        }
+        const content = await writeTracksToFfmpeg(ffmpeg, tracks);
 
         await ffmpeg.writeFile("concat_list.txt", new TextEncoder().encode(content));
         const audioFilters: string[] = [];
@@ -298,10 +302,7 @@ export default function ExportSessionPage() {
           `session-${sessionId.slice(-8)}-${resolution}.mp4`,
         );
 
-        for (let i = 0; i < tracks.length; i++) {
-          await ffmpeg.deleteFile(`input_${i}.mp4`);
-        }
-        await ffmpeg.deleteFile("concat_list.txt");
+        await removeTrackInputs(ffmpeg, tracks.length);
 
         setProcessingStatus("done");
       } catch (err) {
@@ -338,16 +339,7 @@ export default function ExportSessionPage() {
         const ffmpeg = ffmpegRef.current;
         const scale = DEMO_ASPECT_SCALES[preset];
 
-        let content = "";
-        for (let i = 0; i < tracks.length; i++) {
-          const name = `input_${i}.mp4`;
-          const mediaRef = tracks[i]!.s3Url ?? tracks[i]!.s3Key;
-          const downloadUrl = await resolveTrackDownloadUrl(trpcClient, mediaRef);
-          if (!downloadUrl) throw new Error(`Could not resolve download URL for track ${i + 1}`);
-          const data = await fetchFile(downloadUrl);
-          await ffmpeg.writeFile(name, data);
-          content += `file '${name}'\n`;
-        }
+        const content = await writeTracksToFfmpeg(ffmpeg, tracks);
 
         await ffmpeg.writeFile("concat_list.txt", new TextEncoder().encode(content));
         const audioFilters: string[] = [];
@@ -383,10 +375,7 @@ export default function ExportSessionPage() {
           `demo-${sessionId.slice(-8)}-${preset.replace(":", "x")}.mp4`,
         );
 
-        for (let i = 0; i < tracks.length; i++) {
-          await ffmpeg.deleteFile(`input_${i}.mp4`);
-        }
-        await ffmpeg.deleteFile("concat_list.txt");
+        await removeTrackInputs(ffmpeg, tracks.length);
 
         setProcessingStatus("done");
       } catch (err) {
@@ -507,10 +496,9 @@ export default function ExportSessionPage() {
 
       if (keepRanges.length === 0) throw new Error("Cannot cut entire video");
 
-      // Trim to each keep range using concat
-      let concatContent = "";
-      for (let i = 0; i < keepRanges.length; i++) {
-        const r = keepRanges[i]!;
+      // Trim each keep range sequentially (ffmpeg single input), then concat
+      const keepNames = await keepRanges.reduce<Promise<string[]>>(async (namesPromise, r, i) => {
+        const names = await namesPromise;
         const name = `keep_${i}.mp4`;
         await ffmpeg.exec([
           "-i",
@@ -523,9 +511,10 @@ export default function ExportSessionPage() {
           "copy",
           name,
         ]);
-        concatContent += `file '${name}'\n`;
-      }
+        return [...names, name];
+      }, Promise.resolve([]));
 
+      const concatContent = keepNames.map((name) => `file '${name}'\n`).join("");
       await ffmpeg.writeFile("concat_list.txt", new TextEncoder().encode(concatContent));
       await ffmpeg.exec([
         "-f",
@@ -541,11 +530,11 @@ export default function ExportSessionPage() {
 
       await downloadFile(ffmpeg, "output.mp4", `session-${sessionId.slice(-8)}-edited.mp4`);
 
-      await ffmpeg.deleteFile("input.mp4");
-      for (let i = 0; i < keepRanges.length; i++) {
-        await ffmpeg.deleteFile(`keep_${i}.mp4`);
-      }
-      await ffmpeg.deleteFile("concat_list.txt");
+      await Promise.all([
+        ffmpeg.deleteFile("input.mp4"),
+        ...keepNames.map((name) => ffmpeg.deleteFile(name)),
+        ffmpeg.deleteFile("concat_list.txt"),
+      ]);
 
       setProcessingStatus("done");
       clearCutSegments();

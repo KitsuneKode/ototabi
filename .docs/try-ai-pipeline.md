@@ -5,36 +5,31 @@ Prerequisites: PostgreSQL, Redis, MinIO (or S3), `OPENAI_API_KEY`, and **ffmpeg*
 ## 1. Infrastructure
 
 ```bash
-# From repo root — adjust if you use docker-compose elsewhere
-export REDIS_URL=redis://localhost:6379
-export DATABASE_URL=postgresql://...
-export OPENAI_API_KEY=sk-...
-# MinIO / S3 (see .env.example)
-export MINIO_ENDPOINT=http://localhost:9000
-export MINIO_ACCESS_KEY=...
-export MINIO_SECRET_KEY=...
-export MINIO_BUCKET_NAME=ototabi
+docker compose up -d
+cp .env.example .env   # if you have not already
+# Edit .env: DATABASE_URL, OPENAI_API_KEY, LiveKit, and S3 vars (see .docs/quick-start.md)
+bun run db:migrate       # prisma migrate deploy
 ```
 
-```bash
-bun run db:migrate   # runs prisma migrate deploy
-```
+Use the same S3 bucket name as `docker-compose` init: **`ototabi-recordings`** (`AWS_S3_BUCKET_NAME` in `.env.example`).
 
 ## 2. Start services
 
-Terminal A — API + client (your usual dev command):
+From repo root (Turbo runs **client**, **api**, and **worker** together):
 
 ```bash
-bun run dev
+bun dev
 ```
 
-Terminal B — BullMQ worker:
+Install **ffmpeg** on your machine for 9:16 export jobs (`ffmpeg -version`). Worker logs will fail export jobs without it.
+
+Worker-only terminal (optional, if you filtered Turbo):
 
 ```bash
 cd apps/worker && bun run dev
 ```
 
-Worker queues: `transcript` → `llm` → `clips`, and `export` for 9:16 renders.
+Queues: `transcript` → `llm` → `clips`, and `export` for 9:16 renders.
 
 Docker worker (includes ffmpeg):
 
@@ -65,5 +60,5 @@ docker run --env-file .env ototabi-worker
 ## 5. Verification commands
 
 ```bash
-bun fmt && bun lint && bun typecheck && bun run test
+bun run check   # fmt:check + lint + typecheck + test
 ```

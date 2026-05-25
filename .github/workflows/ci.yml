@@ -59,16 +59,16 @@ jobs:
         run: bun lint
 
       - name: Generate Prisma client
-        run: turbo run db:generate
+        run: bun run db:generate
 
       - name: Run migrations
         run: cd packages/store && bun run prisma migrate deploy
 
       - name: Type check (affected only)
-        run: turbo run typecheck --affected
+        run: bunx turbo run typecheck --affected
 
       - name: Build (affected only)
-        run: turbo run build --affected
+        run: bunx turbo run build --affected
 
       - name: Test
         run: bun run test
