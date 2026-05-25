@@ -111,6 +111,47 @@ Shipped: `readiness.ts` + tests, `/chat/[roomId]/preflight`, recording consent o
 
 ---
 
+## Wave 2 Stream 3 — Session health panel (PR3)
+
+| Field             | Value                                                |
+| ----------------- | ---------------------------------------------------- |
+| **Wave / stream** | Wave 2 — Session health panel (after studio trust)   |
+| **Branch**        | `feat/parity-stream3-health` (local)                 |
+| **Plan refs**     | `.plans/28` §7, parity subagent plan Wave 2 Stream 3 |
+
+### Scope
+
+Shipped: studio sidebar **Health** tab with per-participant link/upload/consent/recovery rows; `rooms.getStudioHealth` for server consent snapshot; pure `studio-health.mapper` + tests; client merge of LiveKit roster, upload progress map, local OPFS pending count, and device labels from join params.
+
+Out of scope: export page, usage module, demo editor, timeline MVP.
+
+### Files touched
+
+- `apps/client/app/(site)/chat/[roomId]/page.tsx` — Health tab + `StudioHealthPanel`
+- `apps/client/components/studio/studio-health-panel.tsx` (new)
+- `packages/trpc/src/modules/rooms/studio-health.mapper.ts`, `.test.ts`
+- `packages/trpc/src/modules/rooms/rooms.service.ts`, `rooms.router.ts`, `rooms.repository.ts`
+- `packages/trpc/package.json` — export `@ototabi/trpc/studio-health`
+- `.docs/subagent-handoff.md`, `.docs/try-studio-trust-smoke.md`
+
+### Tests added / updated
+
+| Package         | Tests                                                                |
+| --------------- | -------------------------------------------------------------------- |
+| `@ototabi/trpc` | `studio-health.mapper.test.ts` — consent, upload, recovery, identity |
+
+**Gate:** `bun fmt && bun lint && bun typecheck && bun run test`
+
+### Smoke steps
+
+[try-studio-trust-smoke.md](./try-studio-trust-smoke.md) — section 6 (session health panel).
+
+### Blockers for Wave 2 Stream 4
+
+- None from health panel. Export polish can proceed in parallel on `export/[sessionId]/page.tsx`.
+
+---
+
 ## Wave 1 Stream 1 — Billing & usage caps
 
 | Field             | Value                                                          |

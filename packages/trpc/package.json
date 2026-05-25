@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./simp": "./src/simple.ts",
-    "./enter-studio": "./src/modules/rooms/enter-studio.ts"
+    "./enter-studio": "./src/modules/rooms/enter-studio.ts",
+    "./studio-health": "./src/modules/rooms/studio-health.mapper.ts"
   },
   "scripts": {
     "test": "bun test"

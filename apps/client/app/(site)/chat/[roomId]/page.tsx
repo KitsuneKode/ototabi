@@ -14,6 +14,7 @@ import { SessionStatusRail } from "@/components/layout/session-status-rail";
 import { StudioShell } from "@/components/layout/studio-shell";
 import { StudioChatPanel } from "@/components/studio/studio-chat-panel";
 import { StudioControlDeck } from "@/components/studio/studio-control-deck";
+import { StudioHealthPanel } from "@/components/studio/studio-health-panel";
 import { StudioParticipantRoster } from "@/components/studio/studio-participant-roster";
 import { StudioRecordingConsent } from "@/components/studio/studio-recording-consent";
 import { StudioVideoGrid } from "@/components/studio/studio-video-grid";
@@ -69,7 +70,7 @@ function StudioPageContent() {
       }
     >
   >(new Map());
-  const [sidebarTab, setSidebarTab] = useState<"uploads" | "chat">("uploads");
+  const [sidebarTab, setSidebarTab] = useState<"health" | "uploads" | "chat">("health");
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [consentOpen, setConsentOpen] = useState(false);
@@ -615,6 +616,16 @@ function StudioPageContent() {
             {/* Tab bar */}
             <div className="border-border flex shrink-0 border-b">
               <button
+                onClick={() => setSidebarTab("health")}
+                className={`flex-1 py-2 text-[10px] font-bold tracking-widest uppercase transition-colors ${
+                  sidebarTab === "health"
+                    ? "bg-popover text-foreground border-accent border-b-2"
+                    : "bg-card text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Health
+              </button>
+              <button
                 onClick={() => setSidebarTab("uploads")}
                 className={`flex-1 py-2 text-[10px] font-bold tracking-widest uppercase transition-colors ${
                   sidebarTab === "uploads"
@@ -645,7 +656,24 @@ function StudioPageContent() {
               onBroadcastMuteRequest={broadcastMuteRequest}
             />
 
-            {sidebarTab === "uploads" ? (
+            {sidebarTab === "health" ? (
+              <StudioHealthPanel
+                roomDbId={roomDetails.id}
+                localUserId={sessionUser.id}
+                localUserEmail={sessionUser.email}
+                localRole={sessionRole}
+                isRecording={isRecording}
+                localConnectionHealth={connectionHealth}
+                uploadProgress={Array.from(progressMap.entries()).map(([, data]) => ({
+                  name: data.name,
+                  progress: data.progress,
+                  uploadedParts: data.uploadedParts,
+                  totalParts: data.totalParts,
+                }))}
+                micDeviceId={micId}
+                camDeviceId={camId}
+              />
+            ) : sidebarTab === "uploads" ? (
               <div className="flex-1 overflow-y-auto p-4">
                 {canControlStudio ? (
                   <>

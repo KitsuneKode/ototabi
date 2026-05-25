@@ -45,6 +45,20 @@ Riverside parity **Wave 1 Stream 2** (Plan 13 Phase 2). Verifies preflight, cons
 3. **Remove** on guest → participant row removed server-side (`rooms.removeGuest`).
 4. **REC** indicator visible to all participants while session is recording (not host-only).
 
+## 6. Session health panel
+
+1. Host and guest in studio (`preflight=done`).
+2. Open sidebar → **Health** tab (default).
+3. Each connected participant shows:
+   - **Link** — LIVE / SYNC / LOST for local; connected for remotes in room
+   - **Upload** — idle until `upload_progress` data messages; then uploading / complete
+   - **Consent** — pending while recording until `rooms.acknowledgeRecordingConsent`; then Consented
+   - **Recovery** — local row shows **OPFS recovery** when IndexedDB `uploadSessions` has pending tracks (simulate by interrupting upload mid-session)
+4. Local row **device** line reflects mic/cam from join URL (`micId` / `camId` labels when enumerated).
+5. Switch to **Uploads** tab — existing queue UI unchanged.
+
+**API check:** `rooms.getStudioHealth` returns `participants[]` with `hasRecordingConsent` per room participant.
+
 ## 5. Automated tests
 
 ```bash
@@ -55,6 +69,7 @@ bun fmt && bun lint && bun typecheck && bun run test
 | ------- | ---------------------------------------------------------------------- |
 | client  | `apps/client/lib/studio/readiness.test.ts`                             |
 | trpc    | `packages/trpc/src/modules/rooms/rooms.policy.test.ts`                 |
+| trpc    | `packages/trpc/src/modules/rooms/studio-health.mapper.test.ts`         |
 | trpc    | `packages/trpc/src/modules/rooms/enter-studio.test.ts` (no regression) |
 
 ## Sign-off
@@ -63,4 +78,5 @@ bun fmt && bun lint && bun typecheck && bun run test
 - [ ] Consent blocks local capture until ack; persisted per participant
 - [ ] Co-host admit + record controls work
 - [ ] Mute request + remove guest + REC for all
+- [ ] Health tab shows per-participant link, upload, consent, recovery, devices
 - [ ] `bun run check` green on integration branch
