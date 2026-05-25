@@ -186,13 +186,32 @@ describe("roomsPolicy", () => {
     ).toEqual({ allowed: false, message: "Host denied your join request" });
   });
 
-  test("only host or room host member can manage join requests and lock", () => {
+  test("canControlStudio allows creator and host role members", () => {
     const room = { creatorId: "creator-1" };
 
-    expect(roomsPolicy.canToggleRoomLock(room, "creator-1")).toBe(true);
-    expect(roomsPolicy.canToggleRoomLock(room, "other-1")).toBe(false);
-    expect(roomsPolicy.canManageJoinRequests({ role: "host" }, room, "member-1")).toBe(true);
-    expect(roomsPolicy.canManageJoinRequests(null, room, "creator-1")).toBe(true);
-    expect(roomsPolicy.canManageJoinRequests({ role: "editor" }, room, "member-1")).toBe(false);
+    expect(roomsPolicy.canControlStudio(null, room, "creator-1")).toBe(true);
+    expect(roomsPolicy.canControlStudio({ role: "host" }, room, "cohost-1")).toBe(true);
+    expect(roomsPolicy.canControlStudio({ role: "editor" }, room, "editor-1")).toBe(false);
+    expect(roomsPolicy.canControlStudio(null, room, "guest-1")).toBe(false);
+  });
+
+  test("co-host can manage join requests, lock, remove guest, and mute request", () => {
+    const room = { creatorId: "creator-1" };
+    const cohost = { role: "host" as const };
+
+    expect(roomsPolicy.canManageJoinRequests(cohost, room, "cohost-1")).toBe(true);
+    expect(roomsPolicy.canToggleRoomLock(cohost, room, "cohost-1")).toBe(true);
+    expect(roomsPolicy.canRemoveGuest(cohost, room, "cohost-1")).toBe(true);
+    expect(roomsPolicy.canRequestMute(cohost, room, "cohost-1")).toBe(true);
+  });
+
+  test("editor cannot control studio", () => {
+    const room = { creatorId: "creator-1" };
+    const editor = { role: "editor" as const };
+
+    expect(roomsPolicy.canManageJoinRequests(editor, room, "editor-1")).toBe(false);
+    expect(roomsPolicy.canToggleRoomLock(editor, room, "editor-1")).toBe(false);
+    expect(roomsPolicy.canRemoveGuest(editor, room, "editor-1")).toBe(false);
+    expect(roomsPolicy.canRequestMute(editor, room, "editor-1")).toBe(false);
   });
 });

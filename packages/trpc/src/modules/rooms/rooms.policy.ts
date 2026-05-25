@@ -98,7 +98,7 @@ export const roomsPolicy = {
     return { allowed: false, message: "Room is locked" };
   },
 
-  canManageJoinRequests(
+  canControlStudio(
     member: { role: string } | null,
     room: { creatorId: string },
     userId: string,
@@ -106,7 +106,35 @@ export const roomsPolicy = {
     return room.creatorId === userId || member?.role === "host";
   },
 
-  canToggleRoomLock(room: { creatorId: string }, userId: string): boolean {
-    return room.creatorId === userId;
+  canManageJoinRequests(
+    member: { role: string } | null,
+    room: { creatorId: string },
+    userId: string,
+  ): boolean {
+    return roomsPolicy.canControlStudio(member, room, userId);
+  },
+
+  canToggleRoomLock(
+    member: { role: string } | null,
+    room: { creatorId: string },
+    userId: string,
+  ): boolean {
+    return roomsPolicy.canControlStudio(member, room, userId);
+  },
+
+  canRemoveGuest(
+    member: { role: string } | null,
+    room: { creatorId: string },
+    userId: string,
+  ): boolean {
+    return roomsPolicy.canControlStudio(member, room, userId);
+  },
+
+  canRequestMute(
+    member: { role: string } | null,
+    room: { creatorId: string },
+    userId: string,
+  ): boolean {
+    return roomsPolicy.canControlStudio(member, room, userId);
   },
 };

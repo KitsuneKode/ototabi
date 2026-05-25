@@ -15,6 +15,7 @@ import { StudioShell } from "@/components/layout/studio-shell";
 import { StudioChatPanel } from "@/components/studio/studio-chat-panel";
 import { StudioControlDeck } from "@/components/studio/studio-control-deck";
 import { StudioParticipantRoster } from "@/components/studio/studio-participant-roster";
+import { StudioRecordingConsent } from "@/components/studio/studio-recording-consent";
 import { StudioVideoGrid } from "@/components/studio/studio-video-grid";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { KeyboardShortcutsOverlay } from "@/components/ui/keyboard-shortcuts-overlay";
@@ -37,6 +38,7 @@ function StudioPageContent() {
   const videoEnabled = searchParams.get("videoEnabled") === "true";
   const screenShareEnabled = searchParams.get("screenShareEnabled") === "true";
   const inviteToken = searchParams.get("invite") || "";
+  const preflightDone = searchParams.get("preflight") === "done";
   const micId = searchParams.get("micId") || "";
   const camId = searchParams.get("camId") || "";
 
@@ -70,6 +72,9 @@ function StudioPageContent() {
   const [sidebarTab, setSidebarTab] = useState<"uploads" | "chat">("uploads");
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [consentOpen, setConsentOpen] = useState(false);
+  const [pendingRemoteSessionId, setPendingRemoteSessionId] = useState<string | null>(null);
+  const consentResolverRef = useRef<((granted: boolean) => void) | null>(null);
 
   const activeSessionIdRef = useRef<string | null>(null);
 
@@ -91,6 +96,21 @@ function StudioPageContent() {
   );
   const roomDetails = roomInfo.data;
 
+  const studioContext = useQuery(
+    trpc.rooms.getStudioContext.queryOptions(
+      { roomId: roomDetails?.id ?? "" },
+      { enabled: !!roomDetails?.id },
+    ),
+  );
+  const hasRecordingConsent = studioContext.data?.hasRecordingConsent ?? false;
+  const canControlStudio = studioContext.data?.canControlStudio ?? false;
+
+  const consentMutation = useMutation(
+    trpc.rooms.acknowledgeRecordingConsent.mutationOptions({
+      onSuccess: () => studioContext.refetch(),
+    }),
+  );
+
   const startSessionMutation = useMutation(trpc.rooms.startRecordingSession.mutationOptions());
   const stopSessionMutation = useMutation(trpc.rooms.stopRecordingSession.mutationOptions());
   const leaveRoomMutation = useMutation(trpc.rooms.leaveRoom.mutationOptions());
@@ -108,6 +128,29 @@ function StudioPageContent() {
   useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
   }, [activeSessionId]);
+
+  useEffect(() => {
+    if (!roomId || preflightDone) return;
+    const params = new URLSearchParams(searchParams.toString());
+    router.replace(`/chat/${roomId}/preflight?${params.toString()}`);
+  }, [roomId, preflightDone, router, searchParams]);
+
+  const ensureRecordingConsent = useCallback(async (): Promise<boolean> => {
+    if (hasRecordingConsent) return true;
+    return new Promise((resolve) => {
+      consentResolverRef.current = resolve;
+      setConsentOpen(true);
+    });
+  }, [hasRecordingConsent]);
+
+  useEffect(() => {
+    if (!hasRecordingConsent || !pendingRemoteSessionId) return;
+    const sessionId = pendingRemoteSessionId;
+    setPendingRemoteSessionId(null);
+    void recorderManagerRef.current?.current?.startRecording(sessionId).catch((err) => {
+      console.error("Deferred remote recording failed:", err);
+    });
+  }, [hasRecordingConsent, pendingRemoteSessionId]);
 
   const room = useRef(
     new Room({
@@ -128,6 +171,16 @@ function StudioPageContent() {
       },
     } as RoomOptions),
   ).current;
+
+  const broadcastMuteRequest = useCallback(
+    (targetUserId: string) => {
+      const payload = new TextEncoder().encode(
+        JSON.stringify({ type: "mute_request", targetUserId }),
+      );
+      void room.localParticipant.publishData(payload, { reliable: true });
+    },
+    [room],
+  );
 
   useEffect(() => {
     if (!isRecording || isPaused || !activeSessionId) return;
@@ -156,7 +209,20 @@ function StudioPageContent() {
         if (data.type === "start_recording") {
           setActiveSessionId(data.sessionId);
           setIsRecording(true);
-          void recorderManagerRef.current?.current?.startRecording(data.sessionId);
+          void (async () => {
+            const ok = await ensureRecordingConsent();
+            if (!ok) {
+              setPendingRemoteSessionId(data.sessionId);
+              return;
+            }
+            try {
+              await recorderManagerRef.current?.current?.startRecording(data.sessionId);
+            } catch (err) {
+              console.error("Remote recording start failed:", err);
+            }
+          })();
+        } else if (data.type === "mute_request" && data.targetUserId === sessionUser?.id) {
+          void room.localParticipant.setMicrophoneEnabled(false);
         } else if (data.type === "stop_recording") {
           setIsRecording(false);
           void recorderManagerRef.current?.current?.stopRecording();
@@ -185,7 +251,7 @@ function StudioPageContent() {
         // ignore malformed payloads
       }
     },
-    [],
+    [ensureRecordingConsent, sessionUser?.id, room],
   );
 
   const connection = useStudioConnection({
@@ -212,6 +278,7 @@ function StudioPageContent() {
     onLeaveRoom: (dbRoomId) => {
       leaveRoomMutateRef.current({ roomId: dbRoomId });
     },
+    assertRecordingConsent: ensureRecordingConsent,
   });
 
   const recorderManager = connection.recorderManager;
@@ -220,7 +287,9 @@ function StudioPageContent() {
   const connectionError = connection.connectionMessage || connection.error;
 
   const handleStartRecording = async () => {
-    if (!roomDetails) return;
+    if (!roomDetails || !canControlStudio) return;
+    const consented = await ensureRecordingConsent();
+    if (!consented) return;
     try {
       const session = await startSessionMutation.mutateAsync({
         roomId: roomDetails.id,
@@ -254,10 +323,33 @@ function StudioPageContent() {
     }
   };
 
-  const isHost = roomDetails && sessionUser && roomDetails.creatorId === sessionUser.id;
+  const isCreator = roomDetails && sessionUser && roomDetails.creatorId === sessionUser.id;
+
+  const handleConsentAccept = async () => {
+    if (!roomDetails?.id) return;
+    try {
+      await consentMutation.mutateAsync({ roomId: roomDetails.id });
+      setConsentOpen(false);
+      consentResolverRef.current?.(true);
+      consentResolverRef.current = null;
+    } catch (err) {
+      console.error("Consent save failed:", err);
+    }
+  };
+
+  const handleConsentDecline = () => {
+    setConsentOpen(false);
+    consentResolverRef.current?.(false);
+    consentResolverRef.current = null;
+    setPendingRemoteSessionId(null);
+  };
 
   useKeyboardShortcuts({
-    toggleRecording: () => (isRecording ? handleStopRecording() : handleStartRecording()),
+    toggleRecording: () => {
+      if (!canControlStudio) return;
+      if (isRecording) void handleStopRecording();
+      else void handleStartRecording();
+    },
     toggleMute: () =>
       room.localParticipant.setMicrophoneEnabled(!room.localParticipant.isMicrophoneEnabled),
     toggleVideo: () =>
@@ -358,10 +450,10 @@ function StudioPageContent() {
                   Join Code: <span className="text-foreground">{roomDetails.code}</span>
                   {" | "}Op: {operatorLabel}
                 </MonoLabel>
-                {isHost && (
+                {canControlStudio && (
                   <StatusBadge variant="ok" className="text-[10px]">
                     <LedInline color="green" size="sm" />
-                    HOST
+                    {isCreator ? "HOST" : "CO-HOST"}
                   </StatusBadge>
                 )}
               </div>
@@ -418,7 +510,7 @@ function StudioPageContent() {
               </AnalogInset>
             )}
 
-            {isHost && (
+            {canControlStudio && (
               <div className="flex items-center gap-2">
                 {!isRecording ? (
                   <Button
@@ -545,14 +637,17 @@ function StudioPageContent() {
             </div>
 
             <StudioParticipantRoster
+              roomDbId={roomDetails.id}
               localUserName={sessionUser?.name ?? ""}
               localUserEmail={sessionUser?.email}
               localRole={sessionRole}
+              canControlStudio={canControlStudio}
+              onBroadcastMuteRequest={broadcastMuteRequest}
             />
 
             {sidebarTab === "uploads" ? (
               <div className="flex-1 overflow-y-auto p-4">
-                {isHost ? (
+                {canControlStudio ? (
                   <>
                     <PanelTitle
                       label="Track Upload Queues"
@@ -670,6 +765,12 @@ function StudioPageContent() {
         </footer>
 
         <KeyboardShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+        <StudioRecordingConsent
+          open={consentOpen}
+          onAccept={() => void handleConsentAccept()}
+          onDecline={handleConsentDecline}
+          loading={consentMutation.isPending}
+        />
       </StudioShell>
     </RoomContext.Provider>
   );

@@ -180,7 +180,7 @@ function RoomJoinPageContent() {
       camId: selectedCam,
     });
     if (inviteToken) params.set("invite", inviteToken);
-    router.push(`/chat/${roomId}?${params.toString()}`);
+    router.push(`/chat/${roomId}/preflight?${params.toString()}`);
   }, [
     audioEnabled,
     videoEnabled,

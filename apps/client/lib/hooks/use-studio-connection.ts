@@ -22,6 +22,7 @@ type ConnectionParams = {
   onDataReceived: (payload: Uint8Array, participant?: { identity?: string }) => void;
   onReconnected: () => void;
   onLeaveRoom: (roomDbId: string) => void;
+  assertRecordingConsent?: () => Promise<boolean>;
 };
 
 export function useStudioConnection(params: ConnectionParams) {
@@ -122,7 +123,10 @@ export function useStudioConnection(params: ConnectionParams) {
         if (params.audioEnabled) await room.localParticipant.setMicrophoneEnabled(true);
         if (params.screenShareEnabled) await room.localParticipant.setScreenShareEnabled(true);
 
-        recorderManager.current = new RecorderManager({ room });
+        recorderManager.current = new RecorderManager({
+          room,
+          assertRecordingConsent: params.assertRecordingConsent,
+        });
       } catch (err: unknown) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "Failed to connect to studio");
@@ -147,6 +151,7 @@ export function useStudioConnection(params: ConnectionParams) {
     params.videoEnabled,
     params.screenShareEnabled,
     params.room,
+    params.assertRecordingConsent,
   ]);
 
   const roomDbId = params.roomDbId;

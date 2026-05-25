@@ -56,8 +56,58 @@ What Wave N+1 needs from this stream (schema, env, product decision).
 | Stream              | Blocker                                                                                                                                      |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Billing / usage** | Trial session cap (3) and Creator 10 clips/month need usage counter + schema; client export must read `billing.getSubscription` for Trial UI |
-| **Studio trust**    | Preflight route + consent UI not built; health panel placeholder only — depends on `apps/client/lib/studio/readiness.ts` (Wave 1 Stream 2)   |
+| **Studio trust**    | **Stream 2 shipped** — see section below. Wave 2 health panel still blocked on merging PR2 first.                                            |
 | **Shared**          | `DODO_PAYMENTS_API_KEY` unset → `shouldBypassPlanGates()` skips server plan checks (dev only)                                                |
+
+---
+
+## Wave 1 Stream 2 — Studio trust (PR2)
+
+| Field             | Value                                                         |
+| ----------------- | ------------------------------------------------------------- |
+| **Wave / stream** | Wave 1 — Studio trust (preflight, consent, co-host, controls) |
+| **Branch**        | `feat/parity-stream2-studio-trust` (local)                    |
+| **Plan refs**     | `.plans/13`, `.plans/28` §7                                   |
+
+### Scope
+
+Shipped: `readiness.ts` + tests, `/chat/[roomId]/preflight`, recording consent on `RoomParticipant.recordingConsentedAt`, `canControlStudio` policy, co-host lock/admit/remove/mute-request APIs, studio UI (consent modal, REC for all, roster host controls). Out of scope: session health panel (Wave 2), usage/billing, export page.
+
+### Files touched
+
+- `apps/client/lib/studio/readiness.ts`, `readiness.test.ts`
+- `apps/client/app/(site)/chat/[roomId]/preflight/page.tsx`
+- `apps/client/components/studio/studio-recording-consent.tsx`
+- `apps/client/components/studio/studio-participant-roster.tsx`
+- `apps/client/app/(site)/chat/[roomId]/page.tsx`
+- `apps/client/app/(site)/rooms/[roomId]/join/page.tsx` (redirect via preflight)
+- `apps/client/lib/recorder/recorder-manager.ts`, `lib/hooks/use-studio-connection.ts`
+- `packages/store/prisma/schema.prisma` + migration `20260526180000_room_participant_recording_consent`
+- `packages/trpc/src/modules/rooms/rooms.policy.ts`, `.test.ts`, `rooms.service.ts`, `rooms.router.ts`, `rooms.repository.ts`
+- `.docs/try-studio-trust-smoke.md`, `.docs/subagent-handoff.md`
+
+### Tests added / updated
+
+| Package           | Notes                                                |
+| ----------------- | ---------------------------------------------------- |
+| `@ototabi/client` | `readiness.test.ts` — 9 tests                        |
+| `@ototabi/trpc`   | `rooms.policy.test.ts` — +3 co-host / editor cases   |
+| `@ototabi/trpc`   | `enter-studio.test.ts` — unchanged (regression only) |
+
+**Gate:** `bun fmt && bun lint && bun typecheck && bun run test`
+
+### Smoke steps
+
+[try-studio-trust-smoke.md](./try-studio-trust-smoke.md) — preflight warn/block, consent before capture, co-host admit/record, mute/remove/REC.
+
+### Blockers for Wave 2 (health panel)
+
+| Blocker      | Detail                                                                                                                            |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| Merge order  | PR2 must merge before editing `chat/[roomId]/page.tsx` for health sidebar                                                         |
+| Data sources | Health panel needs upload queue (existing progress map), consent from `getStudioContext`, connection from LiveKit — no new schema |
+| Optional API | `rooms.getStudioHealth` or extend studio poll — not added in Stream 2                                                             |
+| Mapper tests | Plan suggests `studio-health.mapper.test.ts` when aggregating events — Wave 2 deliverable                                         |
 
 ---
 
