@@ -1,171 +1,96 @@
 "use client";
-import { authClient } from "@ototabi/auth/client";
-import { Button } from "@ototabi/ui/components/button";
-import { Input } from "@ototabi/ui/components/input";
-import { Label } from "@ototabi/ui/components/label";
-import { useQuery } from "@tanstack/react-query";
-import React, { useReducer, useState } from "react";
 
-import { useTRPC } from "@/trpc/client";
+import Link from "next/link";
 
-const defaultFormValue = {
-  email: "",
-  name: "",
-  password: "",
-};
+import { ProductShell } from "@/components/layout/product-shell";
+import { SiteFooter } from "@/components/layout/site-footer";
+import { SiteHeader } from "@/components/layout/site-header";
+import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
+import { AnalogReveal } from "@/components/ui/analog-reveal";
+import { LedInline } from "@/components/ui/led";
+import { MechButton, MonoLabel, PanelTitle } from "@/components/ui/retro-primitives";
 
-enum ActionKind {
-  EMAIL = "email",
-  NAME = "name",
-  PASSWORD = "password",
-}
-interface Action {
-  type: ActionKind;
-  value: string;
-}
+const DEMO_STEPS = [
+  {
+    step: "01",
+    title: "Create a room",
+    body: "Sign in, open the dashboard, and spin up a studio with an invite link for guests.",
+    href: "/dashboard",
+    cta: "Open dashboard",
+  },
+  {
+    step: "02",
+    title: "Record locally",
+    body: "Each participant captures high-quality tracks in the browser while LiveKit handles realtime AV.",
+    href: "/auth/signup",
+    cta: "Start free",
+  },
+  {
+    step: "03",
+    title: "Review & export",
+    body: "Session review bundles tracks, timeline, and transcript in one pass — then master in the export console.",
+    href: "/pricing",
+    cta: "See pricing",
+  },
+] as const;
 
-/**
- * Updates the form state for authentication inputs based on the dispatched action.
- *
- * @param state - The current form state containing email, name, and password fields.
- * @param action - The action specifying which field to update and its new value.
- * @returns The updated form state with the specified field changed.
- * @throws Error if an invalid action type is provided.
- */
-function reducer(state: typeof defaultFormValue, action: Action) {
-  switch (action.type) {
-    case "email":
-      return { ...state, email: action.value };
-    case "name":
-      return { ...state, name: action.value };
-    case "password":
-      return { ...state, password: action.value };
-    default:
-      throw new Error("Invalid action type");
-  }
-}
-
-const Demo = () => {
-  const trpc = useTRPC();
-  const [signInState, setSignInState] = useState(false);
-  const [signOutState, setSignOutState] = useState(false);
-  const [state, dispatch] = useReducer(reducer, defaultFormValue);
-  const data = useQuery(trpc.auth.getSecretMessage.queryOptions());
-
-  const authState = useQuery(trpc.auth.getSession.queryOptions());
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log(state);
-    const { data, error } = await authClient.signUp.email({
-      email: state.email,
-      name: state.name,
-      password: state.password,
-    });
-    console.log(data, error);
-    if (data?.user) {
-      setSignInState(true);
-    }
-  };
-
-  const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log(state);
-    const { data, error } = await authClient.signIn.email({
-      email: state.email,
-      password: state.password,
-    });
-    console.log(data, error);
-    if (data?.user) {
-      setSignInState(false);
-      setSignOutState(true);
-    }
-  };
-
-  const handleSignOut = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log(state);
-    const { data, error } = await authClient.signOut();
-    console.log(data, error);
-    if (data) {
-      setSignOutState(false);
-    }
-  };
-
+export default function DemoPage() {
   return (
-    <>
-      <div className="mb-10 flex items-center justify-center">
-        <h1>{data.isLoading && "Loading..."}</h1>
-        {data && <p>{JSON.stringify(data.data, null, 2)}</p>}
-        {authState.data && <p>{JSON.stringify(authState.data.user.name, null, 2)}</p>}
-      </div>
+    <ProductShell>
+      <SiteHeader />
+      <section className="border-border scroll-mt-24 border-b py-16 md:py-24">
+        <AnalogReveal>
+          <div className="mb-12 max-w-2xl">
+            <MonoLabel>Product walkthrough</MonoLabel>
+            <h1 className="mt-2 text-4xl font-bold tracking-tight text-balance uppercase md:text-5xl">
+              From invite to master tape
+            </h1>
+            <p className="text-muted-foreground mt-4 max-w-xl text-base leading-relaxed text-pretty">
+              A three-step flow through Ototabi — local-first recording, Retro Analog studio UX, and
+              browser-based post-production.
+            </p>
+          </div>
+        </AnalogReveal>
 
-      {!signInState && !signOutState && (
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col items-center justify-center gap-4 space-y-4"
-        >
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="Email"
-            value={state.email}
-            onChange={(e) => dispatch({ type: ActionKind.EMAIL, value: e.target.value })}
-          />
-          <Label htmlFor="name">Name</Label>
-          <Input
-            id="name"
-            type="text"
-            placeholder="Name"
-            value={state.name}
-            onChange={(e) => dispatch({ type: ActionKind.NAME, value: e.target.value })}
-          />
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="Password"
-            value={state.password}
-            onChange={(e) => dispatch({ type: ActionKind.PASSWORD, value: e.target.value })}
-          />
-          <Button type="submit">Submit</Button>
-        </form>
-      )}
-      {signInState && !signOutState && (
-        <form
-          onSubmit={handleSignIn}
-          className="flex flex-col items-center justify-center gap-4 space-y-4"
-        >
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="Email"
-            value={state.email}
-            onChange={(e) => dispatch({ type: ActionKind.EMAIL, value: e.target.value })}
-          />
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="Password"
-            value={state.password}
-            onChange={(e) => dispatch({ type: ActionKind.PASSWORD, value: e.target.value })}
-          />
-          <Button type="submit">Submit</Button>
-        </form>
-      )}
-      {signOutState && (
-        <form
-          onSubmit={handleSignOut}
-          className="flex flex-col items-center justify-center gap-4 space-y-4"
-        >
-          <Button type="submit">SignOut</Button>
-        </form>
-      )}
-    </>
+        <div className="space-y-6">
+          {DEMO_STEPS.map((item, index) => (
+            <AnalogReveal key={item.step} delay={(index + 1) as 1 | 2 | 3}>
+              <AnalogCard className="flex flex-col gap-6 p-8 md:flex-row md:items-center md:justify-between">
+                <div className="flex gap-6">
+                  <AnalogInset className="flex h-14 w-14 shrink-0 items-center justify-center">
+                    <span className="text-accent font-mono text-lg font-bold tabular-nums">
+                      {item.step}
+                    </span>
+                  </AnalogInset>
+                  <div>
+                    <PanelTitle label={`Step ${item.step}`} title={item.title} />
+                    <p className="text-muted-foreground mt-2 max-w-lg font-mono text-xs leading-relaxed">
+                      {item.body}
+                    </p>
+                  </div>
+                </div>
+                <Link href={item.href}>
+                  <MechButton className="shrink-0">{item.cta}</MechButton>
+                </Link>
+              </AnalogCard>
+            </AnalogReveal>
+          ))}
+        </div>
+
+        <AnalogCard className="mt-10 flex flex-wrap items-center gap-4 p-6">
+          <LedInline color="green" size="sm" pulse />
+          <MonoLabel className="text-foreground">
+            Beta: sign up, configure LiveKit + MinIO, run worker for transcripts
+          </MonoLabel>
+          <Link
+            href="/"
+            className="text-accent hover:text-foreground ml-auto font-mono text-xs font-bold tracking-widest uppercase"
+          >
+            ← Back to home
+          </Link>
+        </AnalogCard>
+      </section>
+      <SiteFooter />
+    </ProductShell>
   );
-};
-
-export default Demo;
+}

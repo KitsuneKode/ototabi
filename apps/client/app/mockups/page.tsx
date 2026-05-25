@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 
+import { MockupsExploratoryBanner } from "@/components/marketing/mockups-exploratory-banner";
 import {
   Sliders,
   Monitor,
@@ -236,6 +237,9 @@ export default function MockupsPage() {
 
   return (
     <div className="flex min-h-screen flex-col overflow-hidden bg-zinc-950 font-sans text-zinc-100 select-none">
+      <div className="relative z-50 border-b border-zinc-800 bg-zinc-900 px-4 py-3">
+        <MockupsExploratoryBanner />
+      </div>
       {/* Top Header Hub */}
       <header className="relative z-40 flex w-full items-center justify-between border-b border-zinc-800 bg-zinc-900 p-4 shadow-lg">
         <div className="flex items-center gap-3">
