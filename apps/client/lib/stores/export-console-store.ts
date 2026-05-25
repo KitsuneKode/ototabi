@@ -24,6 +24,7 @@ type ExportConsoleState = {
   trimStart: string;
   trimEnd: string;
   trimTrackId: string | null;
+  playheadSec: number;
   errorMessage: string;
   noiseReduction: boolean;
 
@@ -37,6 +38,7 @@ type ExportConsoleState = {
   setTrimStart: (value: string) => void;
   setTrimEnd: (value: string) => void;
   setTrimTrackId: (trackId: string | null) => void;
+  setPlayheadSec: (sec: number) => void;
   toggleTrack: (trackId: string) => void;
   toggleCutSegment: (segmentId: string) => void;
   clearCutSegments: () => void;
@@ -55,6 +57,7 @@ const initialExportConsole = {
   trimStart: "",
   trimEnd: "",
   trimTrackId: null as string | null,
+  playheadSec: 0,
   errorMessage: "",
   noiseReduction: false,
 };
@@ -94,6 +97,8 @@ export const useExportConsoleStore = create<ExportConsoleState>((set, get) => ({
   setTrimEnd: (value) => set({ trimEnd: value }),
 
   setTrimTrackId: (trackId) => set({ trimTrackId: trackId }),
+
+  setPlayheadSec: (sec) => set({ playheadSec: sec }),
 
   toggleTrack: (trackId) =>
     set((state) => ({

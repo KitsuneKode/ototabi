@@ -184,3 +184,38 @@ Out of scope: chat studio, rooms.policy co-host, timeline MVP.
 ### Smoke steps
 
 [try-local-smoke.md](./try-local-smoke.md) §7 — mark segments → preview stats/highlight → apply cuts; multi-track export shows sync warnings when markers missing/sparse.
+
+---
+
+## Wave 4 Stream 7 — Timeline MVP (PR7)
+
+| Field             | Value                                               |
+| ----------------- | --------------------------------------------------- |
+| **Wave / stream** | Wave 4 — Timeline scrub, trim handles, preview sync |
+| **Branch**        | `feat/parity-stream7-timeline`                      |
+| **Plan refs**     | Plan 07, parity subagent plan Stream 7              |
+
+### Scope
+
+Shipped: `TrackLane`, `PlaybackScrub`, `timeline-math` + tests; extended `TimelineLite`; `ExportTrackPreview` + `useExportTimeline` on export page with playhead ↔ video sync; trim handles sync to existing trim form. Merged `feat/parity-stream2-studio-trust` on top of stream4 baseline so `rooms.service` typechecks.
+
+Out of scope: undo/redo stack v1, waveform canvas, multi-cam switch persistence.
+
+### Files touched
+
+- `apps/client/components/editor/timeline-lite.tsx`, `TrackLane.tsx`, `PlaybackScrub.tsx`, `timeline-math.ts`, `timeline-math.test.ts`, `export-track-preview.tsx`, `recording-timeline-shell.tsx`
+- `apps/client/lib/hooks/use-export-timeline.ts`
+- `apps/client/lib/stores/export-console-store.ts` (`playheadSec`)
+- `apps/client/app/(site)/export/[sessionId]/page.tsx`
+- `apps/client/app/(site)/recordings/[sessionId]/page.tsx` (read-only shell)
+- `.docs/try-local-smoke.md` §7, `.docs/subagent-handoff.md`
+
+### Tests added
+
+- `apps/client/components/editor/timeline-math.test.ts`
+
+**Gate:** `bun fmt && bun lint && bun typecheck && bun run test` — pass.
+
+### Smoke steps
+
+[try-local-smoke.md](./try-local-smoke.md) §7 — scrub timeline, drag trim handles on active lane, confirm preview video + trim fields update.

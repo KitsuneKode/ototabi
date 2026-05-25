@@ -66,9 +66,13 @@ On `/recordings/{sessionId}` or `/export/{sessionId}` → **Export bundle**:
 1. `/demo` → record short screen capture.
 2. `/demo/{sessionId}/edit` → **Suggest zoom from cursor** → export.
 
-## 7. Text editing (Plan 05)
+## 7. Export console — timeline, text cuts, trim
 
-1. `/export/{sessionId}` → transcript cut mode, preview range, apply cuts (multi-track when multiple sources).
+On `/export/{sessionId}` with at least one **COMPLETED** track:
+
+1. **Timeline & preview** — scrub the global rail; playhead moves on lanes and in the preview video. Click a lane to make it active, then drag **trim in/out** handles; values sync to **Trim clip** fields.
+2. **Text cuts (Pro+)** — mark transcript segments, confirm preview stats/highlight, apply cuts (multi-track when multiple sources selected).
+3. **Sync warnings** — sparse or missing sync markers show alignment warnings before merge/export.
 
 ## Pass criteria
 

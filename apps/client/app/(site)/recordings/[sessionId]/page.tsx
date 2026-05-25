@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 
 import { ClipRenderActions } from "@/components/clips/clip-render-actions";
 import { SessionExportActions } from "@/components/clips/session-export-actions";
-import { TimelineLite } from "@/components/editor/timeline-lite";
+import { RecordingTimelineShell } from "@/components/editor/recording-timeline-shell";
 import { TranscriptEditor } from "@/components/editor/transcript-editor";
 import { ExportBundlePicker } from "@/components/export/export-bundle-picker";
 import { AppShell } from "@/components/layout/app-shell";
@@ -268,22 +268,15 @@ export default function RecordingSessionPage() {
           <SessionTimeline events={timelineEvents} isLoading={query.isFetching && !query.data} />
         </div>
 
-        <TimelineLite
-          tracks={(data.tracks ?? []).map((track) => ({
-            id: track.id,
-            label: `${track.user?.name ?? "Guest"} · ${track.type}`,
-            durationSec: Math.max(
-              30,
-              data.endedAt && data.startedAt
-                ? (new Date(data.endedAt).getTime() - new Date(data.startedAt).getTime()) / 1000
-                : 120,
-            ),
-          }))}
-          markers={chapters?.map((ch) => ({
-            id: ch.id,
-            label: ch.title,
-            atSec: ch.startTime,
-          }))}
+        <RecordingTimelineShell
+          session={data}
+          chapterMarkers={
+            chapters?.map((ch) => ({
+              id: ch.id,
+              label: ch.title,
+              atSec: ch.startTime,
+            })) ?? []
+          }
         />
 
         {showNotes ? (

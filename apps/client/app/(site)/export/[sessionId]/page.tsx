@@ -8,6 +8,8 @@ import { useRef, useCallback, useEffect, useMemo } from "react";
 
 import { ClipRenderActions } from "@/components/clips/clip-render-actions";
 import { SessionExportActions } from "@/components/clips/session-export-actions";
+import { ExportTrackPreview } from "@/components/editor/export-track-preview";
+import { TimelineLite } from "@/components/editor/timeline-lite";
 import { TranscriptEditor } from "@/components/editor/transcript-editor";
 import { ExportBundlePicker } from "@/components/export/export-bundle-picker";
 import { AppShell } from "@/components/layout/app-shell";
@@ -26,6 +28,7 @@ import {
   type DemoAspectPreset,
 } from "@/lib/demo/demo-export-presets";
 import { useExportConsole } from "@/lib/hooks/use-export-console";
+import { useExportTimeline } from "@/lib/hooks/use-export-timeline";
 import { useAuthGate } from "@/lib/hooks/use-session";
 import { useSessionReview } from "@/lib/hooks/use-session-review";
 import {
@@ -209,6 +212,9 @@ export default function ExportSessionPage() {
     previewCutRange,
     setPreviewCutRange,
   } = useExportConsole(sessionId);
+
+  const transcriptEndSec = transcriptSegments?.[transcriptSegments.length - 1]?.endTime;
+  const exportTimeline = useExportTimeline(session, transcriptEndSec);
 
   const cutPreviewSummary = useMemo(() => {
     if (!transcriptSegments?.length || cutSegmentIds.length === 0) return null;
@@ -787,6 +793,32 @@ export default function ExportSessionPage() {
             </div>
           )}
         </div>
+
+        {exportTimeline.hasTimeline ? (
+          <div className="space-y-4">
+            <PanelTitle label="Visual rail" title="Timeline & preview" />
+            <ExportTrackPreview
+              videoUrl={exportTimeline.previewVideoUrl}
+              playheadSec={exportTimeline.playheadSec}
+              onPlayheadChange={exportTimeline.setPlayheadSec}
+              durationSec={exportTimeline.durationSec}
+            />
+            <TimelineLite
+              tracks={exportTimeline.timelineTracks}
+              durationSec={exportTimeline.durationSec}
+              playheadSec={exportTimeline.playheadSec}
+              activeTrackId={exportTimeline.activeTrackId}
+              trimByTrackId={exportTimeline.trimByTrackId}
+              onPlayheadChange={exportTimeline.setPlayheadSec}
+              onActiveTrackChange={exportTimeline.onActiveTrackChange}
+              onTrimChange={exportTimeline.onTrimChange}
+            />
+            <MonoLabel className="text-muted-foreground/70 block text-[9px] leading-relaxed">
+              Scrub the rail or drag trim handles on the active lane — values sync to the trim deck
+              and preview video below.
+            </MonoLabel>
+          </div>
+        ) : null}
 
         <div className="space-y-4">
           <PanelTitle label="Distribution" title="Export bundle" />
