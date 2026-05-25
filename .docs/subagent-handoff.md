@@ -152,3 +152,77 @@ Out of scope: studio preflight/consent (Stream 2), settings trial banner, worker
 
 - None from usage module. Stream 2 may proceed in parallel; avoid editing `rooms.policy.ts` co-host extensions per ownership split.
 - Stream 3 health panel still merges after Stream 2 on `chat/[roomId]/page.tsx`.
+
+## Wave 2 Stream 4 — Export polish (PR4)
+
+| Field             | Value                                             |
+| ----------------- | ------------------------------------------------- |
+| **Wave / stream** | Wave 2 — Export preview + sync alignment warnings |
+| **Branch**        | `feat/parity-stream4-export`                      |
+| **Plan refs**     | Plan 05 preview, Plan 03 sync warnings slice      |
+
+### Scope
+
+Shipped: cut preview before apply (`cut-preview.ts`, `summarizeCutPreview`, transcript highlight + keep/remove stats); `getSyncAlignmentWarnings` on timeline + merge/export; `computeKeepRanges` shared with `handleCuts`.
+
+Out of scope: chat studio, rooms.policy co-host, timeline MVP.
+
+### Files touched
+
+- `apps/client/app/(site)/export/[sessionId]/page.tsx`
+- `apps/client/components/editor/transcript-editor.tsx`
+- `apps/client/lib/cut-preview.ts`, `cut-preview.test.ts`
+- `apps/client/lib/merge-session-timeline.ts`, `merge-session-timeline.test.ts`
+
+### Tests added
+
+- `apps/client/lib/cut-preview.test.ts`
+- `apps/client/lib/merge-session-timeline.test.ts`
+
+**Gate:** `bun fmt && bun lint && bun typecheck && bun run test` — pass.
+
+### Smoke steps
+
+[try-local-smoke.md](./try-local-smoke.md) §7 — mark segments → preview stats/highlight → apply cuts; multi-track export shows sync warnings when markers missing/sparse.
+
+---
+
+## Wave 3 Stream 5 — Demo browser v1.1 (PR5)
+
+| Field             | Value                                  |
+| ----------------- | -------------------------------------- |
+| **Wave / stream** | Wave 3 — Demo browser v1.1             |
+| **Branch**        | `feat/parity-stream5-demo`             |
+| **Plan refs**     | Plan 24, parity subagent plan Stream 5 |
+
+### Scope
+
+Shipped grill bundle: auto-zoom suggestion + live preview punch-in, optional webcam PiP capture + FFmpeg overlay export, trim/playback speed in editor store + export pipeline, background blur presets (preview + export). Demo export path on export console uses `demo-export-pipeline.ts` with saved edit metadata.
+
+Out of scope: studio chat, usage module, timeline MVP, worker long export.
+
+### Files touched
+
+- `apps/client/lib/demo/` — `demo-export-pipeline.ts`, `demo-zoom-preview.ts`, presets, capture manager webcam track
+- `apps/client/lib/stores/demo-editor-store.ts`
+- `apps/client/components/demo/demo-editor-preview.tsx`, `demo-cursor-overlay.tsx`
+- `apps/client/app/(site)/demo/[sessionId]/edit/page.tsx`, `demo/record/page.tsx`
+- `apps/client/app/(site)/export/[sessionId]/page.tsx` (demo export handler only)
+- `packages/trpc/src/modules/demo/*`, `packages/store/prisma/schema.prisma` + migration
+- `.docs/try-demo-smoke.md`, `.docs/subagent-handoff.md`
+
+### Tests added
+
+- `apps/client/lib/demo/suggest-zoom-from-cursor.test.ts`
+- `apps/client/lib/demo/demo-background-presets.test.ts`
+- `apps/client/lib/demo/demo-export-pipeline.test.ts`
+
+**Gate:** `bun fmt && bun lint && bun typecheck && bun run test`
+
+### Smoke steps
+
+[try-demo-smoke.md](./try-demo-smoke.md)
+
+### Blockers
+
+- Stream 6 worker export can proceed in parallel; timeline (Stream 7) should not rewrite demo editor ownership.

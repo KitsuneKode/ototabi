@@ -37,6 +37,9 @@ export const saveDemoEditSchema = z.object({
   zoomRegions: z.array(zoomRegionSchema).max(200),
   trimStartMs: z.number().min(0).nullable().optional(),
   trimEndMs: z.number().min(0).nullable().optional(),
+  playbackSpeed: z.number().min(0.25).max(4).optional(),
+  backgroundBlur: z.number().int().min(0).max(3).optional(),
+  pipEnabled: z.boolean().optional(),
   background: demoBackgroundSchema.optional(),
 });
 

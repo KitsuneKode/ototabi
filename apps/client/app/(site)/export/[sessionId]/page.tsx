@@ -6,6 +6,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useRef, useCallback } from "react";
 
+import type { BackgroundBlurPreset } from "@/lib/demo/demo-background-presets";
+
 import { ClipRenderActions } from "@/components/clips/clip-render-actions";
 import { SessionExportActions } from "@/components/clips/session-export-actions";
 import { TranscriptEditor } from "@/components/editor/transcript-editor";
@@ -19,11 +21,14 @@ import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { Led, LedInline } from "@/components/ui/led";
 import { MonoLabel, PanelTitle, StatusBadge, MechButton } from "@/components/ui/retro-primitives";
 import { formatDateTime, formatTimestamp } from "@/lib/date-utils";
+import { isValidBlurPreset } from "@/lib/demo/demo-background-presets";
 import {
-  DEMO_ASPECT_LABELS,
-  DEMO_ASPECT_SCALES,
-  type DemoAspectPreset,
-} from "@/lib/demo/demo-export-presets";
+  buildDemoFfmpegExecArgs,
+  removeDemoExportInputs,
+  resolveDemoExportTracks,
+  writeDemoInputsToFfmpeg,
+} from "@/lib/demo/demo-export-pipeline";
+import { DEMO_ASPECT_LABELS, type DemoAspectPreset } from "@/lib/demo/demo-export-presets";
 import { useExportConsole } from "@/lib/hooks/use-export-console";
 import { useAuthGate } from "@/lib/hooks/use-session";
 import { useSessionReview } from "@/lib/hooks/use-session-review";
@@ -167,6 +172,12 @@ export default function ExportSessionPage() {
     aggregateUploadStatus,
     isBootingAuth,
   } = useSessionReview(sessionId);
+
+  const demoSessionQuery = useQuery({
+    ...trpc.demo.getSession.queryOptions({ sessionId }),
+    enabled: sessionReady && Boolean(sessionId) && session?.mode === "DEMO",
+  });
+
   const syncOffsetMs = getSyncMarkerOffsetMs(syncMarkers);
   const completedTrackCount =
     session?.tracks.filter((t) => t.status === "COMPLETED" && (t.s3Url || t.s3Key)).length ?? 0;
@@ -362,47 +373,35 @@ export default function ExportSessionPage() {
   const handleDemoAspectExport = useCallback(
     async (preset: DemoAspectPreset) => {
       if (!session) return;
-      const tracks = session.tracks.filter(
-        (t) => selectedTrackIds.includes(t.id) && t.status === "COMPLETED" && (t.s3Url || t.s3Key),
-      );
-      if (tracks.length === 0) return;
+      const resolved = resolveDemoExportTracks(session.tracks, selectedTrackIds);
+      if (!resolved.display) return;
 
-      const mode = preset;
-      beginProcessing(mode);
+      const demoEdit = demoSessionQuery.data?.demo;
+      const blurLevel = demoEdit?.backgroundBlur ?? 0;
+      const edit = {
+        trimStartMs: demoEdit?.trimStartMs ?? null,
+        trimEndMs: demoEdit?.trimEndMs ?? null,
+        playbackSpeed: demoEdit?.playbackSpeed ?? 1,
+        backgroundBlur: (isValidBlurPreset(blurLevel) ? blurLevel : 0) as BackgroundBlurPreset,
+        pipEnabled: demoEdit?.pipEnabled ?? true,
+      };
+
+      beginProcessing(preset);
 
       try {
         await loadFfmpeg();
         const ffmpeg = ffmpegRef.current;
-        const scale = DEMO_ASPECT_SCALES[preset];
-
-        const content = await writeTracksToFfmpeg(ffmpeg, tracks);
-
-        await ffmpeg.writeFile("concat_list.txt", new TextEncoder().encode(content));
-        const audioFilters: string[] = [];
-        if (noiseReduction) audioFilters.push("afftdn");
-        if (syncOffsetMs > 0) audioFilters.push(`adelay=${syncOffsetMs}|${syncOffsetMs}`);
-        const exportArgs = [
-          "-f",
-          "concat",
-          "-safe",
-          "0",
-          "-i",
-          "concat_list.txt",
-          ...(audioFilters.length > 0 ? ["-af", audioFilters.join(",")] : []),
-          "-vf",
-          `scale=${scale}:force_original_aspect_ratio=decrease,pad=${scale}:(ow-iw)/2:(oh-ih)/2`,
-          "-c:v",
-          "libx264",
-          "-preset",
-          "fast",
-          "-crf",
-          "23",
-          "-c:a",
-          "aac",
-          "-b:a",
-          "128k",
-          "output.mp4",
-        ];
+        const inputs = await writeDemoInputsToFfmpeg(ffmpeg, {
+          display: resolved.display,
+          camera: resolved.camera,
+          mic: resolved.mic,
+        });
+        const exportArgs = buildDemoFfmpegExecArgs({
+          inputs,
+          aspectPreset: preset,
+          edit,
+          noiseReduction,
+        });
         await ffmpeg.exec(exportArgs);
 
         await downloadFile(
@@ -411,7 +410,7 @@ export default function ExportSessionPage() {
           `demo-${sessionId.slice(-8)}-${preset.replace(":", "x")}.mp4`,
         );
 
-        await removeTrackInputs(ffmpeg, tracks.length);
+        await removeDemoExportInputs(ffmpeg, inputs);
 
         setProcessingStatus("done");
       } catch (err) {
@@ -422,11 +421,11 @@ export default function ExportSessionPage() {
     [
       session,
       selectedTrackIds,
+      demoSessionQuery.data?.demo,
       beginProcessing,
       loadFfmpeg,
       sessionId,
       noiseReduction,
-      syncOffsetMs,
       setErrorMessage,
       setProcessingStatus,
     ],

@@ -81,6 +81,9 @@ export const demoRepository = {
       zoomRegions: unknown;
       trimStartMs?: number | null;
       trimEndMs?: number | null;
+      playbackSpeed?: number;
+      backgroundBlur?: number;
+      pipEnabled?: boolean;
       background?: unknown;
     },
   ) {
@@ -90,6 +93,9 @@ export const demoRepository = {
         zoomRegions: data.zoomRegions as object,
         ...(data.trimStartMs !== undefined ? { trimStartMs: data.trimStartMs } : {}),
         ...(data.trimEndMs !== undefined ? { trimEndMs: data.trimEndMs } : {}),
+        ...(data.playbackSpeed !== undefined ? { playbackSpeed: data.playbackSpeed } : {}),
+        ...(data.backgroundBlur !== undefined ? { backgroundBlur: data.backgroundBlur } : {}),
+        ...(data.pipEnabled !== undefined ? { pipEnabled: data.pipEnabled } : {}),
         ...(data.background !== undefined ? { background: data.background as object } : {}),
       },
     });

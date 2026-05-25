@@ -102,6 +102,9 @@ export const demoService = {
         zoomRegions: parseZoomRegions(demoData?.zoomRegions),
         trimStartMs: demoData?.trimStartMs ?? null,
         trimEndMs: demoData?.trimEndMs ?? null,
+        playbackSpeed: demoData?.playbackSpeed ?? 1,
+        backgroundBlur: demoData?.backgroundBlur ?? 0,
+        pipEnabled: demoData?.pipEnabled ?? true,
         background: parseBackground(demoData?.background),
       },
     };
@@ -113,6 +116,9 @@ export const demoService = {
     zoomRegions: ZoomRegion[];
     trimStartMs?: number | null;
     trimEndMs?: number | null;
+    playbackSpeed?: number;
+    backgroundBlur?: number;
+    pipEnabled?: boolean;
     background?: DemoBackground;
   }) {
     const session = await demoRepository.findDemoSessionForActor(params.sessionId, params.actorId);
@@ -124,6 +130,9 @@ export const demoService = {
       zoomRegions: params.zoomRegions,
       trimStartMs: params.trimStartMs,
       trimEndMs: params.trimEndMs,
+      playbackSpeed: params.playbackSpeed,
+      backgroundBlur: params.backgroundBlur,
+      pipEnabled: params.pipEnabled,
       background: params.background,
     });
 
