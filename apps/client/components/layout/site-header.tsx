@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { MechButton } from "@/components/ui/retro-primitives";
+import { useSessionQuery } from "@/lib/hooks/use-session";
 import { Menu, X } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,89 @@ function HeaderLeds() {
   );
 }
 
+function MarketingAuthLinks({
+  onNavigate,
+  layout,
+}: {
+  onNavigate?: () => void;
+  layout: "mobile" | "desktop";
+}) {
+  const authState = useSessionQuery();
+  const user = authState.data?.user;
+
+  if (user) {
+    if (layout === "mobile") {
+      return (
+        <>
+          <Link
+            href="/dashboard"
+            onClick={onNavigate}
+            className="text-foreground hover:bg-muted rounded-md px-3 py-3 font-mono text-xs font-bold tracking-widest uppercase transition-colors duration-150"
+          >
+            Dashboard
+          </Link>
+          <Link href="/dashboard" onClick={onNavigate} className="mt-2">
+            <MechButton type="button" className="w-full">
+              Open Studio
+            </MechButton>
+          </Link>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <Link
+          href="/dashboard"
+          className="hover:text-foreground px-1 py-2 transition-colors duration-150"
+        >
+          Dashboard
+        </Link>
+        <Link href="/dashboard">
+          <MechButton type="button" className="text-xs">
+            Open Studio
+          </MechButton>
+        </Link>
+      </>
+    );
+  }
+
+  if (layout === "mobile") {
+    return (
+      <>
+        <Link
+          href="/auth/signin"
+          onClick={onNavigate}
+          className="text-muted-foreground hover:text-accent px-3 py-3 font-mono text-xs font-bold tracking-widest uppercase transition-colors duration-150"
+        >
+          Sign In
+        </Link>
+        <Link href="/auth/signup" onClick={onNavigate} className="mt-2">
+          <MechButton type="button" className="w-full">
+            Start Recording
+          </MechButton>
+        </Link>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Link
+        href="/auth/signin"
+        className="hover:text-foreground px-1 py-2 transition-colors duration-150"
+      >
+        Sign In
+      </Link>
+      <Link href="/auth/signup">
+        <MechButton type="button" className="text-xs">
+          Start Recording
+        </MechButton>
+      </Link>
+    </>
+  );
+}
+
 function MobileNavPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   if (!open) return null;
 
@@ -50,18 +134,7 @@ function MobileNavPanel({ open, onClose }: { open: boolean; onClose: () => void 
             {link.label}
           </Link>
         ))}
-        <Link
-          href="/auth/signin"
-          onClick={onClose}
-          className="text-muted-foreground hover:text-accent px-3 py-3 font-mono text-xs font-bold tracking-widest uppercase transition-colors duration-150"
-        >
-          Sign In
-        </Link>
-        <Link href="/auth/signup" onClick={onClose} className="mt-2">
-          <MechButton type="button" className="w-full">
-            Start Recording
-          </MechButton>
-        </Link>
+        <MarketingAuthLinks onNavigate={onClose} layout="mobile" />
       </nav>
     </div>
   );
@@ -108,17 +181,7 @@ export function SiteHeader() {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/auth/signin"
-            className="hover:text-foreground px-1 py-2 transition-colors duration-150"
-          >
-            Sign In
-          </Link>
-          <Link href="/auth/signup">
-            <MechButton type="button" className="text-xs">
-              Start Recording
-            </MechButton>
-          </Link>
+          <MarketingAuthLinks layout="desktop" />
         </nav>
 
         <button

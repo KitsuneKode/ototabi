@@ -11,10 +11,12 @@ import Link from "next/link";
 import { ProductShell } from "@/components/layout/product-shell";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
+import { MarketingPrimaryCta } from "@/components/marketing/marketing-primary-cta";
+import { PricingTierCta } from "@/components/marketing/pricing-tier-cta";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { AnalogReveal } from "@/components/ui/analog-reveal";
-import { MechButton, MonoLabel, StatusBadge } from "@/components/ui/retro-primitives";
-import { ArrowRight, CloudUpload, Layers, Mic, Shield, Users, Video, Waveform } from "@/lib/icons";
+import { MonoLabel, StatusBadge } from "@/components/ui/retro-primitives";
+import { CloudUpload, Layers, Mic, Shield, Users, Video, Waveform } from "@/lib/icons";
 
 const SIGNAL_METRICS = [
   { label: "Track alignment", value: "<50ms", detail: "export target" },
@@ -347,14 +349,12 @@ function PricingSection() {
                   </li>
                 ))}
               </ul>
-              <Link href={tier.href} className="w-full">
-                <MechButton
-                  type="button"
-                  className={`w-full ${tier.highlighted ? "" : "opacity-90"}`}
-                >
-                  {tier.cta}
-                </MechButton>
-              </Link>
+              <PricingTierCta
+                tierId={tier.id}
+                defaultHref={tier.href}
+                defaultLabel={tier.cta}
+                highlighted={tier.highlighted}
+              />
             </AnalogCard>
           </AnalogReveal>
         ))}
@@ -441,12 +441,11 @@ function FinalCta() {
             </p>
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-            <Link href="/auth/signup" className="w-full sm:w-auto">
-              <MechButton type="button" className="group w-full px-8 py-3.5 text-sm">
-                <span>Start Recording</span>
-                <ArrowRight className="h-4 w-4 transition-transform duration-150 group-hover:translate-x-0.5" />
-              </MechButton>
-            </Link>
+            <MarketingPrimaryCta
+              signedInLabel="Open dashboard"
+              className="w-full sm:w-auto"
+              buttonClassName="w-full px-8 py-3.5 text-sm"
+            />
             <Link
               href="/demo"
               className="text-subtle-foreground hover:text-foreground w-full py-3 text-center font-mono text-xs font-bold tracking-widest uppercase transition-colors duration-150 sm:w-auto"
@@ -483,12 +482,10 @@ export function LandingPage() {
           </p>
 
           <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-            <Link href="/auth/signup">
-              <MechButton type="button" className="group w-full px-8 py-4 text-base sm:w-auto">
-                <span>Start recording free</span>
-                <ArrowRight className="h-5 w-5 transition-transform duration-150 group-hover:translate-x-1" />
-              </MechButton>
-            </Link>
+            <MarketingPrimaryCta
+              className="w-full sm:w-auto"
+              buttonClassName="w-full px-8 py-4 text-base sm:w-auto"
+            />
             <Link
               href="/#workflow"
               className="btn-panel-ghost text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center justify-center rounded-md px-6 py-3 font-mono text-xs font-bold tracking-widest uppercase"

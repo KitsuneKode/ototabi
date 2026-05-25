@@ -1,6 +1,6 @@
 # Plan 01: Guest Join Without Authentication
 
-**Status:** in-progress  
+**Status:** in-progress (guest session cookies fixed; invite link required per Plan 13)  
 **Priority:** P0
 
 ## Problem

@@ -8,10 +8,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { LedInline } from "@/components/ui/led";
 import { MonoLabel, NoiseBackground, MechButton } from "@/components/ui/retro-primitives";
+import { apiUrl } from "@/lib/api-base";
 import { formatDateTime } from "@/lib/date-utils";
+import { useRefreshAuthSession } from "@/lib/hooks/use-session";
 import { Mic, ArrowRight, Info, AlertTriangle, RefreshCw, VideoOff, Tv, User } from "@/lib/icons";
+import { isTrpcForbidden, isTrpcUnauthorized } from "@/lib/trpc-error";
 import { useTRPC } from "@/trpc/client";
-import config from "@/utils/config";
 
 export default function RoomJoinPage() {
   const { roomId } = useParams() as { roomId: string };
@@ -36,8 +38,10 @@ export default function RoomJoinPage() {
   const [guestLoading, setGuestLoading] = useState(false);
   const [quality, setQuality] = useState<"720p" | "1080p" | "4k">("720p");
 
+  const refreshAuthSession = useRefreshAuthSession();
   const authState = useQuery(trpc.auth.getSession.queryOptions());
   const isSignedIn = !!authState.data?.user;
+  const guestNeedsInvite = !isSignedIn && !inviteToken;
 
   const roomInfo = useQuery(
     trpc.rooms.getRoomByCode.queryOptions({ code: roomId }, { enabled: !!roomId }),
@@ -126,17 +130,25 @@ export default function RoomJoinPage() {
   }, [audioEnabled, videoEnabled, selectedMic, selectedCam]);
 
   const joinRoom = useCallback(async () => {
+    setMicError("");
+
+    if (guestNeedsInvite) {
+      setMicError("Ask the host for an invite link (it includes ?invite= in the URL).");
+      return;
+    }
+
     if (!isSignedIn) {
       if (!guestName.trim()) return;
       setGuestLoading(true);
       try {
-        const resp = await fetch(`${config.getConfig("apiBaseUrl")}/api/guest-auth`, {
+        const resp = await fetch(apiUrl("/api/guest-auth"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({ name: guestName.trim() }),
         });
         if (!resp.ok) throw new Error("Guest sign-in failed");
+        await refreshAuthSession();
       } catch {
         setMicError("Failed to create guest session");
         setGuestLoading(false);
@@ -147,8 +159,14 @@ export default function RoomJoinPage() {
 
     try {
       await joinRoomMutation.mutateAsync({ code: roomId, inviteToken });
-    } catch {
-      setMicError("Failed to verify room access");
+    } catch (error) {
+      if (isTrpcUnauthorized(error)) {
+        setMicError("Session expired. Re-enter your name and try again.");
+      } else if (isTrpcForbidden(error)) {
+        setMicError("This room requires a valid invite link from the host.");
+      } else {
+        setMicError("Failed to verify room access");
+      }
       return;
     }
 
@@ -174,7 +192,9 @@ export default function RoomJoinPage() {
     router,
     isSignedIn,
     guestName,
+    guestNeedsInvite,
     joinRoomMutation,
+    refreshAuthSession,
   ]);
 
   // ── Loading ──────────────────────────────────────────────────────────────
@@ -231,7 +251,17 @@ export default function RoomJoinPage() {
                 </MonoLabel>
               </div>
 
-              {inviteInfo.data && (
+              {guestNeedsInvite ? (
+                <AnalogInset className="border-led-on/30 p-3">
+                  <MonoLabel className="text-led-on block">INVITE LINK REQUIRED</MonoLabel>
+                  <MonoLabel className="mt-1 block text-[9px] leading-relaxed">
+                    Ask the host to share their studio invite from Room Settings. Plain room codes
+                    are not enough for guest access.
+                  </MonoLabel>
+                </AnalogInset>
+              ) : null}
+
+              {inviteInfo.data ? (
                 <AnalogInset className="p-3">
                   <MonoLabel className="text-accent block">SECURE INVITE VERIFIED</MonoLabel>
                   <MonoLabel className="mt-1 block text-[9px]">
@@ -241,7 +271,7 @@ export default function RoomJoinPage() {
                       : " // NO EXPIRY"}
                   </MonoLabel>
                 </AnalogInset>
-              )}
+              ) : null}
 
               {/* CRT video display */}
               <div className="scanlines relative flex aspect-video w-full items-center justify-center overflow-hidden rounded border-4 border-[#1a1a1a] bg-[#111] shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]">
@@ -468,7 +498,7 @@ export default function RoomJoinPage() {
               )}
               <MechButton
                 onClick={joinRoom}
-                disabled={!isSignedIn && (!guestName.trim() || guestLoading)}
+                disabled={guestNeedsInvite || (!isSignedIn && (!guestName.trim() || guestLoading))}
                 className="h-12 w-full justify-center gap-3 text-sm disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {guestLoading ? (

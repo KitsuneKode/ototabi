@@ -39,6 +39,73 @@ bun dev
 | PostgreSQL    | localhost:5432        | Database              |
 | MinIO API     | localhost:9000        | S3-compatible storage |
 | MinIO Console | localhost:9001        | Storage admin UI      |
+| Redis         | localhost:6379        | BullMQ worker queue   |
+
+## Backend configuration checklist
+
+`bun dev` runs **client (:3000)**, **api (:8080)**, and **worker** together. All three read the **repo root** `.env` (copy from `.env.example`).
+
+### Required for core studio flow
+
+| Variable                  | Where used                     | Dev value / notes                                                                                |
+| ------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`            | API, client SSR, Prisma        | `postgresql://user:password@localhost:5432/ototabi?schema=public` (matches `docker-compose.yml`) |
+| `BETTER_AUTH_SECRET`      | API + client (session signing) | Long random string; **same value** in one `.env`                                                 |
+| `BETTER_AUTH_URL`         | `@ototabi/auth` `baseURL`      | **`http://localhost:3000`** — browser origin, not `:8080`                                        |
+| `FRONTEND_URL`            | API CORS                       | `http://localhost:3000`                                                                          |
+| `NEXT_PUBLIC_APP_URL`     | Auth client SSR fallback       | `http://localhost:3000`                                                                          |
+| `NEXT_PUBLIC_API_URL`     | Next rewrites target           | `http://localhost:8080`                                                                          |
+| `LIVEKIT_URL`             | API token route                | `wss://…` from LiveKit Cloud dashboard                                                           |
+| `LIVEKIT_API_KEY`         | API token route                | LiveKit project API key                                                                          |
+| `LIVEKIT_API_SECRET`      | API token route                | LiveKit project secret                                                                           |
+| `NEXT_PUBLIC_LIVEKIT_URL` | Client `room.connect()`        | **Must match** `LIVEKIT_URL` exactly                                                             |
+
+### Required for uploads (Plan 13 trust path)
+
+| Variable                                      | Where used                                                        |
+| --------------------------------------------- | ----------------------------------------------------------------- |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | `packages/trpc` uploads (presigned URLs)                          |
+| `AWS_S3_BUCKET_NAME`                          | Multipart upload target (`ototabi-recordings` after compose init) |
+| `AWS_S3_ENDPOINT`                             | `http://localhost:9000` for local MinIO                           |
+| `AWS_S3_REGION`                               | e.g. `us-east-1`                                                  |
+
+Without S3 vars, uploads fall back to **mock URLs** — recording works locally but tracks will not persist to MinIO.
+
+### Optional (plans 04, 06, 08)
+
+| Variable         | Purpose                                                   |
+| ---------------- | --------------------------------------------------------- |
+| `REDIS_URL`      | Worker + transcript/LLM queues (`redis://localhost:6379`) |
+| `OPENAI_API_KEY` | Whisper transcript + LLM jobs                             |
+| `POLAR_*`        | Billing / subscriptions                                   |
+
+### Express routes (API `:8080`)
+
+| Path              | Handler                                                     |
+| ----------------- | ----------------------------------------------------------- |
+| `/api/auth/*`     | Better Auth (`toNodeHandler`) — **before** `express.json()` |
+| `/api/guest-auth` | Guest session (`createGuestSession` → signed cookies)       |
+| `/api/trpc/*`     | tRPC (`createTRPCContext` → `auth.api.getSession`)          |
+| `/api/token`      | LiveKit JWT (session cookie + room/invite check)            |
+
+Next.js **rewrites** (client `:3000`) proxy `/api/auth`, `/api/trpc`, `/api/guest-auth`, `/api/token` → `:8080` so cookies stay on `:3000`.
+
+### Smoke test (backend)
+
+```bash
+# After bun dev + .env filled:
+curl -s http://localhost:8080/api/trpc/auth.getSession -H 'content-type: application/json' -d '{}'
+# Expect JSON (null session if not logged in)
+
+# LiveKit (requires session cookie from browser sign-in — use DevTools → Application → Cookies)
+# GET http://localhost:3000/api/token?room=ROOMCODE&username=Test
+```
+
+### Guest join (Plan 01 + 13)
+
+1. Host creates **invite link** in Room Settings (`?invite=…` in URL).
+2. Guest opens invite → name → `/api/guest-auth` → `rooms.joinRoom` → studio.
+3. Plain `/rooms/{code}/join` without `?invite=` is **blocked** for guests by design.
 
 ## Common Tasks
 

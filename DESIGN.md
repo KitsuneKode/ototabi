@@ -1,4 +1,6 @@
-# Ototabi — Design System (Retro Analog v2)
+# Ototabi — Design System (Retro Analog v2 / v3)
+
+> **v3** (Plan 16) consolidates v2 into one product-grade vocabulary — same aesthetic, stricter enforcement across all routes. See `.plans/16-retro-analog-v3-product-grade.md`.
 
 ## Direction
 
