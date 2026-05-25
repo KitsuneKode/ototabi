@@ -9,6 +9,7 @@ import { createTRPCContext } from "@trpc/tanstack-react-query";
 import { useState } from "react";
 import { SuperJSON } from "superjson";
 
+import { getApiBaseUrl } from "@/lib/api-base";
 import config from "@/utils/config";
 
 import { makeQueryClient } from "./query-client";
@@ -40,14 +41,8 @@ function getQueryClient() {
  * @returns The complete URL for the tRPC API endpoint.
  */
 function getUrl() {
-  const base = (() => {
-    // if (typeof window !== 'undefined') return ''
-    return config.getConfig("apiBaseUrl");
-  })();
-  return `${base}/api/trpc`;
+  return `${getApiBaseUrl()}/api/trpc`;
 }
-
-console.log(getUrl());
 
 /**
  * Provides tRPC and React Query contexts to descendant components.

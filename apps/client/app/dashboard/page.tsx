@@ -14,6 +14,7 @@ import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { LedInline } from "@/components/ui/led";
 import { MonoLabel, PanelTitle, StatusBadge, MechButton } from "@/components/ui/retro-primitives";
 import { formatDate, formatTime, formatDateTime } from "@/lib/date-utils";
+import { useAuthGate } from "@/lib/hooks/use-session";
 import {
   Copy,
   Plus,
@@ -28,6 +29,7 @@ import {
   ExternalLink,
   Lock,
 } from "@/lib/icons";
+import { isTrpcUnauthorized } from "@/lib/trpc-error";
 import { useTRPC } from "@/trpc/client";
 
 export default function DashboardPage() {
@@ -39,9 +41,22 @@ export default function DashboardPage() {
   const [copiedRoomCode, setCopiedRoomCode] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const authState = useQuery(trpc.auth.getSession.queryOptions());
-  const roomsList = useQuery(trpc.rooms.listRooms.queryOptions());
-  const sharedRooms = useQuery(trpc.rooms.listSharedRooms.queryOptions());
+  const { authState, isBooting, showGate, sessionReady } = useAuthGate();
+  const sessionSettled = authState.isFetched && !authState.isFetching;
+  const canLoadDashboardData = sessionReady && sessionSettled;
+
+  const roomsList = useQuery({
+    ...trpc.rooms.listRooms.queryOptions(),
+    enabled: canLoadDashboardData,
+    retry: (failureCount, error) =>
+      isTrpcUnauthorized(error) ? failureCount < 2 : failureCount < 1,
+  });
+  const sharedRooms = useQuery({
+    ...trpc.rooms.listSharedRooms.queryOptions(),
+    enabled: canLoadDashboardData,
+    retry: (failureCount, error) =>
+      isTrpcUnauthorized(error) ? failureCount < 2 : failureCount < 1,
+  });
 
   const createRoomMutation = useMutation(
     trpc.rooms.createRoom.mutationOptions({
@@ -59,7 +74,12 @@ export default function DashboardPage() {
     ),
   );
 
-  const recentSessions = useQuery(trpc.rooms.listRecentSessions.queryOptions());
+  const recentSessions = useQuery({
+    ...trpc.rooms.listRecentSessions.queryOptions(),
+    enabled: canLoadDashboardData,
+    retry: (failureCount, error) =>
+      isTrpcUnauthorized(error) ? failureCount < 2 : failureCount < 1,
+  });
 
   const handleCreateRoom = useCallback(
     (e: React.FormEvent) => {
@@ -78,7 +98,7 @@ export default function DashboardPage() {
   }, []);
 
   // ── Loading ──────────────────────────────────────────────────────────────
-  if (authState.isLoading) {
+  if (isBooting) {
     return (
       <AppShell>
         <div className="flex flex-1 flex-col space-y-8">
@@ -116,7 +136,7 @@ export default function DashboardPage() {
   }
 
   // ── Auth gate ────────────────────────────────────────────────────────────
-  if (!authState.data?.user) {
+  if (showGate) {
     return (
       <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
         <AnalogCard className="w-full max-w-sm p-8 text-center">
@@ -129,9 +149,15 @@ export default function DashboardPage() {
           <p className="text-muted-foreground mb-6 font-mono text-xs leading-normal">
             Authenticate to establish console link.
           </p>
-          <MechButton onClick={() => router.push("/")} className="w-full">
-            Authenticate
+          <MechButton onClick={() => router.push("/auth/signin")} className="w-full">
+            Sign In
           </MechButton>
+          <p className="text-muted-foreground mt-4 font-mono text-[10px] leading-relaxed">
+            New here?{" "}
+            <Link href="/auth/signup" className="text-accent hover:underline">
+              Create an account
+            </Link>
+          </p>
         </AnalogCard>
       </div>
     );
@@ -150,6 +176,16 @@ export default function DashboardPage() {
       room.code.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
+  const dataError = roomsList.error ?? sharedRooms.error ?? recentSessions.error;
+  const suppressDataError =
+    dataError &&
+    isTrpcUnauthorized(dataError) &&
+    (isBooting || authState.isFetching || !canLoadDashboardData);
+  const dataErrorMessage =
+    dataError && "message" in dataError && typeof dataError.message === "string"
+      ? dataError.message
+      : "Failed to load dashboard data";
+
   return (
     <AppShell>
       <div className="flex flex-1 flex-col space-y-8">
@@ -158,6 +194,18 @@ export default function DashboardPage() {
           title="Dashboard"
           description="Create studios, review sessions, and recover local uploads."
         />
+
+        {dataError && !suppressDataError ? (
+          <AnalogCard className="border-destructive/40 bg-destructive/10 p-4">
+            <p className="text-destructive text-sm font-bold tracking-wider uppercase">
+              Dashboard sync failed
+            </p>
+            <p className="text-muted-foreground mt-2 font-mono text-xs leading-relaxed">
+              {dataErrorMessage}. If you recently pulled main, run{" "}
+              <code className="text-foreground">bun run db:migrate</code> from the repo root.
+            </p>
+          </AnalogCard>
+        ) : null}
 
         {/* ── Main Grid ───────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 gap-8 md:grid-cols-12">

@@ -11,7 +11,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { RedirectIfAuthenticated } from "@/components/auth/redirect-if-authenticated";
 import { AuthShell } from "@/components/layout/auth-shell";
+import { useRefreshAuthSession } from "@/lib/hooks/use-session";
 import { Key, Mail, ShieldAlert, User } from "@/lib/icons";
 
 const signUpSchema = z.object({
@@ -48,6 +50,7 @@ const fields = [
 
 export default function SignUpPage() {
   const router = useRouter();
+  const refreshAuthSession = useRefreshAuthSession();
   const [serverError, setServerError] = useState("");
 
   const form = useForm<SignUpValues>({
@@ -66,68 +69,75 @@ export default function SignUpPage() {
       setServerError(error.message || "Failed to create account");
       return;
     }
-    router.push("/dashboard");
+    const session = await refreshAuthSession();
+    if (!session?.user) {
+      setServerError("Account created but session could not be established. Sign in.");
+      return;
+    }
+    router.replace("/dashboard");
   };
 
   return (
-    <AuthShell title="Register" subtitle="Model 16-A // New Operator Init">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSignUp)} className="space-y-5">
-          {fields.map(({ id, label, type, Icon, placeholder }) => (
-            <FormField
-              key={id}
-              control={form.control}
-              name={id}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-muted-foreground font-mono text-[10px] font-bold tracking-widest uppercase">
-                    {label}
-                  </FormLabel>
-                  <div className="relative">
-                    <span className="text-muted-foreground/60 absolute inset-y-0 left-3 flex items-center">
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <Input
-                      {...field}
-                      type={type}
-                      placeholder={placeholder}
-                      className="border-border bg-popover text-foreground placeholder:text-muted-foreground/40 focus-visible:ring-accent/60 h-11 rounded border pl-10 font-mono text-sm shadow-inner focus-visible:ring-1"
-                    />
-                  </div>
-                  <FormMessage className="text-destructive font-mono text-xs" />
-                </FormItem>
-              )}
-            />
-          ))}
+    <RedirectIfAuthenticated>
+      <AuthShell title="Register" subtitle="Model 16-A // New Operator Init">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSignUp)} className="space-y-5">
+            {fields.map(({ id, label, type, Icon, placeholder }) => (
+              <FormField
+                key={id}
+                control={form.control}
+                name={id}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground font-mono text-[10px] font-bold tracking-widest uppercase">
+                      {label}
+                    </FormLabel>
+                    <div className="relative">
+                      <span className="text-muted-foreground/60 absolute inset-y-0 left-3 flex items-center">
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <Input
+                        {...field}
+                        type={type}
+                        placeholder={placeholder}
+                        className="border-border bg-popover text-foreground placeholder:text-muted-foreground/40 focus-visible:ring-accent/60 h-11 rounded border pl-10 font-mono text-sm shadow-inner focus-visible:ring-1"
+                      />
+                    </div>
+                    <FormMessage className="text-destructive font-mono text-xs" />
+                  </FormItem>
+                )}
+              />
+            ))}
 
-          {serverError ? (
-            <div className="border-destructive/40 bg-destructive/10 flex items-start gap-2.5 rounded border p-3">
-              <ShieldAlert className="text-destructive mt-0.5 h-4 w-4 shrink-0" />
-              <p className="text-destructive font-mono text-xs uppercase">{serverError}</p>
-            </div>
-          ) : null}
+            {serverError ? (
+              <div className="border-destructive/40 bg-destructive/10 flex items-start gap-2.5 rounded border p-3">
+                <ShieldAlert className="text-destructive mt-0.5 h-4 w-4 shrink-0" />
+                <p className="text-destructive font-mono text-xs uppercase">{serverError}</p>
+              </div>
+            ) : null}
 
-          <Button
-            type="submit"
-            disabled={form.formState.isSubmitting}
-            className="btn-mechanical text-secondary-foreground h-11 w-full rounded font-bold tracking-widest uppercase"
-          >
-            {form.formState.isSubmitting ? "INITIALIZING..." : "CREATE ACCOUNT"}
-          </Button>
-        </form>
-      </Form>
+            <Button
+              type="submit"
+              disabled={form.formState.isSubmitting}
+              className="btn-mechanical text-secondary-foreground h-11 w-full rounded font-bold tracking-widest uppercase"
+            >
+              {form.formState.isSubmitting ? "INITIALIZING..." : "CREATE ACCOUNT"}
+            </Button>
+          </form>
+        </Form>
 
-      <div className="border-border mt-6 border-t pt-5">
-        <p className="text-muted-foreground text-center font-mono text-[10px] tracking-wide uppercase">
-          Already registered?{" "}
-          <Link
-            href="/auth/signin"
-            className="text-accent font-bold underline-offset-2 transition-[text-decoration] hover:underline"
-          >
-            Authenticate Here
-          </Link>
-        </p>
-      </div>
-    </AuthShell>
+        <div className="border-border mt-6 border-t pt-5">
+          <p className="text-muted-foreground text-center font-mono text-[10px] tracking-wide uppercase">
+            Already registered?{" "}
+            <Link
+              href="/auth/signin"
+              className="text-accent font-bold underline-offset-2 transition-[text-decoration] hover:underline"
+            >
+              Authenticate Here
+            </Link>
+          </p>
+        </div>
+      </AuthShell>
+    </RedirectIfAuthenticated>
   );
 }

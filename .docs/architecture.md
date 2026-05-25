@@ -12,8 +12,8 @@
 │  Local: IndexedDB (Dexie) + OPFS (Origin Private File System)  │
 │  Lib: RecorderManager, S3Uploader, ResilientRecordingDB         │
 └──────────────┬──────────────────────────────────────────────────┘
-               │ tRPC (httpBatchLink) + REST (/api/token)
-               │ CORS + credentials: include
+               │ Same-origin in dev: /api/trpc, /api/auth, /api/token
+               │ (Next rewrites → Express :8080; cookies stay on :3000)
 ┌──────────────▼──────────────────────────────────────────────────┐
 │                     API Server (Express + Bun :8080)             │
 │                                                                 │
@@ -21,7 +21,7 @@
 │  /api/trpc/*       → tRPC Express middleware                    │
 │  /api/token        → LiveKit JWT token generation               │
 │                                                                 │
-│  Middleware stack: helmet → cors → auth → json → timing → trpc │
+│  Middleware: cors → helmet → /api/auth → json → guest-auth → trpc → /api/token │
 └──────────────┬──────────────────────────────────────────────────┘
                │
     ┌──────────┼──────────┐
@@ -70,17 +70,25 @@ apps/api    ──→ packages/trpc, packages/auth, packages/store, packages/com
 
 ## Auth Flow
 
+Better Auth **runs on the API** (`toNodeHandler` on Express), but **`BETTER_AUTH_URL` / `baseURL` is the URL the browser uses** for `/api/auth/*` — not the internal Express port. See [Better Auth baseURL](https://www.better-auth.com/docs/reference/options#baseurl) and [Cookies / reverse proxy](https://www.better-auth.com/docs/concepts/cookies).
+
+| Dev setting           | Value                              | Meaning                                     |
+| --------------------- | ---------------------------------- | ------------------------------------------- |
+| Express listen        | `:8080`                            | Process that executes auth handlers         |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8080`            | Rewrite target for Next proxy               |
+| `BETTER_AUTH_URL`     | `http://localhost:3000`            | Public origin for cookies + OAuth redirects |
+| `authClient.baseURL`  | `window.location.origin` (`:3000`) | Must match `BETTER_AUTH_URL`                |
+
 ```
-1. Sign up           → authClient.signUp.email()
-                     → Better Auth creates user in PostgreSQL
-2. Sign in           → authClient.signIn.email()
-                     → Better Auth creates session → sets cookie
-3. tRPC call         → cookie sent with request
-                     → createTRPCContext extracts session from headers
-                     → protectedProcedure checks ctx.session
-4. LiveKit token     → GET /api/token authenticates via cookie
-                     → generates JWT with room + username grants
+1. Sign up/in        → POST http://localhost:3000/api/auth/...  (browser)
+                     → Next rewrite → Express :8080 handler
+                     → Session cookie scoped to :3000
+2. tRPC / token      → Same origin :3000/api/... (cookie included)
+                     → createTRPCContext → auth.api.getSession(headers)
+3. LiveKit token     → GET /api/token (cookie auth on API)
 ```
+
+**If you pointed `BETTER_AUTH_URL` at `:8080` while the client used `:3000`**, cookies and redirects would not match the origin the browser actually uses — sessions would look like logouts after navigation.
 
 ## Key Principles
 

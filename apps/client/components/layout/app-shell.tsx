@@ -1,13 +1,14 @@
 "use client";
 
 import { authClient } from "@ototabi/auth/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useState, type ReactNode } from "react";
 
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { NoiseBackground } from "@/components/ui/retro-primitives";
+import { useSessionQuery } from "@/lib/hooks/use-session";
 import {
   ChevronLeft,
   ChevronRight,
@@ -68,9 +69,10 @@ export function AppShell({
   const pathname = usePathname();
   const router = useRouter();
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
 
-  const authState = useQuery(trpc.auth.getSession.queryOptions());
+  const authState = useSessionQuery();
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed((value) => !value);
@@ -78,8 +80,9 @@ export function AppShell({
 
   const handleSignOut = useCallback(async () => {
     await authClient.signOut();
+    queryClient.setQueryData(trpc.auth.getSession.queryOptions().queryKey, null);
     router.push("/auth/signin");
-  }, [router]);
+  }, [queryClient, router, trpc]);
 
   const userName = authState.data?.user?.name ?? "Operator";
   const userEmail = authState.data?.user?.email ?? "";

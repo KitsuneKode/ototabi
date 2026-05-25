@@ -3,11 +3,11 @@ import type { AppRouter } from "@ototabi/trpc";
 import { createTRPCClient, httpBatchLink, loggerLink } from "@trpc/client";
 import { SuperJSON } from "superjson";
 
+import { getApiBaseUrl } from "@/lib/api-base";
 import config from "@/utils/config";
 
 function getUrl() {
-  const base = config.getConfig("apiBaseUrl");
-  return `${base}/api/trpc`;
+  return `${getApiBaseUrl()}/api/trpc`;
 }
 
 export const trpcClient = createTRPCClient<AppRouter>({
