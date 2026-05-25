@@ -232,19 +232,19 @@ model RecordingSession {
 }
 
 model DemoSessionData {
-  id           String           @id @default(cuid())
-  sessionId    String           @unique
-  session      RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  cursorEvents Json             @default("[]")
-  zoomRegions  Json             @default("[]")
+  id             String           @id @default(cuid())
+  sessionId      String           @unique
+  session        RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  cursorEvents   Json             @default("[]")
+  zoomRegions    Json             @default("[]")
   trimStartMs    Float?
   trimEndMs      Float?
   playbackSpeed  Float            @default(1)
   backgroundBlur Int              @default(0)
   pipEnabled     Boolean          @default(true)
   background     Json             @default("{\"type\":\"solid\",\"value\":\"#0a0a0a\"}")
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   @@map("demo_session_data")
 }
