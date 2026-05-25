@@ -32,7 +32,7 @@ packages/
 ├── auth/           Better Auth — email/password + guest sessions
 ├── ui/             shadcn/ui — retro analog design tokens, globals.css
 ├── jobs/           BullMQ queue definitions + job types
-├── billing/        Polar.sh — subscription checkout, webhook, plan gating
+├── billing/        Dodo Payments — checkout, webhook, subscription sync
 ├── common/         Zod schemas, ConfigLoader, Winston logger
 └── backend-common/ Backend config loader
 ```
@@ -52,7 +52,9 @@ packages/
 | **AI transcript**      | Whisper API → word-level timestamps, auto chapters, show notes       |
 | **Clip export**        | Merge, trim, re-encode (720p/1080p) with FFmpeg.wasm                 |
 | **Room sharing**       | Invite collaborators by email — host / editor / viewer roles         |
-| **Billing**            | Polar.sh — trial → Creator ($15) → Pro ($29) → Studio ($59)          |
+| **Billing**            | Dodo Payments — trial → Creator ($15) → Pro ($29) → Studio ($59)     |
+| **Export bundles**     | Selective session ZIP + signed downloads (Plan 09 v1)                |
+| **Studio access**      | Invite links, room lock, host admit/deny (`enterStudio`)             |
 
 ## Quality Gates
 
@@ -77,7 +79,9 @@ See [`.env.example`](.env.example). Key vars:
 | `AWS_*` or `MINIO_*`         | S3-compatible storage                        |
 | `REDIS_URL`                  | BullMQ worker queue                          |
 | `OPENAI_API_KEY`             | Optional — enables transcript + LLM features |
-| `POLAR_ACCESS_TOKEN`         | Optional — enables subscription billing      |
+| `DODO_PAYMENTS_API_KEY`      | Optional — subscription checkout + webhooks  |
+| `DODO_WEBHOOK_SECRET`        | Optional — verify Dodo webhook payloads      |
+| `DODO_PRODUCT_*`             | Optional — product IDs per plan tier         |
 | `BETTER_AUTH_SECRET`         | Session encryption                           |
 
 ## Docker Compose
@@ -95,7 +99,7 @@ docker compose up -d
 - [`.docs/architecture.md`](.docs/architecture.md) — system overview, data flow, auth flow
 - [`.docs/encyclopedia.md`](.docs/encyclopedia.md) — glossary of all concepts
 - [`.docs/workspace-layout.md`](.docs/workspace-layout.md) — package map, import rules
-- [`.plans/`](.plans/) — 12 scoped engineering plans
+- [`.plans/`](.plans/) — scoped engineering plans (index in [`.plans/README.md`](.plans/README.md))
 - [`AGENTS.md`](AGENTS.md) — AI coding conventions
 
 ## Self-Hostable, No Vendor Lock-in

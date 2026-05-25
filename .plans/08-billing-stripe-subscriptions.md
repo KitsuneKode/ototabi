@@ -1,8 +1,8 @@
 # Plan 08: Billing — Dodo Payments Subscriptions
 
-**Status:** pending  
+**Status:** done (May 2026) — Dodo checkout + `/api/dodo-webhook`; **`requirePlan` not yet applied** to AI/export routers  
 **Priority:** P2  
-**Provider target:** [Dodo Payments](https://docs.dodopayments.com) (replace existing Polar scaffolding in `packages/billing`).
+**Provider:** [Dodo Payments](https://docs.dodopayments.com) (`packages/billing`, `apps/api/src/routes/dodo-webhook.ts`).
 
 ## Problem
 
@@ -12,7 +12,7 @@ The product has no revenue mechanism. AI features (Whisper, LLM) cost money to r
 
 Dodo Payments Checkout Sessions for subscription management. Plans: Trial (14 days, free) → Creator ($15/mo) → Pro ($29/mo) → Studio ($59/mo).
 
-**Migration note:** Repo currently wires Polar (`packages/billing`, `/api/polar-webhook`). Plan 08 implementation should swap to `DODO_PAYMENTS_API_KEY`, checkout session create, and Dodo webhooks for `Subscription` sync.
+**Follow-up:** Wire `requirePlan` from `packages/trpc/src/trpc.ts` on transcript/LLM/export procedures; enforce trial expiry and feature matrix below.
 
 ### Plan Gating
 

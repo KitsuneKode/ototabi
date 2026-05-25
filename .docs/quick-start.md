@@ -73,11 +73,11 @@ Without S3 vars, uploads fall back to **mock URLs** — recording works locally 
 
 ### Optional (plans 04, 06, 08)
 
-| Variable         | Purpose                                                   |
-| ---------------- | --------------------------------------------------------- |
-| `REDIS_URL`      | Worker + transcript/LLM queues (`redis://localhost:6379`) |
-| `OPENAI_API_KEY` | Whisper transcript + LLM jobs                             |
-| `POLAR_*`        | Billing / subscriptions                                   |
+| Variable          | Purpose                                                       |
+| ----------------- | ------------------------------------------------------------- |
+| `REDIS_URL`       | Worker + transcript/LLM queues (`redis://localhost:6379`)     |
+| `OPENAI_API_KEY`  | Whisper transcript + LLM jobs                                 |
+| `DODO_PAYMENTS_*` | Billing — checkout + `/api/dodo-webhook` (see `.env.example`) |
 
 ### Transcript pipeline (Plan 04)
 

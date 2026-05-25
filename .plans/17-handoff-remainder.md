@@ -92,16 +92,16 @@ Smoke: host sign-in → dashboard → create room → create invite → guest in
 
 ## Backlog (P2, after above)
 
-| Plan | Summary                          |
-| ---- | -------------------------------- |
-| 02   | OPFS-primary recovery edge cases |
-| 05   | Text-based editing               |
-| 06   | AI chapters/clips/notes          |
-| 07   | Multi-track timeline editor      |
-| 08   | Polar billing                    |
-| 09   | YouTube distribution             |
-| 10   | OXC migration completion         |
-| 11   | Module-first refactor sweep      |
+| Plan | Summary                            |
+| ---- | ---------------------------------- |
+| 02   | OPFS-primary recovery edge cases   |
+| 05   | Text-based editing                 |
+| 06   | AI chapters/clips/notes            |
+| 07   | Multi-track timeline editor        |
+| 08   | Dodo billing (checkout + webhooks) |
+| 09   | YouTube distribution               |
+| 10   | OXC migration completion           |
+| 11   | Module-first refactor sweep        |
 
 ---
 

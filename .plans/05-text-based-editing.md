@@ -1,6 +1,6 @@
 # Plan 05: Text-Based Editing
 
-**Status:** pending  
+**Status:** in-progress — `TranscriptEditor` on recordings/export; full FFmpeg cut export TBD  
 **Priority:** P1
 
 ## Problem

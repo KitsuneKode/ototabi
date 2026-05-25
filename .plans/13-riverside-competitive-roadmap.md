@@ -1,6 +1,6 @@
 # Plan 13: Riverside-Competitive Product Roadmap
 
-**Status:** pending  
+**Status:** in-progress — Phase 0–1 partial; **Phase 2 lock/admit + `enterStudio` shipped** (May 2026)  
 **Priority:** P0
 
 ## Problem

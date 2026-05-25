@@ -1,8 +1,8 @@
 # Plan 09: Distribution — Export bundles & selective downloads
 
-**Status:** pending  
+**Status:** done (v1, May 2026) — selective export + ZIP via `packages/trpc/src/modules/exports/`  
 **Priority:** P2  
-**Updated:** May 2026 — YouTube OAuth and embed player deferred.
+**Deferred:** YouTube OAuth and embed player.
 
 ## Problem
 

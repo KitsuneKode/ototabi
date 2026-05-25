@@ -1,6 +1,6 @@
 # Plan 27: Concurrent multipart upload (during + after recording)
 
-**Status:** pending  
+**Status:** done (May 2026)  
 **Priority:** P0 (trust / Riverside parity)  
 **Parent:** [Plan 02](02-local-recording-opfs-recovery.md), [Plan 13](13-riverside-competitive-roadmap.md)
 

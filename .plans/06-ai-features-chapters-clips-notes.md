@@ -1,6 +1,6 @@
 # Plan 06: AI Features — Chapters, Clips, Show Notes
 
-**Status:** pending  
+**Status:** in-progress — Creator Suite pipeline (chapters, clips, show notes); regen/polish TBD  
 **Priority:** P2
 
 ## Problem

@@ -2,44 +2,51 @@
 
 Each file is a scoped engineering initiative, implementable in one PR.
 
-| #   | File                                       | Status                                  | Priority |
-| --- | ------------------------------------------ | --------------------------------------- | -------- |
-| 01  | `01-guest-join-no-auth.md`                 | done                                    | P0       |
-| 02  | `02-local-recording-opfs-recovery.md`      | done                                    | P0       |
-| 03  | `03-sync-markers-livekit-rtp.md`           | in-progress                             | P1       |
-| 04  | `04-transcript-pipeline-whisper.md`        | done                                    | P1       |
-| 05  | `05-text-based-editing.md`                 | pending                                 | P1       |
-| 06  | `06-ai-features-chapters-clips-notes.md`   | pending                                 | P2       |
-| 07  | `07-multi-track-timeline-editor.md`        | pending                                 | P2       |
-| 08  | `08-billing-stripe-subscriptions.md`       | pending                                 | P2       |
-| 09  | `09-distribution-youtube-bundles.md`       | pending                                 | P2       |
-| 10  | `10-oxc-migration.md`                      | in-progress                             | P0       |
-| 11  | `11-module-first-architecture-refactor.md` | pending                                 | P1       |
-| 12  | `12-ux-polish-keyboard-animation.md`       | in-progress                             | P1       |
-| 13  | `13-riverside-competitive-roadmap.md`      | in-progress                             | P0       |
-| 14  | `14-retro-analog-v2-product-shell.md`      | done                                    | P1       |
-| 15  | `15-premium-ux-master-plan.md`             | in-progress                             | P1       |
-| 16  | `16-retro-analog-v3-product-grade.md`      | done (batch 4; Phase 5 studio deferred) | P0       |
-| 17  | `17-handoff-remainder.md`                  | done                                    | P0       |
-| 18  | `18-session-data-layer.md`                 | done                                    | P0       |
-| 19  | `19-creator-suite-vision.md`               | done (strategy locked)                  | P0       |
-| 20  | `20-creator-suite-execution.md` + batches  | done (batches 0–6)                      | P0       |
-| 24  | `24-demo-mode-browser.md`                  | done                                    | P2       |
-| 25  | `25-parallel-subagent-execution.md`        | done (waves A–F code); smoke operator   | P0       |
-| 26  | `20-batch-6-reels.md`                      | done (May 2026)                         | P2       |
-| 27  | `27-upload-concurrency.md`                 | pending                                 | P0       |
+| #   | File                                       | Status                                                      | Priority |
+| --- | ------------------------------------------ | ----------------------------------------------------------- | -------- |
+| 01  | `01-guest-join-no-auth.md`                 | done                                                        | P0       |
+| 02  | `02-local-recording-opfs-recovery.md`      | done                                                        | P0       |
+| 03  | `03-sync-markers-livekit-rtp.md`           | in-progress                                                 | P1       |
+| 04  | `04-transcript-pipeline-whisper.md`        | done                                                        | P1       |
+| 05  | `05-text-based-editing.md`                 | in-progress (editor UI; full cut export TBD)                | P1       |
+| 06  | `06-ai-features-chapters-clips-notes.md`   | in-progress (pipeline + clips; polish/regen TBD)            | P2       |
+| 07  | `07-multi-track-timeline-editor.md`        | pending                                                     | P2       |
+| 08  | `08-billing-stripe-subscriptions.md`       | done (Dodo checkout + webhooks; `requirePlan` not wired)    | P2       |
+| 09  | `09-distribution-youtube-bundles.md`       | done (v1 selective export + ZIP; YouTube/embed deferred)    | P2       |
+| 10  | `10-oxc-migration.md`                      | in-progress                                                 | P0       |
+| 11  | `11-module-first-architecture-refactor.md` | pending                                                     | P1       |
+| 12  | `12-ux-polish-keyboard-animation.md`       | in-progress                                                 | P1       |
+| 13  | `13-riverside-competitive-roadmap.md`      | in-progress (Phase 0–1 partial; Phase 2 lock/admit shipped) | P0       |
+| 14  | `14-retro-analog-v2-product-shell.md`      | done                                                        | P1       |
+| 15  | `15-premium-ux-master-plan.md`             | in-progress                                                 | P1       |
+| 16  | `16-retro-analog-v3-product-grade.md`      | done (batch 4; Phase 5 studio deferred)                     | P0       |
+| 17  | `17-handoff-remainder.md`                  | done                                                        | P0       |
+| 18  | `18-session-data-layer.md`                 | done                                                        | P0       |
+| 19  | `19-creator-suite-vision.md`               | done (strategy locked)                                      | P0       |
+| 20  | `20-creator-suite-execution.md` + batches  | done (batches 0–6)                                          | P0       |
+| 24  | `24-demo-mode-browser.md`                  | done                                                        | P2       |
+| 25  | `25-parallel-subagent-execution.md`        | done (waves A–F code); smoke operator                       | P0       |
+| 26  | `20-batch-6-reels.md`                      | done (May 2026)                                             | P2       |
+| 27  | `27-upload-concurrency.md`                 | done (May 2026)                                             | P0       |
 
-## Current focus (product-grade)
+## Current focus (May 2026)
 
-**Shipped on `main` (May 2026):** Creator Suite batches 0–6, parallel waves A–F, demo v1.1, trust/upload policy, CI, brand/OG.
+**Shipped on `main`:** Creator Suite batches 0–6, parallel waves A–F, demo v1.1, trust/upload policy, CI, brand/OG, **Plan 27** upload pool, **Plan 13 Phase 2** lock/admit + unified `enterStudio`, **Plan 09** export bundles, **Plan 08** Dodo Payments, AI pipeline status/dedup, DB list indexes.
+
+**Operator next (no new code required):**
+
+1. `git push` + `bun run db:migrate`
+2. [try-local-smoke.md](../.docs/try-local-smoke.md) — full record → upload → AI → export → studio lock
+3. Dodo dashboard: products + `DODO_PRODUCT_*` + webhook URL → `/api/dodo-webhook`
 
 **Next build order:**
 
-1. **[27-upload-concurrency](27-upload-concurrency.md)** — parallel multipart (no 50‑min post-stop drain)
-2. **[13 Phase 2](13-riverside-competitive-roadmap.md)** — invite validity + lock/admit
-3. **[09 distribution](09-distribution-youtube-bundles.md)** — selective export + ZIP (no YouTube/embed v1)
-4. **[08 billing](08-billing-stripe-subscriptions.md)** — Dodo Payments
-5. **Local/staging smoke** — [try-local-smoke.md](../.docs/try-local-smoke.md) (operator)
+1. **Plan gating** — wire `requirePlan` on AI/export endpoints ([08](08-billing-stripe-subscriptions.md))
+2. **[13 Phase 2 remainder](13-riverside-competitive-roadmap.md)** — preflight, health panel, consent, host controls
+3. **[05](05-text-based-editing.md)** — transcript selection → FFmpeg cut export
+4. **[07](07-multi-track-timeline-editor.md)** — multi-track timeline
+5. **[11](11-module-first-architecture-refactor.md)** — module-first debt
+6. **Staging deploy** — [deploy-railway.md](../.docs/deploy-railway.md) (optional)
 
 ## Convention
 
