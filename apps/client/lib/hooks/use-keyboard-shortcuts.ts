@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 
 export type ShortcutAction =
   | "toggleRecording"
@@ -31,54 +31,52 @@ export const SHORTCUTS: ShortcutDef[] = [
 export function useKeyboardShortcuts(handlers: {
   [K in ShortcutAction]?: () => void;
 }) {
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+  const handlersRef = useRef(handlers);
+  handlersRef.current = handlers;
 
-      const pressed = e.key.toLowerCase();
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
-      if (pressed === "r" && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        handlers.toggleRecording?.();
-      }
-      if (pressed === "m" && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        handlers.toggleMute?.();
-      }
-      if (pressed === "v" && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        handlers.toggleVideo?.();
-      }
-      if (pressed === "s" && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        handlers.toggleScreenShare?.();
-      }
-      if (e.code === "Space" && !e.ctrlKey && !e.metaKey) {
-        if (e.repeat) return;
-        e.preventDefault();
-        handlers.pttDown?.();
-      }
-      if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        handlers.toggleShortcuts?.();
-      }
-      if (e.key === "Escape") {
-        handlers.dismiss?.();
-      }
-    },
-    [handlers],
-  );
+    const pressed = e.key.toLowerCase();
+    const h = handlersRef.current;
 
-  const handleKeyUp = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (e.code === "Space") {
-        e.preventDefault();
-        handlers.pttUp?.();
-      }
-    },
-    [handlers],
-  );
+    if (pressed === "r" && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      h.toggleRecording?.();
+    }
+    if (pressed === "m" && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      h.toggleMute?.();
+    }
+    if (pressed === "v" && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      h.toggleVideo?.();
+    }
+    if (pressed === "s" && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      h.toggleScreenShare?.();
+    }
+    if (e.code === "Space" && !e.ctrlKey && !e.metaKey) {
+      if (e.repeat) return;
+      e.preventDefault();
+      h.pttDown?.();
+    }
+    if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      h.toggleShortcuts?.();
+    }
+    if (e.key === "Escape") {
+      h.dismiss?.();
+    }
+  }, []);
+
+  const handleKeyUp = useCallback((e: KeyboardEvent) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    if (e.code === "Space") {
+      e.preventDefault();
+      handlersRef.current.pttUp?.();
+    }
+  }, []);
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);

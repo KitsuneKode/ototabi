@@ -1,22 +1,18 @@
 "use client";
 
-import {
-  ControlBar,
-  GridLayout,
-  ParticipantTile,
-  RoomAudioRenderer,
-  RoomContext,
-  useTracks,
-  useChat,
-} from "@livekit/components-react";
+import { ControlBar, RoomAudioRenderer, RoomContext } from "@livekit/components-react";
 import "@livekit/components-styles";
 import { Button } from "@ototabi/ui/components/button";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Room, RoomEvent, Track, RoomOptions, VideoPresets } from "livekit-client";
+import { Room, RoomOptions, VideoPresets } from "livekit-client";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+
+import type { RecorderManager } from "@/lib/recorder/recorder-manager";
 
 import { SessionStatusRail } from "@/components/layout/session-status-rail";
+import { StudioChatPanel } from "@/components/studio/studio-chat-panel";
+import { StudioVideoGrid } from "@/components/studio/studio-video-grid";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { KeyboardShortcutsOverlay } from "@/components/ui/keyboard-shortcuts-overlay";
 import { Led, LedInline } from "@/components/ui/led";
@@ -27,14 +23,11 @@ import {
   NoiseBackground,
   MechButton,
 } from "@/components/ui/retro-primitives";
-import { formatTime } from "@/lib/date-utils";
 import { useKeyboardShortcuts } from "@/lib/hooks/use-keyboard-shortcuts";
+import { useStudioConnection } from "@/lib/hooks/use-studio-connection";
 import { useTimer, formatTimer } from "@/lib/hooks/use-timer";
 import { ArrowLeft, CheckCircle, AlertTriangle, Radio, PanelRight } from "@/lib/icons";
-import { RecorderManager } from "@/lib/recorder/recorder-manager";
 import { useTRPC } from "@/trpc/client";
-import config from "@/utils/config";
-
 export default function StudioPage() {
   const { roomId } = useParams() as { roomId: string };
   const searchParams = useSearchParams();
@@ -60,51 +53,41 @@ export default function StudioPage() {
   };
   const qualityConfig = qualityPresets[quality] || qualityPresets["720p"]!;
 
-  const [_token, setToken] = useState<string | null>(null);
-  const [tokenLoading, setTokenLoading] = useState(true);
-  const [tokenError, setTokenError] = useState("");
-  const [sessionUser, setSessionUser] = useState<any>(null);
-  const [roomDetails, setRoomDetails] = useState<any>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [progressMap, setProgressMap] = useState<
     Map<string, { name: string; progress: number; type: string }>
   >(new Map());
-  const [connectionError, setConnectionError] = useState("");
-  const [_isConnected, setIsConnected] = useState(false);
-  const [connectionHealth, setConnectionHealth] = useState<
-    "connected" | "reconnecting" | "disconnected"
-  >("disconnected");
   const [sidebarTab, setSidebarTab] = useState<"uploads" | "chat">("uploads");
-  const [chatInput, setChatInput] = useState("");
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const recorderManager = useRef<RecorderManager | null>(null);
   const activeSessionIdRef = useRef<string | null>(null);
 
   const recordingSeconds = useTimer(isRecording);
 
   const authState = useQuery(trpc.auth.getSession.queryOptions());
-
-  useEffect(() => {
-    if (authState.data?.user) setSessionUser(authState.data.user);
-  }, [authState.data]);
+  const sessionUser = authState.data?.user;
 
   const roomInfo = useQuery(
     trpc.rooms.getRoom.queryOptions({ code: roomId }, { enabled: !!roomId }),
   );
-
-  useEffect(() => {
-    if (roomInfo.data) setRoomDetails(roomInfo.data);
-  }, [roomInfo.data]);
+  const roomDetails = roomInfo.data;
 
   const startSessionMutation = useMutation(trpc.rooms.startRecordingSession.mutationOptions());
   const stopSessionMutation = useMutation(trpc.rooms.stopRecordingSession.mutationOptions());
   const leaveRoomMutation = useMutation(trpc.rooms.leaveRoom.mutationOptions());
   const createEventMutation = useMutation(trpc.recordingEvents.create.mutationOptions());
   const submitSyncMarkerMutation = useMutation(trpc.syncMarkers.submit.mutationOptions());
+
+  const leaveRoomMutateRef = useRef(leaveRoomMutation.mutate);
+  const createEventMutateRef = useRef(createEventMutation.mutate);
+  const submitSyncMarkerMutateRef = useRef(submitSyncMarkerMutation.mutate);
+  const recorderManagerRef = useRef<{ current: RecorderManager | null } | null>(null);
+  leaveRoomMutateRef.current = leaveRoomMutation.mutate;
+  createEventMutateRef.current = createEventMutation.mutate;
+  submitSyncMarkerMutateRef.current = submitSyncMarkerMutation.mutate;
 
   useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
@@ -135,7 +118,7 @@ export default function StudioPage() {
 
     const publishMarker = () => {
       const localTime = performance.now();
-      submitSyncMarkerMutation.mutate({
+      submitSyncMarkerMutateRef.current({
         sessionId: activeSessionId,
         localTime,
       });
@@ -148,120 +131,67 @@ export default function StudioPage() {
     publishMarker();
     const intervalId = window.setInterval(publishMarker, 2000);
     return () => window.clearInterval(intervalId);
-  }, [isRecording, isPaused, activeSessionId, room, submitSyncMarkerMutation]);
+  }, [isRecording, isPaused, activeSessionId, room]);
 
-  const handleDataReceived = useCallback((payload: Uint8Array, participant?: any) => {
-    try {
-      const data = JSON.parse(new TextDecoder().decode(payload));
-      if (data.type === "start_recording") {
-        setActiveSessionId(data.sessionId);
-        setIsRecording(true);
-        recorderManager.current?.startRecording(data.sessionId);
-      } else if (data.type === "stop_recording") {
-        setIsRecording(false);
-        recorderManager.current?.stopRecording();
-      } else if (data.type === "upload_progress") {
-        setProgressMap((prev) => {
-          const next = new Map(prev);
-          next.set(data.trackSid, {
-            name: participant?.identity || "Guest",
-            progress: data.progress,
-            type: data.trackSid.includes("video") ? "VIDEO" : "AUDIO",
-          });
-          return next;
-        });
-      }
-    } catch {
-      // ignore malformed payloads
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!sessionUser || !roomId || !roomDetails) return;
-
-    let cancelled = false;
-
-    (async () => {
+  const handleDataReceived = useCallback(
+    (payload: Uint8Array, participant?: { identity?: string }) => {
       try {
-        setTokenLoading(true);
-        const tokenParams = new URLSearchParams({
-          room: roomId,
-          username: sessionUser.name || sessionUser.email,
-        });
-        if (inviteToken) tokenParams.set("invite", inviteToken);
-        const resp = await fetch(`${config.getConfig("apiBaseUrl")}/api/token?${tokenParams}`);
-        if (!resp.ok) throw new Error(`Token request failed: ${resp.status}`);
-        const data = await resp.json();
-        if (cancelled) return;
-
-        if (!data.token) throw new Error("No token returned from server");
-
-        setToken(data.token);
-
-        room.on(RoomEvent.DataReceived, handleDataReceived);
-        room.on(RoomEvent.Disconnected, () => {
-          setIsConnected(false);
-          setConnectionHealth("disconnected");
-          setConnectionError("Disconnected from studio");
-        });
-        room.on(RoomEvent.Reconnecting, () => {
-          setConnectionHealth("reconnecting");
-          setConnectionError("Reconnecting...");
-        });
-        room.on(RoomEvent.Reconnected, () => {
-          setConnectionError("");
-          setIsConnected(true);
-          setConnectionHealth("connected");
-          const sessionId = activeSessionIdRef.current;
-          if (sessionId) {
-            createEventMutation.mutate({
-              sessionId,
-              type: "RECONNECT",
-              message: "Participant reconnected to studio",
+        const data = JSON.parse(new TextDecoder().decode(payload));
+        if (data.type === "start_recording") {
+          setActiveSessionId(data.sessionId);
+          setIsRecording(true);
+          void recorderManagerRef.current?.current?.startRecording(data.sessionId);
+        } else if (data.type === "stop_recording") {
+          setIsRecording(false);
+          void recorderManagerRef.current?.current?.stopRecording();
+        } else if (data.type === "upload_progress") {
+          setProgressMap((prev) => {
+            const next = new Map(prev);
+            next.set(data.trackSid, {
+              name: participant?.identity || "Guest",
+              progress: data.progress,
+              type: data.trackSid.includes("video") ? "VIDEO" : "AUDIO",
             });
-          }
-        });
-
-        await room.connect(config.getConfig("liveKitUrl"), data.token);
-        if (cancelled) return;
-
-        setIsConnected(true);
-        setConnectionHealth("connected");
-        setTokenLoading(false);
-
-        if (videoEnabled) await room.localParticipant.setCameraEnabled(true);
-        if (audioEnabled) await room.localParticipant.setMicrophoneEnabled(true);
-        if (screenShareEnabled) await room.localParticipant.setScreenShareEnabled(true);
-
-        recorderManager.current = new RecorderManager({ room });
-      } catch (err: any) {
-        if (!cancelled) {
-          setTokenError(err.message || "Failed to connect to studio");
-          setTokenLoading(false);
+            return next;
+          });
         }
+      } catch {
+        // ignore malformed payloads
       }
-    })();
+    },
+    [],
+  );
 
-    return () => {
-      cancelled = true;
-      room.off(RoomEvent.DataReceived, handleDataReceived);
-      if (roomDetails?.id) leaveRoomMutation.mutate({ roomId: roomDetails.id });
-      recorderManager.current?.cleanup();
-      room.disconnect();
-    };
-  }, [
-    sessionUser,
-    roomId,
-    roomDetails,
-    handleDataReceived,
+  const connection = useStudioConnection({
     room,
+    roomCode: roomId,
+    roomDbId: roomDetails?.id,
+    username: sessionUser?.name || sessionUser?.email || "",
+    inviteToken,
     audioEnabled,
     videoEnabled,
     screenShareEnabled,
-    inviteToken,
-    createEventMutation,
-    leaveRoomMutation,
-  ]);
+    enabled: !!sessionUser && !!roomDetails?.id,
+    onDataReceived: handleDataReceived,
+    onReconnected: () => {
+      const sessionId = activeSessionIdRef.current;
+      if (sessionId) {
+        createEventMutateRef.current({
+          sessionId,
+          type: "RECONNECT",
+          message: "Participant reconnected to studio",
+        });
+      }
+    },
+    onLeaveRoom: (dbRoomId) => {
+      leaveRoomMutateRef.current({ roomId: dbRoomId });
+    },
+  });
+
+  const recorderManager = connection.recorderManager;
+  recorderManagerRef.current = recorderManager;
+  const connectionHealth = connection.connectionHealth;
+  const connectionError = connection.connectionMessage || connection.error;
 
   const handleStartRecording = async () => {
     if (!roomDetails) return;
@@ -295,52 +225,6 @@ export default function StudioPage() {
       await room.localParticipant.publishData(data, { reliable: true });
     } catch (e) {
       console.error("Failed stopping recording:", e);
-    }
-  };
-
-  const { chatMessages, send } = useChat({ room });
-
-  const persistMessage = useMutation(trpc.chat.sendMessage.mutationOptions());
-
-  const persistedMessagesQuery = useQuery(
-    trpc.chat.getMessages.queryOptions(
-      { roomId: roomDetails?.id ?? "" },
-      { enabled: !!roomDetails?.id },
-    ),
-  );
-
-  const allMessages = useMemo(() => {
-    const persisted = (persistedMessagesQuery.data ?? []).map((m) => ({
-      id: m.id,
-      timestamp: new Date(m.createdAt).getTime(),
-      message: m.message,
-      from: { identity: m.user.name, name: m.user.name },
-    }));
-
-    const dedupedPersisted = persisted.filter(
-      (p) =>
-        !chatMessages.some(
-          (r) =>
-            r.from?.identity === p.from?.identity &&
-            r.message === p.message &&
-            Math.abs(r.timestamp - p.timestamp) < 3000,
-        ),
-    );
-
-    return [...dedupedPersisted, ...chatMessages].sort((a, b) => a.timestamp - b.timestamp);
-  }, [persistedMessagesQuery.data, chatMessages]);
-
-  const handleSend = async () => {
-    if (!chatInput.trim()) return;
-    try {
-      await send(chatInput.trim());
-      await persistMessage.mutateAsync({
-        roomId: roomDetails.id,
-        message: chatInput.trim(),
-      });
-      setChatInput("");
-    } catch (e) {
-      console.error("Failed to send message:", e);
     }
   };
 
@@ -384,7 +268,7 @@ export default function StudioPage() {
   }
 
   // ─── Error State ────────────────────────────────────────────────────────────
-  if (tokenError) {
+  if (connection.phase === "error" || connection.error) {
     return (
       <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
         <AnalogCard className="w-full max-w-sm p-8 text-center">
@@ -395,7 +279,7 @@ export default function StudioPage() {
             Connection Fault
           </p>
           <p className="text-muted-foreground mb-6 font-mono text-xs leading-normal">
-            {tokenError}
+            {connectionError}
           </p>
           <MechButton onClick={() => router.push("/dashboard")} className="w-full justify-center">
             Return to Dashboard
@@ -406,7 +290,7 @@ export default function StudioPage() {
   }
 
   // ─── Loading State ───────────────────────────────────────────────────────────
-  if (tokenLoading || !roomDetails) {
+  if (connection.phase !== "connected" || !roomDetails || !sessionUser) {
     return (
       <div className="bg-background text-foreground flex min-h-screen items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-4">
@@ -505,7 +389,7 @@ export default function StudioPage() {
               <AnalogInset className="flex items-center gap-2 px-3 py-1.5">
                 <Led color={isPaused ? "amber" : "red"} size="sm" pulse={!isPaused} />
                 <MonoLabel className="text-led-on tabular-nums">
-                  {isPaused ? "PAUSED" : "REC"} // {formatTimer(recordingSeconds)}
+                  {isPaused ? "PAUSED" : "REC"} · {formatTimer(recordingSeconds)}
                 </MonoLabel>
               </AnalogInset>
             )}
@@ -526,7 +410,7 @@ export default function StudioPage() {
                         if (isPaused) {
                           recorderManager.current?.resumeRecording();
                           if (activeSessionId) {
-                            createEventMutation.mutate({
+                            createEventMutateRef.current({
                               sessionId: activeSessionId,
                               type: "RESUME",
                               message: "Recording resumed",
@@ -536,7 +420,7 @@ export default function StudioPage() {
                         } else {
                           recorderManager.current?.pauseRecording();
                           if (activeSessionId) {
-                            createEventMutation.mutate({
+                            createEventMutateRef.current({
                               sessionId: activeSessionId,
                               type: "PAUSE",
                               message: "Recording paused",
@@ -592,7 +476,7 @@ export default function StudioPage() {
             </div>
 
             <div className="flex min-h-0 w-full flex-1 items-center justify-center p-3 md:p-4">
-              <StudioVideoConference />
+              <StudioVideoGrid />
             </div>
             <RoomAudioRenderer />
           </main>
@@ -740,70 +624,10 @@ export default function StudioPage() {
                 ) : null}
               </div>
             ) : (
-              <div className="flex flex-1 flex-col overflow-hidden">
-                <div className="flex-1 space-y-3 overflow-y-auto p-4">
-                  {allMessages.length === 0 ? (
-                    <AnalogInset className="flex flex-col items-center justify-center gap-3 border-dashed p-6 text-center">
-                      <div className="space-y-1">
-                        <MonoLabel className="block">No Messages</MonoLabel>
-                        <p className="text-muted-foreground/60 max-w-[160px] font-mono text-[8px] leading-normal uppercase">
-                          Chat messages will appear here.
-                        </p>
-                      </div>
-                    </AnalogInset>
-                  ) : (
-                    allMessages.map((msg) => {
-                      const isLocal = msg.from?.identity === sessionUser?.name;
-                      return (
-                        <div
-                          key={msg.id}
-                          className={`flex ${isLocal ? "justify-end" : "justify-start"}`}
-                        >
-                          <div
-                            className={`max-w-[90%] rounded px-3 py-2 ${
-                              isLocal
-                                ? "bg-accent/20 border-accent/30 border"
-                                : "bg-popover border-border border"
-                            }`}
-                          >
-                            <div className="mb-0.5 flex items-center gap-2">
-                              <span className="text-muted-foreground font-mono text-[8px] font-bold uppercase">
-                                {msg.from?.name || msg.from?.identity || "Unknown"}
-                              </span>
-                              <span className="text-muted-foreground/50 font-mono text-[7px]">
-                                {formatTime(msg.timestamp)}
-                              </span>
-                            </div>
-                            <p className="text-foreground font-mono text-[11px] leading-relaxed break-words">
-                              {msg.message}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-                <div className="border-border border-t p-3">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSend();
-                        }
-                      }}
-                      placeholder="Type a message..."
-                      className="bg-popover border-border text-foreground placeholder:text-muted-foreground/40 focus:border-accent/60 flex-1 rounded border px-3 py-2 font-mono text-[11px] focus:outline-none"
-                    />
-                    <MechButton onClick={handleSend} className="h-auto px-3 py-2">
-                      Send
-                    </MechButton>
-                  </div>
-                </div>
-              </div>
+              <StudioChatPanel
+                roomDbId={roomDetails.id}
+                sessionUserName={sessionUser.name || sessionUser.email}
+              />
             )}
           </aside>
         </div>
@@ -816,31 +640,5 @@ export default function StudioPage() {
 
       <KeyboardShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </RoomContext.Provider>
-  );
-}
-
-function StudioVideoConference() {
-  const tracks = useTracks(
-    [
-      { source: Track.Source.Camera, withPlaceholder: false },
-      { source: Track.Source.ScreenShare, withPlaceholder: false },
-    ],
-    { onlySubscribed: false },
-  );
-
-  return (
-    <GridLayout
-      tracks={tracks}
-      className="h-full w-full"
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-        gap: "16px",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <ParticipantTile className="border-border/60 bg-card overflow-hidden rounded border-2 shadow-[0_4px_12px_rgba(0,0,0,0.4)]" />
-    </GridLayout>
   );
 }
