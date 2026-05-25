@@ -97,6 +97,10 @@ Without S3 vars, uploads fall back to **mock URLs** — recording works locally 
 
 Next.js **rewrites** (client `:3000`) proxy `/api/auth`, `/api/trpc`, `/api/guest-auth`, `/api/token` → `:8080` so cookies stay on `:3000`.
 
+### Full local Creator Suite smoke
+
+See [try-local-smoke.md](./try-local-smoke.md) for auth → studio → AI clips → reels presets → demo → export.
+
 ### Recording trust smoke (Plan 13)
 
 See [try-recovery-smoke.md](./try-recovery-smoke.md) for the full tab-kill → recovery → retry script.

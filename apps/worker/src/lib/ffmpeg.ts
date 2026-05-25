@@ -1,3 +1,5 @@
+import type { ReelsPreset } from "@ototabi/common/reels-presets";
+
 import { spawn } from "node:child_process";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -34,6 +36,37 @@ export async function downloadMediaToFile(fetchUrl: string, destPath: string): P
 
 export type ClipRenderPreset = "vertical_9_16" | "landscape_16_9";
 
+const MAX_CAPTION_CHARS = 96;
+
+function truncateCaption(text: string): string {
+  const trimmed = text.trim().replace(/\s+/g, " ");
+  if (trimmed.length <= MAX_CAPTION_CHARS) return trimmed;
+  return `${trimmed.slice(0, MAX_CAPTION_CHARS - 1)}…`;
+}
+
+/** Path must be escaped for ffmpeg filter (colons, backslashes). */
+function escapeFilterPath(filePath: string): string {
+  return filePath.replace(/\\/g, "/").replace(/:/g, "\\:");
+}
+
+function buildReelsDrawtextFilter(
+  baseVf: string,
+  captionFilePath: string,
+  preset: ReelsPreset,
+): string {
+  const textfile = escapeFilterPath(captionFilePath);
+  const y =
+    preset.captionPosition === "lower_third"
+      ? `h-${preset.marginBottom}-text_h`
+      : `h-${preset.marginBottom}-text_h`;
+  const box =
+    preset.boxBorderWidth > 0 && preset.boxColor
+      ? `:box=1:boxcolor=${preset.boxColor}:boxborderw=${preset.boxBorderWidth}`
+      : "";
+  const draw = `drawtext=textfile=${textfile}:fontsize=${preset.fontSize}:fontcolor=${preset.fontColor}:x=(w-text_w)/2:y=${y}${box}`;
+  return `${baseVf},${draw}`;
+}
+
 export async function renderClipToFile(params: {
   inputPath: string;
   outputPath: string;
@@ -41,9 +74,19 @@ export async function renderClipToFile(params: {
   endTime: number;
   preset: ClipRenderPreset;
   audioOnly?: boolean;
+  reelsPreset?: ReelsPreset;
+  captionText?: string;
+  workDir?: string;
 }): Promise<void> {
   const duration = Math.max(0.5, params.endTime - params.startTime);
-  const vf = params.preset === "vertical_9_16" ? VERTICAL_FILTER : LANDSCAPE_FILTER;
+  const baseVf = params.preset === "vertical_9_16" ? VERTICAL_FILTER : LANDSCAPE_FILTER;
+
+  let vf = baseVf;
+  if (params.reelsPreset && params.captionText && params.workDir) {
+    const captionPath = join(params.workDir, "reels-caption.txt");
+    await writeFile(captionPath, truncateCaption(params.captionText), "utf8");
+    vf = buildReelsDrawtextFilter(baseVf, captionPath, params.reelsPreset);
+  }
 
   const args: string[] = ["-y", "-ss", String(params.startTime), "-t", String(duration)];
 

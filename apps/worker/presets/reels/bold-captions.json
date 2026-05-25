@@ -1,0 +1,11 @@
+{
+  "id": "bold-captions",
+  "label": "Bold captions",
+  "description": "Large bottom captions for short-form hooks.",
+  "captionPosition": "bottom",
+  "fontSize": 52,
+  "marginBottom": 120,
+  "fontColor": "white",
+  "boxBorderWidth": 4,
+  "boxColor": "black@0.55"
+}

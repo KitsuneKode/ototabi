@@ -41,6 +41,8 @@ export interface ExportJobData {
   sessionId: string;
   clipId?: string;
   preset: ExportPreset;
+  /** When set, re-renders a vertical clip with reels caption styling (see @ototabi/common reels-presets). */
+  reelsPresetId?: string;
 }
 
 export interface ExportJobResult {

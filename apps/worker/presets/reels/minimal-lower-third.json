@@ -1,0 +1,10 @@
+{
+  "id": "minimal-lower-third",
+  "label": "Minimal lower third",
+  "description": "Quiet lower-third line for interview clips.",
+  "captionPosition": "lower_third",
+  "fontSize": 36,
+  "marginBottom": 200,
+  "fontColor": "white",
+  "boxBorderWidth": 0
+}

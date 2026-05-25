@@ -20,6 +20,25 @@ export const clipsRouter = {
       }),
     ),
 
+  listReelsPresets: protectedProcedure.query(() => clipsService.listReelsPresets()),
+
+  queueReelsRender: protectedProcedure
+    .input(
+      z.object({
+        sessionId: z.string(),
+        clipId: z.string(),
+        reelsPresetId: z.string(),
+      }),
+    )
+    .mutation(({ input, ctx }) =>
+      clipsService.queueReelsRender({
+        actorId: ctx.session.user.id,
+        sessionId: input.sessionId,
+        clipId: input.clipId,
+        reelsPresetId: input.reelsPresetId,
+      }),
+    ),
+
   regenerate: protectedProcedure
     .input(z.object({ sessionId: z.string() }))
     .mutation(({ input, ctx }) =>

@@ -1,6 +1,7 @@
 export { backendConfigSchema } from "./config";
 export {
   buildClipRenderKey,
+  buildClipReelsRenderKey,
   buildObjectKey,
   getSignedGetUrl,
   getS3Client,

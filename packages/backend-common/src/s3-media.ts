@@ -53,6 +53,16 @@ export function buildClipRenderKey(
   return `recordings/session_${sessionId}/renders/clip_${clipId}_${suffix}.${ext}`;
 }
 
+/** Styled reels export (9:16 + caption preset). */
+export function buildClipReelsRenderKey(
+  sessionId: string,
+  clipId: string,
+  reelsPresetId: string,
+): string {
+  const safeId = reelsPresetId.replace(/[^a-z0-9-]/gi, "_");
+  return `recordings/session_${sessionId}/renders/clip_${clipId}_reels_${safeId}.mp4`;
+}
+
 /** Full-session export (no clip trim). */
 export function buildSessionRenderKey(
   sessionId: string,

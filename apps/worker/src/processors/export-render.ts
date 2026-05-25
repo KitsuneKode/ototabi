@@ -3,10 +3,12 @@ import type { Job } from "bullmq";
 
 import {
   buildClipRenderKey,
+  buildClipReelsRenderKey,
   buildSessionRenderKey,
   resolveMediaFetchUrl,
   uploadObjectFromFile,
 } from "@ototabi/backend-common/s3-media";
+import { assertReelsPresetId } from "@ototabi/common/reels-presets";
 import { prisma } from "@ototabi/store";
 import { join } from "node:path";
 
@@ -152,10 +154,92 @@ async function processSessionExport(
   }
 }
 
+async function processClipReelsExport(
+  sessionId: string,
+  clipId: string,
+  reelsPresetId: string,
+): Promise<ExportJobResult> {
+  const reelsPreset = assertReelsPresetId(reelsPresetId);
+  const clip = await prisma.clipCandidate.findFirst({
+    where: { id: clipId, sessionId },
+  });
+  if (!clip) {
+    throw new Error(`Clip ${clipId} not found for session ${sessionId}`);
+  }
+
+  const outputKey = buildClipReelsRenderKey(sessionId, clip.id, reelsPresetId);
+
+  try {
+    await assertFfmpegAvailable();
+
+    const source = await findSourceTrack(sessionId);
+    if (!source) {
+      throw new Error(`No completed source track for session ${sessionId}`);
+    }
+
+    const mediaRef = source.s3Url ?? source.s3Key;
+    if (!mediaRef) {
+      throw new Error(`Source track has no media reference for session ${sessionId}`);
+    }
+
+    const fetchUrl = await resolveMediaFetchUrl(mediaRef);
+    const audioOnly = source.type === "MICROPHONE";
+
+    await withTempDir(`export-reels-${clip.id}`, async (dir) => {
+      const inputExt = mediaRef.includes(".") ? mediaRef.split(".").pop() : "webm";
+      const inputFile = join(dir, `input.${inputExt ?? "webm"}`);
+      const outputPath = join(dir, "output.mp4");
+
+      console.log(
+        `[Export] Reels ${reelsPresetId} for clip ${clip.id} (${clip.startTime}s–${clip.endTime}s)`,
+      );
+
+      await downloadMediaToFile(fetchUrl, inputFile);
+      await renderClipToFile({
+        inputPath: inputFile,
+        outputPath,
+        startTime: clip.startTime,
+        endTime: clip.endTime,
+        preset: "vertical_9_16",
+        audioOnly,
+        reelsPreset,
+        captionText: clip.rationale,
+        workDir: dir,
+      });
+      await uploadObjectFromFile({
+        key: outputKey,
+        filePath: outputPath,
+        contentType: "video/mp4",
+      });
+    });
+
+    await prisma.clipCandidate.update({
+      where: { id: clip.id },
+      data: {
+        renderStatus: "ready",
+        renderS3Key: outputKey,
+        renderError: null,
+      },
+    });
+
+    console.log(`[Export] Clip ${clip.id} reels ready → ${outputKey}`);
+    return { status: "ready", outputKey };
+  } catch (error) {
+    const msg = errorMessage(error);
+    await prisma.clipCandidate.update({
+      where: { id: clip.id },
+      data: { renderStatus: "failed", renderError: msg },
+    });
+    console.error(`[Export] Clip ${clip.id} reels failed:`, error);
+    return { status: "failed", errorMessage: msg };
+  }
+}
+
 async function processClipExport(
   sessionId: string,
   clipId: string,
   preset: ExportPreset,
+  reelsPresetId?: string,
 ): Promise<ExportJobResult> {
   const clip = await prisma.clipCandidate.findFirst({
     where: { id: clipId, sessionId },
@@ -164,7 +248,10 @@ async function processClipExport(
     throw new Error(`Clip ${clipId} not found for session ${sessionId}`);
   }
 
-  const outputKey = buildClipRenderKey(sessionId, clip.id, preset);
+  const reelsPreset = reelsPresetId ? assertReelsPresetId(reelsPresetId) : undefined;
+  const outputKey = reelsPresetId
+    ? buildClipReelsRenderKey(sessionId, clip.id, reelsPresetId)
+    : buildClipRenderKey(sessionId, clip.id, preset);
 
   try {
     await assertFfmpegAvailable();
@@ -189,8 +276,9 @@ async function processClipExport(
       const inputExt = mediaRef.includes(".") ? mediaRef.split(".").pop() : "webm";
       const inputFile = `${inputPath}.${inputExt ?? "webm"}`;
 
+      const label = reelsPresetId ? `${preset}+reels:${reelsPresetId}` : preset;
       console.log(
-        `[Export] Rendering clip ${clip.id} (${preset}) from ${source.type} ${clip.startTime}s–${clip.endTime}s`,
+        `[Export] Rendering clip ${clip.id} (${label}) from ${source.type} ${clip.startTime}s–${clip.endTime}s`,
       );
 
       await downloadMediaToFile(fetchUrl, inputFile);
@@ -201,6 +289,8 @@ async function processClipExport(
         endTime: clip.endTime,
         preset: renderPreset,
         audioOnly,
+        reelsPreset,
+        captionText: reelsPreset ? clip.rationale : undefined,
       });
       await uploadObjectFromFile({
         key: outputKey,
@@ -232,7 +322,11 @@ async function processClipExport(
 }
 
 export async function processExportJob(job: Job<ExportJobData>): Promise<ExportJobResult> {
-  const { sessionId, clipId, preset } = job.data;
+  const { sessionId, clipId, preset, reelsPresetId } = job.data;
+
+  if (clipId && reelsPresetId) {
+    return processClipReelsExport(sessionId, clipId, reelsPresetId);
+  }
 
   if (!clipId) {
     if (preset !== "episode_mp3" && preset !== "landscape_16_9") {

@@ -1,6 +1,6 @@
 # Batch 6 — Reels Presets (native JSON packs)
 
-**Status:** pending  
+**Status:** done (May 2026 — local)  
 **Priority:** P2  
 **Depends on:** Batch 3 clips + worker 9:16 export stable on staging
 

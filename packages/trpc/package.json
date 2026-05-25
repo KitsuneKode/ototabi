@@ -15,6 +15,7 @@
     "@aws-sdk/s3-request-presigner": "^3.864.0",
     "@ototabi/auth": "*",
     "@ototabi/backend-common": "*",
+    "@ototabi/common": "*",
     "@ototabi/jobs": "*",
     "@ototabi/store": "*",
     "@trpc/server": "^11.4.3",

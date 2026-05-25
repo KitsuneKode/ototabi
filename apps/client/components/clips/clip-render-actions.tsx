@@ -2,6 +2,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 
+import { ClipReelsPresetPicker } from "@/components/clips/clip-reels-preset-picker";
 import { MechButton } from "@/components/ui/retro-primitives";
 import { Download } from "@/lib/icons";
 import { resolveTrackDownloadUrl } from "@/lib/resolve-track-download";
@@ -41,22 +42,27 @@ export function ClipRenderActions({
 
   if (renderStatus === "ready" && renderS3Key) {
     return (
-      <MechButton
-        type="button"
-        onClick={() => void handleDownload()}
-        className="inline-flex items-center gap-1.5"
-      >
-        <Download className="h-3.5 w-3.5" />
-        Download 9:16
-      </MechButton>
+      <div className="flex flex-col items-end gap-3">
+        <MechButton
+          type="button"
+          onClick={() => void handleDownload()}
+          className="inline-flex items-center gap-1.5"
+        >
+          <Download className="h-3.5 w-3.5" />
+          Download 9:16
+        </MechButton>
+        <ClipReelsPresetPicker sessionId={sessionId} clipId={clipId} onQueued={onQueued} />
+      </div>
     );
   }
 
   if (renderStatus === "processing") {
     return (
-      <MechButton type="button" disabled className="opacity-60">
-        Rendering 9:16…
-      </MechButton>
+      <div className="flex flex-col items-end gap-2">
+        <MechButton type="button" disabled className="opacity-60">
+          Rendering…
+        </MechButton>
+      </div>
     );
   }
 

@@ -98,6 +98,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@ototabi/backend-common": "*",
+        "@ototabi/common": "*",
         "@ototabi/jobs": "*",
         "@ototabi/store": "*",
         "bullmq": "^5.51.0",
@@ -200,6 +201,7 @@
         "@aws-sdk/s3-request-presigner": "^3.864.0",
         "@ototabi/auth": "*",
         "@ototabi/backend-common": "*",
+        "@ototabi/common": "*",
         "@ototabi/jobs": "*",
         "@ototabi/store": "*",
         "@trpc/server": "^11.4.3",
