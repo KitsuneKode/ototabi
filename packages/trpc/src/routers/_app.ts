@@ -1,4 +1,6 @@
 import { chatRouter } from "../modules/chat/chat.router";
+import { clipsRouter } from "../modules/clips/clips.router";
+import { dashboardRouter } from "../modules/dashboard/dashboard.router";
 import { recordingEventsRouter } from "../modules/recording-events/recording-events.router";
 import { roomsRouter } from "../modules/rooms/rooms.router";
 import { sessionReviewRouter } from "../modules/session-review/session-review.router";
@@ -14,8 +16,10 @@ export const appRouter = createTRPCRouter({
   auth: authRouter,
   billing: billingRouter,
   user: userRouter,
+  dashboard: dashboardRouter,
   rooms: roomsRouter,
   uploads: uploadsRouter,
+  clips: clipsRouter,
   chat: chatRouter,
   recordingEvents: recordingEventsRouter,
   sessionReview: sessionReviewRouter,

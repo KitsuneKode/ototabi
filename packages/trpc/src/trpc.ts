@@ -11,9 +11,20 @@ export const createTRPCContext = async ({ req }: trpcExpress.CreateExpressContex
   const session = await auth.api.getSession({
     headers,
   });
+
+  let userRole: string | null = null;
+  if (session?.user?.id) {
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+    userRole = user?.role ?? null;
+  }
+
   return {
     session,
     db,
+    userRole,
   };
 };
 
@@ -84,12 +95,8 @@ export const protectedProcedure = t.procedure.use(timingMiddleware).use(({ ctx, 
 });
 
 /** Host accounts only — blocks Better Auth guest sessions from host console APIs. */
-export const hostProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  const user = await prisma.user.findUnique({
-    where: { id: ctx.session.user.id },
-    select: { role: true },
-  });
-  if (user?.role === "guest") {
+export const hostProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.userRole === "guest") {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Guest accounts cannot access the host console",

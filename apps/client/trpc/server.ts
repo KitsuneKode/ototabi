@@ -13,5 +13,15 @@ export const trpcCaller = cache(async () => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
-  return createCaller({ session, db });
+
+  let userRole: string | null = null;
+  if (session?.user?.id) {
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+    userRole = user?.role ?? null;
+  }
+
+  return createCaller({ session, db, userRole });
 });

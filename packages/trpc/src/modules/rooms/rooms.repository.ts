@@ -294,10 +294,28 @@ export const roomsRepository = {
   async listRoomsByMember(userId: string) {
     return prisma.room.findMany({
       where: { members: { some: { userId } } },
-      orderBy: { createdAt: "desc" },
-      include: {
-        creator: { select: { id: true, name: true } },
-        members: { include: { user: { select: { id: true, name: true } } } },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: { select: { sessions: true, participants: true } },
+      },
+    });
+  },
+
+  async listByCreatorSlim(userId: string) {
+    return prisma.room.findMany({
+      where: { creatorId: userId },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        createdAt: true,
+        updatedAt: true,
         _count: { select: { sessions: true, participants: true } },
       },
     });

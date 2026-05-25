@@ -8,6 +8,7 @@ import { useCallback, useState, type ReactNode } from "react";
 
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { NoiseBackground } from "@/components/ui/retro-primitives";
+import { usePendingUploadCount } from "@/lib/hooks/use-pending-upload-count";
 import { useSessionQuery } from "@/lib/hooks/use-session";
 import {
   ChevronLeft,
@@ -25,6 +26,7 @@ import { useTRPC } from "@/trpc/client";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/recordings", label: "Recordings", icon: Film },
   { href: "/recovery", label: "Recovery", icon: HardDrive },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
@@ -35,12 +37,14 @@ function AppNavLink({
   icon: Icon,
   collapsed,
   active,
+  badgeCount,
 }: {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   collapsed: boolean;
   active: boolean;
+  badgeCount?: number;
 }) {
   return (
     <Link
@@ -54,7 +58,12 @@ function AppNavLink({
       aria-current={active ? "page" : undefined}
     >
       <Icon className="h-4 w-4 shrink-0" />
-      {collapsed ? null : <span>{label}</span>}
+      {collapsed ? null : <span className="flex-1">{label}</span>}
+      {badgeCount && badgeCount > 0 ? (
+        <span className="bg-led-amber/20 text-led-amber border-led-amber/40 min-w-[1.25rem] rounded border px-1.5 py-0.5 text-center font-mono text-[9px] tabular-nums">
+          {badgeCount > 99 ? "99+" : badgeCount}
+        </span>
+      ) : null}
     </Link>
   );
 }
@@ -84,6 +93,7 @@ export function AppShell({
     router.push("/auth/signin");
   }, [queryClient, router, trpc]);
 
+  const pendingUploadCount = usePendingUploadCount();
   const userName = authState.data?.user?.name ?? "Operator";
   const userEmail = authState.data?.user?.email ?? "";
 
@@ -127,6 +137,7 @@ export function AppShell({
               icon={item.icon}
               collapsed={collapsed}
               active={pathname === item.href || pathname.startsWith(`${item.href}/`)}
+              badgeCount={item.href === "/recovery" ? pendingUploadCount : undefined}
             />
           ))}
         </nav>
