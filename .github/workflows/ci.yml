@@ -30,7 +30,7 @@ jobs:
     env:
       DATABASE_URL: "postgresql://user:password@localhost:5432/ototabi?schema=public"
       BETTER_AUTH_SECRET: ci-test-secret-do-not-use-in-production
-      BETTER_AUTH_URL: http://localhost:8080
+      BETTER_AUTH_URL: http://localhost:3000
       FRONTEND_URL: http://localhost:3000
       LIVEKIT_URL: wss://ci-test.livekit.cloud
       LIVEKIT_API_KEY: ci-test-key

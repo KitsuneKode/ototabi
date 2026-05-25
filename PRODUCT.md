@@ -29,8 +29,8 @@ Browser-based remote recording for podcasters and creator teams. Each participan
 | ---------------------------- | -------------------------------------------------------------------- | ------------------------------------------- |
 | **Now — Recording producer** | Trust studio, dashboard, recovery, private uploads                   | Riverside-class reliability without hosting |
 | **Next — AI surface**        | Transcript hardening, show notes, clip candidates, 9:16 export queue | Hybrid WASM + Railway worker                |
-| **Later — Demo mode**        | Browser screen capture + cursor log                                  | Spec: `.plans/24-demo-mode-browser.md`      |
-| **Later — Reels presets**    | Native JSON packs in repo                                            | After magic clips engine                    |
+| **Shipped — Demo mode**      | Browser screen capture, cursor log, manual zoom editor               | `.plans/24-demo-mode-browser.md`            |
+| **Later — Reels presets**    | Native JSON packs in repo (Plan 20 batch 6)                          | After magic clips engine                    |
 
 ## Tone
 

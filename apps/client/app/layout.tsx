@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 
 import { cn } from "@ototabi/ui/lib/utils";
-import "@ototabi/ui/globals.css";
 import { Courier_Prime, Oswald, Source_Sans_3 } from "next/font/google";
+import "@ototabi/ui/globals.css";
+import { Suspense } from "react";
 
 import { Providers } from "@/components/providers";
 
@@ -45,7 +46,9 @@ export default function RootLayout({
       className={cn(fontDisplay.variable, fontSans.variable, fontMono.variable)}
     >
       <body className="font-sans antialiased">
-        <Providers>{children}</Providers>
+        <Suspense fallback={null}>
+          <Providers>{children}</Providers>
+        </Suspense>
       </body>
     </html>
   );

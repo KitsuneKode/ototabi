@@ -36,6 +36,9 @@ const FOOTER_COLUMNS = [
   },
 ] as const;
 
+/** Fixed for static prerender — SiteFooter is rendered under client marketing shells. */
+const COPYRIGHT_YEAR = 2026;
+
 function BrandMark() {
   return (
     <div
@@ -76,8 +79,6 @@ function FooterLinkColumn({
 }
 
 export function SiteFooter({ className }: { className?: string }) {
-  const year = new Date().getFullYear();
-
   return (
     <footer className={cn("border-border relative mt-24 border-t pt-14 pb-6", className)}>
       <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-8">
@@ -92,7 +93,7 @@ export function SiteFooter({ className }: { className?: string }) {
             Local-first remote recording for creators who need masters they can trust.
           </p>
           <p className="text-subtle-foreground font-mono text-[10px] tracking-widest uppercase">
-            &copy; {year} Ototabi Studio. All rights reserved.
+            &copy; {COPYRIGHT_YEAR} Ototabi Studio. All rights reserved.
           </p>
           <div className="flex items-center gap-2">
             <div className="led-green h-1.5 w-1.5 rounded-full" aria-hidden="true" />

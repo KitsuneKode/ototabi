@@ -3,7 +3,7 @@
 import { Label } from "@ototabi/ui/components/label";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { Suspense, useState, useEffect, useRef, useCallback } from "react";
 
 import { JoinShell } from "@/components/layout/join-shell";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
@@ -16,7 +16,7 @@ import { Mic, ArrowRight, Info, AlertTriangle, RefreshCw, VideoOff, Tv, User } f
 import { isTrpcForbidden, isTrpcUnauthorized } from "@/lib/trpc-error";
 import { useTRPC } from "@/trpc/client";
 
-export default function RoomJoinPage() {
+function RoomJoinPageContent() {
   const { roomId } = useParams() as { roomId: string };
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -520,5 +520,23 @@ export default function RoomJoinPage() {
         </div>
       </AnalogCard>
     </JoinShell>
+  );
+}
+
+function RoomJoinPageFallback() {
+  return (
+    <JoinShell title="Join session" subtitle="Loading invite and device console…">
+      <AnalogCard className="p-8">
+        <MonoLabel>Preparing join surface…</MonoLabel>
+      </AnalogCard>
+    </JoinShell>
+  );
+}
+
+export default function RoomJoinPage() {
+  return (
+    <Suspense fallback={<RoomJoinPageFallback />}>
+      <RoomJoinPageContent />
+    </Suspense>
   );
 }

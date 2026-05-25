@@ -6,7 +6,7 @@ import { Button } from "@ototabi/ui/components/button";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Room, RoomOptions, VideoPresets } from "livekit-client";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { Suspense, useEffect, useRef, useState, useCallback } from "react";
 
 import type { RecorderManager } from "@/lib/recorder/recorder-manager";
 
@@ -26,7 +26,7 @@ import { useStudioConnection } from "@/lib/hooks/use-studio-connection";
 import { useTimer } from "@/lib/hooks/use-timer";
 import { ArrowLeft, CheckCircle, AlertTriangle, Radio, PanelRight } from "@/lib/icons";
 import { useTRPC } from "@/trpc/client";
-export default function StudioPage() {
+function StudioPageContent() {
   const { roomId } = useParams() as { roomId: string };
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -650,5 +650,21 @@ export default function StudioPage() {
         <KeyboardShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       </StudioShell>
     </RoomContext.Provider>
+  );
+}
+
+function StudioPageFallback() {
+  return (
+    <div className="bg-background flex min-h-[100dvh] items-center justify-center font-sans">
+      <MonoLabel>Loading studio deck…</MonoLabel>
+    </div>
+  );
+}
+
+export default function StudioPage() {
+  return (
+    <Suspense fallback={<StudioPageFallback />}>
+      <StudioPageContent />
+    </Suspense>
   );
 }
