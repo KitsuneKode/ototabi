@@ -227,10 +227,11 @@ export const roomsRepository = {
     });
   },
 
-  async listSessions(roomId: string) {
+  async listSessions(roomId: string, take = 50) {
     return prisma.recordingSession.findMany({
       where: { roomId },
       orderBy: { startedAt: "desc" },
+      take,
       include: {
         tracks: {
           include: {

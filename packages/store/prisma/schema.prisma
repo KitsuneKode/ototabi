@@ -97,6 +97,7 @@ model Room {
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
+  @@index([creatorId])
   @@map("room")
 }
 
@@ -185,6 +186,7 @@ model RecordingSession {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
+  @@index([roomId, startedAt])
   @@map("recording_session")
 }
 
@@ -217,6 +219,7 @@ model RecordingTrack {
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
+  @@index([sessionId])
   @@map("recording_track")
 }
 
