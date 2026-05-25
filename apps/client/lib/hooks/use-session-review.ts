@@ -32,11 +32,16 @@ export function useSessionReview(sessionId: string) {
             q.state.data?.exports?.episodeMp3?.status === "processing" ||
             q.state.data?.exports?.landscape?.status === "processing";
           const transcriptQueued = q.state.data?.transcriptStatus === "queued";
+          const pipelineProcessing =
+            q.state.data?.pipeline?.transcript?.status === "processing" ||
+            q.state.data?.pipeline?.llm?.status === "processing" ||
+            q.state.data?.pipeline?.clips?.status === "processing";
           if (
             status === "processing" ||
             clipRendering ||
             sessionExportProcessing ||
             transcriptQueued ||
+            pipelineProcessing ||
             (sessionStatus === "COMPLETED" && (status === "pending" || transcriptEmpty))
           ) {
             return 8_000;

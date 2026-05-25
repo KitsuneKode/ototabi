@@ -94,19 +94,40 @@ async function markSessionExportReady(
 async function processSessionExport(
   sessionId: string,
   preset: "landscape_16_9" | "episode_mp3",
+  force?: boolean,
 ): Promise<ExportJobResult> {
+  const session = await prisma.recordingSession.findUnique({
+    where: { id: sessionId },
+    select: {
+      episodeMp3Status: true,
+      episodeMp3S3Key: true,
+      landscapeStatus: true,
+      landscapeS3Key: true,
+    },
+  });
+
+  const statusField = preset === "episode_mp3" ? "episodeMp3Status" : "landscapeStatus";
+  const keyField = preset === "episode_mp3" ? "episodeMp3S3Key" : "landscapeS3Key";
+  const currentStatus = session?.[statusField];
+  const existingKey = session?.[keyField];
+
+  if (!force && currentStatus === "ready" && existingKey) {
+    console.log(`[Export] Session ${sessionId} ${preset} already ready, skipping`);
+    return { status: "ready", outputKey: existingKey };
+  }
+
   const source = await findSourceTrack(sessionId);
   if (!source) {
     const msg = `No completed source track for session ${sessionId}`;
     await markSessionExportFailed(sessionId, preset, msg);
-    return { status: "failed", errorMessage: msg };
+    throw new Error(msg);
   }
 
   const mediaRef = source.s3Url ?? source.s3Key;
   if (!mediaRef) {
     const msg = `Source track has no media reference for session ${sessionId}`;
     await markSessionExportFailed(sessionId, preset, msg);
-    return { status: "failed", errorMessage: msg };
+    throw new Error(msg);
   }
 
   const outputKey = buildSessionRenderKey(sessionId, preset);
@@ -150,88 +171,7 @@ async function processSessionExport(
     const msg = errorMessage(error);
     await markSessionExportFailed(sessionId, preset, msg);
     console.error(`[Export] Session ${sessionId} ${preset} failed:`, error);
-    return { status: "failed", errorMessage: msg };
-  }
-}
-
-async function processClipReelsExport(
-  sessionId: string,
-  clipId: string,
-  reelsPresetId: string,
-): Promise<ExportJobResult> {
-  const reelsPreset = assertReelsPresetId(reelsPresetId);
-  const clip = await prisma.clipCandidate.findFirst({
-    where: { id: clipId, sessionId },
-  });
-  if (!clip) {
-    throw new Error(`Clip ${clipId} not found for session ${sessionId}`);
-  }
-
-  const outputKey = buildClipReelsRenderKey(sessionId, clip.id, reelsPresetId);
-
-  try {
-    await assertFfmpegAvailable();
-
-    const source = await findSourceTrack(sessionId);
-    if (!source) {
-      throw new Error(`No completed source track for session ${sessionId}`);
-    }
-
-    const mediaRef = source.s3Url ?? source.s3Key;
-    if (!mediaRef) {
-      throw new Error(`Source track has no media reference for session ${sessionId}`);
-    }
-
-    const fetchUrl = await resolveMediaFetchUrl(mediaRef);
-    const audioOnly = source.type === "MICROPHONE";
-
-    await withTempDir(`export-reels-${clip.id}`, async (dir) => {
-      const inputExt = mediaRef.includes(".") ? mediaRef.split(".").pop() : "webm";
-      const inputFile = join(dir, `input.${inputExt ?? "webm"}`);
-      const outputPath = join(dir, "output.mp4");
-
-      console.log(
-        `[Export] Reels ${reelsPresetId} for clip ${clip.id} (${clip.startTime}s–${clip.endTime}s)`,
-      );
-
-      await downloadMediaToFile(fetchUrl, inputFile);
-      await renderClipToFile({
-        inputPath: inputFile,
-        outputPath,
-        startTime: clip.startTime,
-        endTime: clip.endTime,
-        preset: "vertical_9_16",
-        audioOnly,
-        reelsPreset,
-        captionText: clip.rationale,
-        workDir: dir,
-      });
-      await uploadObjectFromFile({
-        key: outputKey,
-        filePath: outputPath,
-        contentType: "video/mp4",
-      });
-    });
-
-    await prisma.clipCandidate.update({
-      where: { id: clip.id },
-      data: {
-        renderStatus: "ready",
-        renderS3Key: outputKey,
-        renderError: null,
-      },
-    });
-
-    console.log(`[Export] Clip ${clip.id} reels ready → ${outputKey}`);
-    return { status: "ready", outputKey };
-  } catch (error) {
-    const msg = errorMessage(error);
-    await prisma.clipCandidate.update({
-      where: { id: clip.id },
-      data: { renderStatus: "failed", renderError: msg },
-    });
-    console.error(`[Export] Clip ${clip.id} reels failed:`, error);
-    return { status: "failed", errorMessage: msg };
+    throw error instanceof Error ? error : new Error(msg);
   }
 }
 
@@ -239,7 +179,7 @@ async function processClipExport(
   sessionId: string,
   clipId: string,
   preset: ExportPreset,
-  reelsPresetId?: string,
+  options?: { reelsPresetId?: string; force?: boolean },
 ): Promise<ExportJobResult> {
   const clip = await prisma.clipCandidate.findFirst({
     where: { id: clipId, sessionId },
@@ -248,33 +188,48 @@ async function processClipExport(
     throw new Error(`Clip ${clipId} not found for session ${sessionId}`);
   }
 
+  const reelsPresetId = options?.reelsPresetId;
   const reelsPreset = reelsPresetId ? assertReelsPresetId(reelsPresetId) : undefined;
   const outputKey = reelsPresetId
     ? buildClipReelsRenderKey(sessionId, clip.id, reelsPresetId)
     : buildClipRenderKey(sessionId, clip.id, preset);
 
+  if (!options?.force && clip.renderStatus === "ready" && clip.renderS3Key === outputKey) {
+    console.log(`[Export] Clip ${clip.id} already ready at ${outputKey}, skipping`);
+    return { status: "ready", outputKey };
+  }
+
+  const source = await findSourceTrack(sessionId);
+  if (!source) {
+    const msg = `No completed source track for session ${sessionId}`;
+    await prisma.clipCandidate.update({
+      where: { id: clip.id },
+      data: { renderStatus: "failed", renderError: msg },
+    });
+    throw new Error(msg);
+  }
+
+  const mediaRef = source.s3Url ?? source.s3Key;
+  if (!mediaRef) {
+    const msg = `Source track has no media reference for session ${sessionId}`;
+    await prisma.clipCandidate.update({
+      where: { id: clip.id },
+      data: { renderStatus: "failed", renderError: msg },
+    });
+    throw new Error(msg);
+  }
+
+  const fetchUrl = await resolveMediaFetchUrl(mediaRef);
+  const renderPreset = clipPresetToRender(preset);
+  const audioOnly = source.type === "MICROPHONE";
+
   try {
     await assertFfmpegAvailable();
 
-    const source = await findSourceTrack(sessionId);
-    if (!source) {
-      throw new Error(`No completed source track for session ${sessionId}`);
-    }
-
-    const mediaRef = source.s3Url ?? source.s3Key;
-    if (!mediaRef) {
-      throw new Error(`Source track has no media reference for session ${sessionId}`);
-    }
-
-    const fetchUrl = await resolveMediaFetchUrl(mediaRef);
-    const renderPreset = clipPresetToRender(preset);
-    const audioOnly = source.type === "MICROPHONE";
-
     await withTempDir(`export-${clip.id}`, async (dir) => {
-      const inputPath = join(dir, "input");
-      const outputPath = join(dir, "output.mp4");
       const inputExt = mediaRef.includes(".") ? mediaRef.split(".").pop() : "webm";
-      const inputFile = `${inputPath}.${inputExt ?? "webm"}`;
+      const inputFile = join(dir, `input.${inputExt ?? "webm"}`);
+      const outputPath = join(dir, "output.mp4");
 
       const label = reelsPresetId ? `${preset}+reels:${reelsPresetId}` : preset;
       console.log(
@@ -291,6 +246,7 @@ async function processClipExport(
         audioOnly,
         reelsPreset,
         captionText: reelsPreset ? clip.rationale : undefined,
+        workDir: dir,
       });
       await uploadObjectFromFile({
         key: outputKey,
@@ -317,24 +273,26 @@ async function processClipExport(
       data: { renderStatus: "failed", renderError: msg },
     });
     console.error(`[Export] Clip ${clip.id} failed:`, error);
-    return { status: "failed", errorMessage: msg };
+    throw error instanceof Error ? error : new Error(msg);
   }
 }
 
 export async function processExportJob(job: Job<ExportJobData>): Promise<ExportJobResult> {
-  const { sessionId, clipId, preset, reelsPresetId } = job.data;
+  const { sessionId, clipId, preset, reelsPresetId, force } = job.data;
 
   if (clipId && reelsPresetId) {
-    return processClipReelsExport(sessionId, clipId, reelsPresetId);
+    return processClipExport(sessionId, clipId, "vertical_9_16", {
+      reelsPresetId,
+      force,
+    });
   }
 
   if (!clipId) {
     if (preset !== "episode_mp3" && preset !== "landscape_16_9") {
-      const msg = `Session export requires episode_mp3 or landscape_16_9, got ${preset}`;
-      return { status: "failed", errorMessage: msg };
+      throw new Error(`Session export requires episode_mp3 or landscape_16_9, got ${preset}`);
     }
-    return processSessionExport(sessionId, preset);
+    return processSessionExport(sessionId, preset, force);
   }
 
-  return processClipExport(sessionId, clipId, preset);
+  return processClipExport(sessionId, clipId, preset, { force });
 }

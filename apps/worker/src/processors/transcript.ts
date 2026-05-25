@@ -2,11 +2,23 @@ import type { TranscriptJobData, TranscriptJobResult } from "@ototabi/jobs/types
 import type { Job } from "bullmq";
 
 import { resolveMediaFetchUrl } from "@ototabi/backend-common/s3-media";
+import { llmJobId } from "@ototabi/common/pipeline-status";
 import { getLlmQueue } from "@ototabi/jobs/queues";
 import { prisma } from "@ototabi/store";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const WHISPER_MODEL = process.env.WHISPER_MODEL || "whisper-1";
+
+async function setTranscriptStatus(
+  sessionId: string,
+  status: string,
+  error: string | null = null,
+): Promise<void> {
+  await prisma.recordingSession.update({
+    where: { id: sessionId },
+    data: { transcriptStatus: status, transcriptError: error },
+  });
+}
 
 export async function processTranscriptJob(
   job: Job<TranscriptJobData>,
@@ -14,17 +26,18 @@ export async function processTranscriptJob(
   const { sessionId } = job.data;
   let { audioTrackS3Key } = job.data;
 
-  // Check if already processed
   const existing = await prisma.transcriptSegment.findFirst({
     where: { sessionId },
   });
   if (existing) {
     console.log(`[Transcript] Session ${sessionId} already has transcript, skipping`);
+    await setTranscriptStatus(sessionId, "ready");
     return { segments: [] };
   }
 
   if (!OPENAI_API_KEY) {
     console.log(`[Transcript] No OPENAI_API_KEY set, skipping session ${sessionId}`);
+    await setTranscriptStatus(sessionId, "skipped", "OPENAI_API_KEY not configured");
     return { segments: [] };
   }
 
@@ -47,14 +60,14 @@ export async function processTranscriptJob(
     );
   }
 
+  await setTranscriptStatus(sessionId, "processing");
+
   console.log(`[Transcript] Transcribing session ${sessionId}...`);
 
   try {
-    // Call Whisper API
     const formData = new FormData();
     formData.append("model", WHISPER_MODEL);
     formData.append("response_format", "verbose_json");
-    formData.append("timestamp_granularities[]", "word");
 
     const fetchUrl = await resolveMediaFetchUrl(audioTrackS3Key);
     const audioResponse = await fetch(fetchUrl);
@@ -83,7 +96,6 @@ export async function processTranscriptJob(
         end: number;
         text: string;
         confidence?: number;
-        words?: Array<{ word: string; start: number; end: number; confidence: number }>;
       }>;
     };
 
@@ -94,7 +106,6 @@ export async function processTranscriptJob(
       confidence: seg.confidence,
     }));
 
-    // Store segments in DB
     if (segments.length > 0) {
       await prisma.transcriptSegment.createMany({
         data: segments.map((seg) => ({
@@ -107,18 +118,27 @@ export async function processTranscriptJob(
       });
 
       console.log(`[Transcript] Stored ${segments.length} segments for session ${sessionId}`);
+      await setTranscriptStatus(sessionId, "ready");
 
-      // Chain: queue LLM job for chapters + show notes
       try {
-        await getLlmQueue().add(`llm-${sessionId}`, { sessionId });
+        const id = llmJobId(sessionId);
+        await getLlmQueue().add(id, { sessionId }, { jobId: id });
+        await prisma.recordingSession.update({
+          where: { id: sessionId },
+          data: { llmStatus: "processing", llmError: null },
+        });
       } catch {
         // LLM queue is optional
       }
+    } else {
+      await setTranscriptStatus(sessionId, "failed", "Whisper returned no segments");
     }
 
     return { segments };
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Transcript failed";
     console.error(`[Transcript] Failed for session ${sessionId}:`, error);
+    await setTranscriptStatus(sessionId, "failed", message);
     throw error;
   }
 }

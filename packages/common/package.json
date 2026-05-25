@@ -9,6 +9,7 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./pipeline-status": "./src/pipeline-status.ts",
     "./reels-presets": "./src/reels-presets.ts",
     "./types": "./src/types/zod-schema.ts",
     "./config-loader": "./src/utils/config-loader.ts",

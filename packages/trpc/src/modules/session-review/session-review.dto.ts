@@ -28,8 +28,9 @@ export const retryTranscriptSchema = z.object({
  *     episodeMp3: { status, s3Key, error };
  *     landscape: { status, s3Key, error };
  *   };
- *   aiStatus: "pending" | "processing" | "ready";
- *   transcriptStatus: "none" | "queued" | "ready" | "waiting_upload";
+ *   pipeline: { transcript, llm, clips: { status, error } };
+ *   aiStatus: "pending" | "processing" | "ready" | "failed" | "skipped";
+ *   transcriptStatus: "none" | "queued" | "ready" | "waiting_upload" | "failed" | "skipped";
  * }
  * ```
  */
@@ -102,6 +103,11 @@ export type SessionReviewGetResponse = {
     episodeMp3: { status: string; s3Key: string | null; error: string | null };
     landscape: { status: string; s3Key: string | null; error: string | null };
   };
-  aiStatus: "pending" | "processing" | "ready";
-  transcriptStatus: "none" | "queued" | "ready" | "waiting_upload";
+  pipeline: {
+    transcript: { status: string; error: string | null };
+    llm: { status: string; error: string | null };
+    clips: { status: string; error: string | null };
+  };
+  aiStatus: "pending" | "processing" | "ready" | "failed" | "skipped";
+  transcriptStatus: "none" | "queued" | "ready" | "waiting_upload" | "failed" | "skipped";
 };

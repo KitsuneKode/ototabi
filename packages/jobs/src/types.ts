@@ -43,6 +43,8 @@ export interface ExportJobData {
   preset: ExportPreset;
   /** When set, re-renders a vertical clip with reels caption styling (see @ototabi/common reels-presets). */
   reelsPresetId?: string;
+  /** Re-run export even when output is already marked ready. */
+  force?: boolean;
 }
 
 export interface ExportJobResult {

@@ -8,7 +8,7 @@ import { useTRPC } from "@/trpc/client";
 
 type TranscriptRetryActionsProps = {
   sessionId: string;
-  transcriptStatus: "none" | "queued" | "ready" | "waiting_upload";
+  transcriptStatus: "none" | "queued" | "ready" | "waiting_upload" | "failed" | "skipped";
   onQueued?: () => void;
 };
 
@@ -25,7 +25,21 @@ export function TranscriptRetryActions({
     }),
   );
 
-  if (transcriptStatus === "ready") return null;
+  if (transcriptStatus === "ready" || transcriptStatus === "skipped") return null;
+
+  if (transcriptStatus === "failed") {
+    return (
+      <MechButton
+        type="button"
+        disabled={retryTranscript.isPending}
+        onClick={() => retryTranscript.mutate({ sessionId })}
+        className="inline-flex items-center gap-1.5"
+      >
+        <RefreshCw className="h-3.5 w-3.5" />
+        {retryTranscript.isPending ? "Queueing…" : "Retry failed transcript"}
+      </MechButton>
+    );
+  }
 
   if (transcriptStatus === "queued") {
     return (

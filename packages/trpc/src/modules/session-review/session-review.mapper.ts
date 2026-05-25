@@ -1,3 +1,5 @@
+import type { PipelineStatus } from "@ototabi/common/pipeline-status";
+
 import type { sessionReviewRepository } from "./session-review.repository";
 
 type SessionRecord = NonNullable<
@@ -6,28 +8,100 @@ type SessionRecord = NonNullable<
 
 type BundleRecord = Awaited<ReturnType<typeof sessionReviewRepository.loadReviewBundle>>;
 
-function deriveAiStatus(
-  session: SessionRecord,
-  bundle: BundleRecord,
-): "pending" | "processing" | "ready" {
-  if (bundle.transcriptSegments.length === 0) {
-    return session.status === "COMPLETED" ? "processing" : "pending";
-  }
-  if (bundle.showNotes || bundle.chapters.length > 0 || bundle.clipCandidates.length > 0) {
-    return "ready";
-  }
-  return "processing";
+type PipelineFields = {
+  transcriptStatus: string;
+  transcriptError: string | null;
+  llmStatus: string;
+  llmError: string | null;
+  clipsStatus: string;
+  clipsError: string | null;
+};
+
+export type UiTranscriptStatus =
+  | "none"
+  | "queued"
+  | "ready"
+  | "waiting_upload"
+  | "failed"
+  | "skipped";
+
+export type UiAiStatus = "pending" | "processing" | "ready" | "failed" | "skipped";
+
+function isPipelineStatus(value: string): value is PipelineStatus {
+  return (
+    value === "pending" ||
+    value === "processing" ||
+    value === "ready" ||
+    value === "failed" ||
+    value === "skipped"
+  );
 }
 
-function deriveTranscriptStatus(
-  session: SessionRecord,
-  bundle: BundleRecord,
-  micReady: boolean,
-): "none" | "queued" | "ready" | "waiting_upload" {
-  if (bundle.transcriptSegments.length > 0) return "ready";
-  if (session.status !== "COMPLETED") return "none";
+export function mapTranscriptUiStatus(params: {
+  sessionStatus: string;
+  dbStatus: string;
+  hasSegments: boolean;
+  micReady: boolean;
+}): UiTranscriptStatus {
+  const { sessionStatus, dbStatus, hasSegments, micReady } = params;
+
+  if (hasSegments) return "ready";
+
+  if (isPipelineStatus(dbStatus)) {
+    if (dbStatus === "ready") return "ready";
+    if (dbStatus === "failed") return "failed";
+    if (dbStatus === "skipped") return "skipped";
+    if (dbStatus === "processing") return "queued";
+  }
+
+  if (sessionStatus !== "COMPLETED") return "none";
   if (!micReady) return "waiting_upload";
+  if (dbStatus === "pending") return "none";
   return "queued";
+}
+
+export function mapAiUiStatus(params: {
+  sessionStatus: string;
+  transcriptDbStatus: string;
+  llmDbStatus: string;
+  clipsDbStatus: string;
+  hasTranscript: boolean;
+  hasAiArtifacts: boolean;
+}): UiAiStatus {
+  const {
+    sessionStatus,
+    transcriptDbStatus,
+    llmDbStatus,
+    clipsDbStatus,
+    hasTranscript,
+    hasAiArtifacts,
+  } = params;
+
+  const statuses = [transcriptDbStatus, llmDbStatus, clipsDbStatus];
+  if (statuses.some((s) => s === "failed")) return "failed";
+  if (statuses.every((s) => s === "skipped")) return "skipped";
+  if (hasAiArtifacts) return "ready";
+  if (
+    llmDbStatus === "ready" &&
+    clipsDbStatus === "ready" &&
+    (transcriptDbStatus === "ready" || hasTranscript)
+  ) {
+    return "ready";
+  }
+  if (
+    statuses.some((s) => s === "processing") ||
+    (hasTranscript &&
+      (llmDbStatus === "pending" ||
+        llmDbStatus === "processing" ||
+        clipsDbStatus === "pending" ||
+        clipsDbStatus === "processing"))
+  ) {
+    return "processing";
+  }
+  if (sessionStatus === "COMPLETED" && transcriptDbStatus === "processing") {
+    return "processing";
+  }
+  return "pending";
 }
 
 type ExportFields = {
@@ -43,6 +117,7 @@ export function mapSessionReview(
   session: SessionRecord,
   bundle: BundleRecord,
   exportFields?: ExportFields,
+  pipeline?: PipelineFields | null,
 ) {
   const micReady = session.tracks.some(
     (t) =>
@@ -50,6 +125,14 @@ export function mapSessionReview(
       t.status === "COMPLETED" &&
       (t.s3Key.length > 0 || t.s3Url != null),
   );
+
+  const transcriptDbStatus = pipeline?.transcriptStatus ?? "pending";
+  const llmDbStatus = pipeline?.llmStatus ?? "pending";
+  const clipsDbStatus = pipeline?.clipsStatus ?? "pending";
+
+  const hasTranscript = bundle.transcriptSegments.length > 0;
+  const hasAiArtifacts =
+    bundle.showNotes != null || bundle.chapters.length > 0 || bundle.clipCandidates.length > 0;
 
   return {
     session: {
@@ -99,7 +182,33 @@ export function mapSessionReview(
         error: exportFields?.landscapeError ?? null,
       },
     },
-    aiStatus: deriveAiStatus(session, bundle),
-    transcriptStatus: deriveTranscriptStatus(session, bundle, micReady),
+    pipeline: {
+      transcript: {
+        status: transcriptDbStatus,
+        error: pipeline?.transcriptError ?? null,
+      },
+      llm: {
+        status: llmDbStatus,
+        error: pipeline?.llmError ?? null,
+      },
+      clips: {
+        status: clipsDbStatus,
+        error: pipeline?.clipsError ?? null,
+      },
+    },
+    aiStatus: mapAiUiStatus({
+      sessionStatus: session.status,
+      transcriptDbStatus,
+      llmDbStatus,
+      clipsDbStatus,
+      hasTranscript,
+      hasAiArtifacts,
+    }),
+    transcriptStatus: mapTranscriptUiStatus({
+      sessionStatus: session.status,
+      dbStatus: transcriptDbStatus,
+      hasSegments: hasTranscript,
+      micReady,
+    }),
   };
 }

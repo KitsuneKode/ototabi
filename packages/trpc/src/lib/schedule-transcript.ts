@@ -1,50 +1,63 @@
+import { transcriptJobId } from "@ototabi/common/pipeline-status";
 import { getTranscriptQueue } from "@ototabi/jobs/queues";
 import { prisma } from "@ototabi/store";
 
 import { roomsRepository } from "../modules/rooms/rooms.repository";
+import { resetAiPipelineForRetry } from "./ai-pipeline-reset";
+import {
+  evaluateScheduleTranscript,
+  type ScheduleTranscriptResult,
+} from "./schedule-transcript.gates";
 
-export type ScheduleTranscriptResult =
-  | { status: "queued" }
-  | { status: "already_ready" }
-  | { status: "waiting_for_upload" }
-  | { status: "session_not_complete" };
+export type { ScheduleTranscriptResult };
 
 /** Queue Whisper when session is complete and mic media exists. */
 export async function scheduleTranscriptForSession(
   sessionId: string,
   options?: { force?: boolean },
 ): Promise<ScheduleTranscriptResult> {
-  const existing = await prisma.transcriptSegment.findFirst({
-    where: { sessionId },
-    select: { id: true },
-  });
-  if (existing && !options?.force) {
-    return { status: "already_ready" };
-  }
-
   const session = await prisma.recordingSession.findUnique({
     where: { id: sessionId },
-    select: { status: true },
+    select: { status: true, transcriptStatus: true },
   });
-  if (session?.status !== "COMPLETED") {
-    return { status: "session_not_complete" };
-  }
+
+  const hasSegments = !!(await prisma.transcriptSegment.findFirst({
+    where: { sessionId },
+    select: { id: true },
+  }));
 
   const audioTrack = await roomsRepository.findFirstAudioTrack(sessionId);
+
+  const gate = evaluateScheduleTranscript({
+    sessionStatus: session?.status,
+    transcriptStatus: session?.transcriptStatus ?? "pending",
+    hasSegments,
+    hasAudioKey: !!audioTrack?.s3Key,
+    force: options?.force,
+  });
+  if (gate.status !== "queued") {
+    return gate;
+  }
+
   if (!audioTrack?.s3Key) {
     return { status: "waiting_for_upload" };
   }
 
   if (options?.force) {
-    await prisma.transcriptSegment.deleteMany({ where: { sessionId } });
+    await resetAiPipelineForRetry(sessionId);
   }
 
   const queue = getTranscriptQueue();
-  const jobId = `transcript-${sessionId}`;
+  const jobId = transcriptJobId(sessionId);
   const existingJob = await queue.getJob(jobId);
   if (existingJob) {
     await existingJob.remove();
   }
+
+  await prisma.recordingSession.update({
+    where: { id: sessionId },
+    data: { transcriptStatus: "processing", transcriptError: null },
+  });
 
   await queue.add(jobId, { sessionId, audioTrackS3Key: audioTrack.s3Key }, { jobId });
 

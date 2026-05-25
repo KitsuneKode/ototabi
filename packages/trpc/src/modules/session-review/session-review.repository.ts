@@ -106,4 +106,18 @@ export const sessionReviewRepository = {
       },
     });
   },
+
+  async getSessionPipelineFields(sessionId: string) {
+    return prisma.recordingSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        transcriptStatus: true,
+        transcriptError: true,
+        llmStatus: true,
+        llmError: true,
+        clipsStatus: true,
+        clipsError: true,
+      },
+    });
+  },
 };

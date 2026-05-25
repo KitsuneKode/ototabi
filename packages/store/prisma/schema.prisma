@@ -199,6 +199,12 @@ model RecordingSession {
   landscapeStatus    String              @default("pending")
   landscapeS3Key     String?
   landscapeError     String?
+  transcriptStatus   String              @default("pending") // pending | processing | ready | failed | skipped
+  transcriptError    String?
+  llmStatus          String              @default("pending")
+  llmError           String?
+  clipsStatus        String              @default("pending")
+  clipsError         String?
   startedAt          DateTime            @default(now())
   endedAt            DateTime?
   createdAt          DateTime            @default(now())

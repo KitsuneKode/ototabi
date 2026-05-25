@@ -21,11 +21,12 @@ export const sessionReviewService = {
   async getSessionReview(params: { actorId: string; sessionId: string }) {
     const session = await assertCanViewSession(params.actorId, params.sessionId);
 
-    const [bundle, exportFields] = await Promise.all([
+    const [bundle, exportFields, pipeline] = await Promise.all([
       sessionReviewRepository.loadReviewBundle(params.sessionId),
       sessionReviewRepository.getSessionExportFields(params.sessionId),
+      sessionReviewRepository.getSessionPipelineFields(params.sessionId),
     ]);
-    return mapSessionReview(session, bundle, exportFields);
+    return mapSessionReview(session, bundle, exportFields, pipeline);
   },
 
   async retryTranscript(params: { actorId: string; sessionId: string }) {

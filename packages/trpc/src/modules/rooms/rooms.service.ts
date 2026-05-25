@@ -1,3 +1,4 @@
+import { transcriptJobId } from "@ototabi/common/pipeline-status";
 import { getTranscriptQueue } from "@ototabi/jobs/queues";
 import { prisma } from "@ototabi/store";
 import { TRPCError } from "@trpc/server";
@@ -332,18 +333,24 @@ export const roomsService = {
 
     // Queue background jobs
     try {
+      const jobId = transcriptJobId(params.sessionId);
       const audioTrack = await roomsRepository.findFirstAudioTrack(params.sessionId);
+      await prisma.recordingSession.update({
+        where: { id: params.sessionId },
+        data: { transcriptStatus: "processing", transcriptError: null },
+      });
       if (audioTrack?.s3Key) {
-        await getTranscriptQueue().add(`transcript-${params.sessionId}`, {
-          sessionId: params.sessionId,
-          audioTrackS3Key: audioTrack.s3Key,
-        });
+        await getTranscriptQueue().add(
+          jobId,
+          { sessionId: params.sessionId, audioTrackS3Key: audioTrack.s3Key },
+          { jobId },
+        );
       } else {
         // Queue without audio URL — worker will retry until upload completes
         await getTranscriptQueue().add(
-          `transcript-${params.sessionId}`,
+          jobId,
           { sessionId: params.sessionId, audioTrackS3Key: "" },
-          { delay: 30000 },
+          { jobId, delay: 30000 },
         );
       }
     } catch {
