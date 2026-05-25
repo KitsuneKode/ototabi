@@ -1,6 +1,7 @@
 import type { LlmJobData, LlmJobResult } from "@ototabi/jobs/types";
 import type { Job } from "bullmq";
 
+import { getClipsQueue } from "@ototabi/jobs/queues";
 import { prisma } from "@ototabi/store";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
@@ -107,6 +108,16 @@ Only return valid JSON, no markdown.`,
         },
       });
       console.log(`[LLM] Stored show notes for session ${sessionId}`);
+    }
+
+    try {
+      await getClipsQueue().add(
+        `clips-${sessionId}`,
+        { sessionId },
+        { jobId: `clips-${sessionId}` },
+      );
+    } catch {
+      // clips queue optional in dev
     }
 
     return parsed;

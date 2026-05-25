@@ -51,7 +51,7 @@
       "oxlint --fix --report-unused-disable-directives"
     ],
     "*.prisma": [
-      "oxfmt"
+      "bash -c 'cd packages/store && bunx prisma format --schema prisma/schema.prisma'"
     ]
   },
   "engines": {

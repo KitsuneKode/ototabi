@@ -21,6 +21,14 @@ export function useSessionReview(sessionId: string) {
         enabled: !!sessionId && sessionReady,
         staleTime: SESSION_REVIEW_STALE_MS,
         placeholderData: (previous) => previous,
+        refetchInterval: (q) => {
+          const status = q.state.data?.aiStatus;
+          const sessionStatus = q.state.data?.session?.status;
+          if (status === "processing" || (sessionStatus === "COMPLETED" && status === "pending")) {
+            return 8_000;
+          }
+          return false;
+        },
       },
     ),
   });
@@ -39,6 +47,9 @@ export function useSessionReview(sessionId: string) {
     syncMarkers: data?.syncMarkers,
     transcriptSegments: data?.transcriptSegments,
     chapters: data?.chapters,
+    showNotes: data?.showNotes,
+    clipCandidates: data?.clipCandidates,
+    aiStatus: data?.aiStatus,
     timelineEvents,
     allUploaded,
     aggregateUploadStatus,

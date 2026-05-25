@@ -9,6 +9,8 @@ function createConnection() {
 
 let transcriptQueue: Queue | null = null;
 let llmQueue: Queue | null = null;
+let clipsQueue: Queue | null = null;
+let exportQueue: Queue | null = null;
 
 const defaultJobOptions: JobsOptions = {
   attempts: 3,
@@ -32,6 +34,20 @@ export function getLlmQueue(): Queue {
     llmQueue = new Queue("llm", { connection: createConnection(), defaultJobOptions });
   }
   return llmQueue;
+}
+
+export function getClipsQueue(): Queue {
+  if (!clipsQueue) {
+    clipsQueue = new Queue("clips", { connection: createConnection(), defaultJobOptions });
+  }
+  return clipsQueue;
+}
+
+export function getExportQueue(): Queue {
+  if (!exportQueue) {
+    exportQueue = new Queue("export", { connection: createConnection(), defaultJobOptions });
+  }
+  return exportQueue;
 }
 
 export function getWorkerConnection() {

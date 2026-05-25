@@ -6,6 +6,19 @@ type SessionRecord = NonNullable<
 
 type BundleRecord = Awaited<ReturnType<typeof sessionReviewRepository.loadReviewBundle>>;
 
+function deriveAiStatus(
+  session: SessionRecord,
+  bundle: BundleRecord,
+): "pending" | "processing" | "ready" {
+  if (bundle.transcriptSegments.length === 0) {
+    return session.status === "COMPLETED" ? "processing" : "pending";
+  }
+  if (bundle.showNotes || bundle.chapters.length > 0 || bundle.clipCandidates.length > 0) {
+    return "ready";
+  }
+  return "processing";
+}
+
 export function mapSessionReview(session: SessionRecord, bundle: BundleRecord) {
   return {
     session: {
@@ -40,5 +53,8 @@ export function mapSessionReview(session: SessionRecord, bundle: BundleRecord) {
     })),
     transcriptSegments: bundle.transcriptSegments,
     chapters: bundle.chapters,
+    showNotes: bundle.showNotes,
+    clipCandidates: bundle.clipCandidates,
+    aiStatus: deriveAiStatus(session, bundle),
   };
 }

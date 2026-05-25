@@ -15,24 +15,24 @@ datasource db {
 }
 
 model User {
-  id            String           @id
-  name          String
-  email         String
-  emailVerified Boolean
-  image         String?
-  role          String           @default("user")
-  subscription  Subscription?
-  createdAt     DateTime
-  updatedAt     DateTime
-  sessions      Session[]
-  accounts      Account[]
-  rooms         Room[]
-  tracks        RecordingTrack[]
-  uploadSessions UploadSession[]
-  recordingEvents RecordingEvent[]
+  id                 String            @id
+  name               String
+  email              String
+  emailVerified      Boolean
+  image              String?
+  role               String            @default("user")
+  subscription       Subscription?
+  createdAt          DateTime
+  updatedAt          DateTime
+  sessions           Session[]
+  accounts           Account[]
+  rooms              Room[]
+  tracks             RecordingTrack[]
+  uploadSessions     UploadSession[]
+  recordingEvents    RecordingEvent[]
   roomParticipations RoomParticipant[]
-  roomMemberships RoomMember[]
-  chatMessages  ChatMessage[]
+  roomMemberships    RoomMember[]
+  chatMessages       ChatMessage[]
 
   @@unique([email])
   @@map("user")
@@ -101,19 +101,19 @@ model Room {
 }
 
 model RoomInvite {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   roomId    String
-  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  tokenHash String   @unique
-  role      String   @default("participant") // participant | editor | viewer
+  room      Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  role      String    @default("participant") // participant | editor | viewer
   email     String?
   maxUses   Int?
-  usedCount Int      @default(0)
+  usedCount Int       @default(0)
   expiresAt DateTime?
   revokedAt DateTime?
   createdBy String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([roomId, revokedAt])
   @@map("room_invite")
@@ -134,11 +134,11 @@ model RoomMember {
 }
 
 model RoomParticipant {
-  id       String @id @default(cuid())
+  id       String   @id @default(cuid())
   roomId   String
-  room     Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  room     Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   userId   String
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   joinedAt DateTime @default(now())
 
   @@unique([roomId, userId])
@@ -160,21 +160,22 @@ model ChatMessage {
 }
 
 model RecordingSession {
-  id              String           @id @default(cuid())
-  roomId          String
-  room            Room             @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  status          String           // "RECORDING" | "COMPLETED"
-  tracks          RecordingTrack[]
-  uploadSessions  UploadSession[]
-  events          RecordingEvent[]
-  syncMarkers     SyncMarker[]
+  id                 String              @id @default(cuid())
+  roomId             String
+  room               Room                @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  status             String // "RECORDING" | "COMPLETED"
+  tracks             RecordingTrack[]
+  uploadSessions     UploadSession[]
+  events             RecordingEvent[]
+  syncMarkers        SyncMarker[]
   transcriptSegments TranscriptSegment[]
-  chapters        Chapter[]
-  showNotes       ShowNotes?
-  startedAt       DateTime         @default(now())
-  endedAt         DateTime?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  chapters           Chapter[]
+  showNotes          ShowNotes?
+  clipCandidates     ClipCandidate[]
+  startedAt          DateTime            @default(now())
+  endedAt            DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   @@map("recording_session")
 }
@@ -185,9 +186,9 @@ model RecordingTrack {
   session   RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   userId    String
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trackSid  String           // LiveKit track SID
-  type      String           // "CAMERA" | "SCREENSHARE" | "MICROPHONE"
-  status    String           // "PENDING" | "UPLOADING" | "COMPLETED" | "FAILED"
+  trackSid  String // LiveKit track SID
+  type      String // "CAMERA" | "SCREENSHARE" | "MICROPHONE"
+  status    String // "PENDING" | "UPLOADING" | "COMPLETED" | "FAILED"
   s3Key     String
   s3Url     String?
   createdAt DateTime         @default(now())
@@ -203,7 +204,7 @@ model UploadSession {
   userId      String
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   trackSid    String
-  type        String           // "CAMERA" | "SCREENSHARE" | "MICROPHONE"
+  type        String // "CAMERA" | "SCREENSHARE" | "MICROPHONE"
   uploadId    String
   s3Key       String           @unique
   status      String           @default("UPLOADING") // "UPLOADING" | "COMPLETED" | "FAILED"
@@ -218,14 +219,14 @@ model UploadSession {
 }
 
 model SyncMarker {
-  id         String           @id @default(cuid())
-  sessionId  String
-  session    RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  userId     String
-  localTime  Float
+  id           String           @id @default(cuid())
+  sessionId    String
+  session      RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId       String
+  localTime    Float
   rtpTimestamp Float?
-  trackSid   String?
-  createdAt  DateTime         @default(now())
+  trackSid     String?
+  createdAt    DateTime         @default(now())
 
   @@index([sessionId, userId])
   @@index([sessionId, createdAt])
@@ -238,7 +239,7 @@ model RecordingEvent {
   session    RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   userId     String?
   user       User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
-  type       String           // START | STOP | PAUSE | RESUME | JOIN | LEAVE | RECONNECT | TRACK_PUBLISHED | TRACK_UNPUBLISHED | UPLOAD_COMPLETED
+  type       String // START | STOP | PAUSE | RESUME | JOIN | LEAVE | RECONNECT | TRACK_PUBLISHED | TRACK_UNPUBLISHED | UPLOAD_COMPLETED
   trackSid   String?
   message    String?
   metadata   Json             @default("{}")
@@ -251,14 +252,14 @@ model RecordingEvent {
 }
 
 model TranscriptSegment {
-  id         String   @id @default(cuid())
+  id         String           @id @default(cuid())
   sessionId  String
   userId     String?
   startTime  Float
   endTime    Float
   text       String
   confidence Float?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime         @default(now())
   session    RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId, startTime])
@@ -266,40 +267,58 @@ model TranscriptSegment {
 }
 
 model Chapter {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   sessionId String
   title     String
   startTime Float
   endTime   Float?
-  createdAt DateTime @default(now())
+  createdAt DateTime         @default(now())
   session   RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@map("chapter")
 }
 
 model ShowNotes {
-  id        String   @id @default(cuid())
-  sessionId String   @unique
-  summary   String   @db.Text
-  keywords  Json     @default("[]")
-  seoTitles Json     @default("[]")
-  createdAt DateTime @default(now())
+  id        String           @id @default(cuid())
+  sessionId String           @unique
+  summary   String           @db.Text
+  keywords  Json             @default("[]")
+  seoTitles Json             @default("[]")
+  createdAt DateTime         @default(now())
   session   RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@map("show_notes")
 }
 
+model ClipCandidate {
+  id           String           @id @default(cuid())
+  sessionId    String
+  session      RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  startTime    Float
+  endTime      Float
+  score        Float
+  rationale    String           @db.Text
+  layout       String           @default("vertical_9_16")
+  renderStatus String           @default("pending")
+  renderS3Key  String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([sessionId, score])
+  @@map("clip_candidate")
+}
+
 model Subscription {
-  id                          String   @id @default(cuid())
-  userId                      String   @unique
-  plan                        Plan     @default(TRIAL)
-  status                      SubscriptionStatus @default(TRIALING)
-  stripeCustomerId            String?
-  trialEndsAt                 DateTime?
-  currentPeriodEnd            DateTime?
-  createdAt                   DateTime @default(now())
-  updatedAt                   DateTime @updatedAt
-  user                        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String             @id @default(cuid())
+  userId           String             @unique
+  plan             Plan               @default(TRIAL)
+  status           SubscriptionStatus @default(TRIALING)
+  stripeCustomerId String?
+  trialEndsAt      DateTime?
+  currentPeriodEnd DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("subscription")
 }

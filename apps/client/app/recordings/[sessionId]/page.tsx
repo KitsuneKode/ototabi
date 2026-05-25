@@ -1,8 +1,11 @@
 "use client";
 
+import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
+import { TimelineLite } from "@/components/editor/timeline-lite";
+import { TranscriptEditor } from "@/components/editor/transcript-editor";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { SessionStatusRail } from "@/components/layout/session-status-rail";
@@ -29,6 +32,7 @@ import {
   Film,
   BookOpen,
 } from "@/lib/icons";
+import { useTRPC } from "@/trpc/client";
 
 const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
   MICROPHONE: Mic,
@@ -39,17 +43,27 @@ const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }
 export default function RecordingSessionPage() {
   const { sessionId } = useParams() as { sessionId: string };
   const router = useRouter();
+  const trpc = useTRPC();
 
   const {
     query,
     session,
     transcriptSegments,
     chapters,
+    showNotes,
+    clipCandidates,
+    aiStatus,
     timelineEvents,
     allUploaded,
     aggregateUploadStatus,
     isBootingAuth,
   } = useSessionReview(sessionId);
+
+  const queueClipRender = useMutation(
+    trpc.clips.queueVerticalRender.mutationOptions({
+      onSuccess: () => query.refetch(),
+    }),
+  );
 
   if (isBootingAuth || query.isLoading) {
     return (
@@ -259,52 +273,99 @@ export default function RecordingSessionPage() {
           <SessionTimeline events={timelineEvents} isLoading={query.isFetching && !query.data} />
         </div>
 
-        {/* ── Transcript Section ────────────────────────────────────────── */}
-        {transcriptSegments && transcriptSegments.length > 0 ? (
-          <div className="space-y-4">
-            <PanelTitle label="AI Transcript" title="Session Transcript" />
+        <TimelineLite
+          tracks={(data.tracks ?? []).map((track) => ({
+            id: track.id,
+            label: `${track.user?.name ?? "Guest"} · ${track.type}`,
+            durationSec: Math.max(
+              30,
+              data.endedAt && data.startedAt
+                ? (new Date(data.endedAt).getTime() - new Date(data.startedAt).getTime()) / 1000
+                : 120,
+            ),
+          }))}
+          markers={chapters?.map((ch) => ({
+            id: ch.id,
+            label: ch.title,
+            atSec: ch.startTime,
+          }))}
+        />
 
-            <AnalogCard className="p-6">
-              {chapters && chapters.length > 0 ? (
-                <div className="border-border mb-6 border-b pb-4">
-                  <div className="mb-3 flex items-center gap-2">
-                    <BookOpen className="text-accent h-4 w-4" />
-                    <h3 className="text-sm font-bold tracking-wider uppercase">Chapters</h3>
-                  </div>
-                  <div className="space-y-1">
-                    {chapters.map((ch) => (
-                      <div
-                        key={ch.id}
-                        className="border-border bg-popover flex items-center gap-3 rounded border px-3 py-2"
-                      >
-                        <MonoLabel className="text-accent shrink-0">
-                          {formatTimestamp(ch.startTime)}
-                        </MonoLabel>
-                        <span className="text-foreground font-mono text-xs">{ch.title}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="max-h-[400px] space-y-2 overflow-y-auto pr-2">
-                {transcriptSegments.map((seg) => (
-                  <div
-                    key={seg.id}
-                    className="hover:bg-popover/50 group rounded px-2 py-1.5 transition-colors"
-                  >
-                    <div className="flex items-start gap-3">
-                      <MonoLabel className="text-muted-foreground mt-0.5 shrink-0 text-[9px]">
-                        {formatTimestamp(seg.startTime)}
-                      </MonoLabel>
-                      <p className="text-foreground/90 font-mono text-[11px] leading-relaxed">
-                        {seg.text}
-                      </p>
-                    </div>
-                  </div>
+        {showNotes ? (
+          <AnalogCard className="space-y-4 p-6">
+            <PanelTitle label="AI producer" title="Show notes" />
+            <p className="text-foreground/90 font-mono text-sm leading-relaxed">
+              {showNotes.summary}
+            </p>
+            {Array.isArray(showNotes.keywords) && showNotes.keywords.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {(showNotes.keywords as string[]).map((kw) => (
+                  <StatusBadge key={kw} variant="default" className="text-[8px]">
+                    {kw}
+                  </StatusBadge>
                 ))}
               </div>
-            </AnalogCard>
+            ) : null}
+          </AnalogCard>
+        ) : aiStatus === "processing" ? (
+          <AnalogCard className="p-6 text-center">
+            <MonoLabel>AI processing transcript, chapters, and clips…</MonoLabel>
+          </AnalogCard>
+        ) : null}
+
+        {clipCandidates && clipCandidates.length > 0 ? (
+          <div className="space-y-4">
+            <PanelTitle label="Magic clips" title="Vertical clip pack" />
+            <div className="space-y-3">
+              {clipCandidates.map((clip) => (
+                <AnalogInset key={clip.id} className="p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <MonoLabel>
+                        {formatTimestamp(clip.startTime)} – {formatTimestamp(clip.endTime)} &bull;
+                        score {(clip.score * 100).toFixed(0)}%
+                      </MonoLabel>
+                      <p className="text-muted-foreground mt-2 font-mono text-[10px] leading-relaxed">
+                        {clip.rationale}
+                      </p>
+                    </div>
+                    <MechButton
+                      disabled={queueClipRender.isPending || clip.renderStatus === "processing"}
+                      onClick={() => queueClipRender.mutate({ sessionId, clipId: clip.id })}
+                    >
+                      {clip.renderStatus === "ready" ? "9:16 ready" : "Queue 9:16 export"}
+                    </MechButton>
+                  </div>
+                </AnalogInset>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {transcriptSegments && transcriptSegments.length > 0 ? (
+          <div className="space-y-4">
+            {chapters && chapters.length > 0 ? (
+              <AnalogCard className="p-6">
+                <div className="mb-3 flex items-center gap-2">
+                  <BookOpen className="text-accent h-4 w-4" />
+                  <h3 className="text-sm font-bold tracking-wider uppercase">Chapters</h3>
+                </div>
+                <div className="space-y-1">
+                  {chapters.map((ch) => (
+                    <div
+                      key={ch.id}
+                      className="border-border bg-popover flex items-center gap-3 rounded border px-3 py-2"
+                    >
+                      <MonoLabel className="text-accent shrink-0">
+                        {formatTimestamp(ch.startTime)}
+                      </MonoLabel>
+                      <span className="text-foreground font-mono text-xs">{ch.title}</span>
+                    </div>
+                  ))}
+                </div>
+              </AnalogCard>
+            ) : null}
+            <TranscriptEditor segments={transcriptSegments} />
           </div>
         ) : null}
 

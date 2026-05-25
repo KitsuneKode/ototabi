@@ -26,3 +26,22 @@ export interface LlmJobResult {
     seoTitles: string[];
   };
 }
+
+export interface ClipsJobData {
+  sessionId: string;
+}
+
+export interface ClipsJobResult {
+  candidates: number;
+}
+
+export interface ExportJobData {
+  sessionId: string;
+  clipId?: string;
+  preset: "vertical_9_16" | "episode_mp3";
+}
+
+export interface ExportJobResult {
+  status: "queued" | "ready";
+  outputKey?: string;
+}
