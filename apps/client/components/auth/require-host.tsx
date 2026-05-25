@@ -1,12 +1,10 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-import { AnalogCard } from "@/components/ui/analog-card";
-import { useAuthGate } from "@/lib/hooks/use-session";
-import { useTRPC } from "@/trpc/client";
+import { AnalogStatePanel } from "@/components/patterns/analog-state-panel";
+import { useAuthGate, useSessionQuery } from "@/lib/hooks/use-session";
 
 type RequireHostProps = {
   children: React.ReactNode;
@@ -17,9 +15,8 @@ type RequireHostProps = {
  */
 export function RequireHost({ children }: RequireHostProps) {
   const router = useRouter();
-  const trpc = useTRPC();
   const { isBooting, showGate, sessionReady } = useAuthGate();
-  const authState = useQuery(trpc.auth.getSession.queryOptions());
+  const authState = useSessionQuery();
 
   const role = authState.data?.user?.role;
   const isGuest = role === "guest";
@@ -37,12 +34,8 @@ export function RequireHost({ children }: RequireHostProps) {
 
   if (isBooting || !sessionReady || isGuest || showGate) {
     return (
-      <div className="bg-background flex min-h-screen items-center justify-center font-sans">
-        <AnalogCard className="p-8 text-center">
-          <p className="animate-pulse font-mono text-xs font-bold tracking-widest uppercase">
-            Verifying access...
-          </p>
-        </AnalogCard>
+      <div className="bg-background flex min-h-[100dvh] items-center justify-center font-sans">
+        <AnalogStatePanel title="Verifying access" message="Checking host console permissions..." />
       </div>
     );
   }

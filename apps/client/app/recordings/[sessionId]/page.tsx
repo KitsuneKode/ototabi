@@ -1,12 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { SessionStatusRail } from "@/components/layout/session-status-rail";
+import { AnalogLoadingPanel, AnalogStatePanel } from "@/components/patterns/analog-state-panel";
 import { SessionTimeline } from "@/components/patterns/session-timeline";
 import {
   mapTrackStatusToUploadDisplay,
@@ -16,6 +16,7 @@ import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { Led, LedInline } from "@/components/ui/led";
 import { MonoLabel, PanelTitle, StatusBadge, MechButton } from "@/components/ui/retro-primitives";
 import { formatDateTime, formatTimestamp } from "@/lib/date-utils";
+import { useSessionReview } from "@/lib/hooks/use-session-review";
 import {
   ArrowLeft,
   Download,
@@ -28,8 +29,6 @@ import {
   Film,
   BookOpen,
 } from "@/lib/icons";
-import { mergeSessionTimelineEvents } from "@/lib/merge-session-timeline";
-import { useTRPC } from "@/trpc/client";
 
 const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
   MICROPHONE: Mic,
@@ -40,83 +39,41 @@ const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }
 export default function RecordingSessionPage() {
   const { sessionId } = useParams() as { sessionId: string };
   const router = useRouter();
-  const trpc = useTRPC();
 
-  const session = useQuery(
-    trpc.rooms.getRecordingSessionById.queryOptions({ sessionId }, { enabled: !!sessionId }),
-  );
+  const {
+    query,
+    session,
+    transcriptSegments,
+    chapters,
+    timelineEvents,
+    allUploaded,
+    aggregateUploadStatus,
+    isBootingAuth,
+  } = useSessionReview(sessionId);
 
-  const authState = useQuery(trpc.auth.getSession.queryOptions());
-
-  const transcript = useQuery(
-    trpc.transcript.getSegments.queryOptions({ sessionId }, { enabled: !!sessionId }),
-  );
-
-  const chapters = useQuery(
-    trpc.transcript.getChapters.queryOptions({ sessionId }, { enabled: !!sessionId }),
-  );
-
-  const events = useQuery(
-    trpc.recordingEvents.listBySession.queryOptions({ sessionId }, { enabled: !!sessionId }),
-  );
-
-  const syncMarkers = useQuery(
-    trpc.syncMarkers.listBySession.queryOptions({ sessionId }, { enabled: !!sessionId }),
-  );
-
-  const timelineEvents = mergeSessionTimelineEvents(events.data, syncMarkers.data);
-
-  // ── Auth Gate ──────────────────────────────────────────────────────────
-  if (!authState.isLoading && !authState.data) {
+  if (isBootingAuth || query.isLoading) {
     return (
-      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
-        <MechButton
-          onClick={() => router.push("/auth/signin")}
-          className="w-full max-w-xs justify-center"
-        >
-          Sign In Required
-        </MechButton>
+      <AppShell maxWidth="max-w-5xl">
+        <AnalogLoadingPanel label="Loading session tapes..." />
+      </AppShell>
+    );
+  }
+
+  if (query.error || !session) {
+    return (
+      <div className="bg-background flex min-h-[100dvh] flex-col items-center justify-center px-4 font-sans">
+        <AnalogStatePanel
+          title="Session not found"
+          message={`Recording session "${sessionId.slice(-8).toUpperCase()}" could not be located.`}
+          actionLabel="Return to dashboard"
+          onAction={() => router.push("/dashboard")}
+          icon={<AlertTriangle className="text-led-on h-12 w-12" />}
+        />
       </div>
     );
   }
 
-  // ── Loading ──────────────────────────────────────────────────────────────
-  if (session.isLoading) {
-    return (
-      <div className="bg-background flex min-h-screen items-center justify-center font-sans">
-        <div className="flex flex-col items-center gap-3">
-          <div className="border-border border-t-accent h-8 w-8 animate-spin rounded-full border-2" />
-          <span className="animate-pulse font-mono text-xs font-bold tracking-widest uppercase">
-            Loading Session Tapes...
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Error ────────────────────────────────────────────────────────────────
-  if (session.error || !session.data) {
-    return (
-      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
-        <AnalogCard className="w-full max-w-sm p-8 text-center">
-          <AlertTriangle className="text-led-on mx-auto mb-4 h-12 w-12" />
-          <p className="text-led-on mb-2 text-sm font-bold tracking-wider uppercase">
-            Session Not Found
-          </p>
-          <p className="text-muted-foreground mb-6 font-mono text-xs leading-normal">
-            Recording session &ldquo;{sessionId.slice(-8).toUpperCase()}&rdquo; could not be
-            located.
-          </p>
-          <MechButton onClick={() => router.push("/dashboard")} className="w-full justify-center">
-            Return to Dashboard
-          </MechButton>
-        </AnalogCard>
-      </div>
-    );
-  }
-
-  const data = session.data;
-  const allUploaded = data.tracks.every((t) => t.status === "COMPLETED");
+  const data = session;
   const totalTracks = data.tracks.length;
 
   // Group tracks by participant
@@ -126,8 +83,6 @@ export default function RecordingSessionPage() {
     acc[key]!.push(track);
     return acc;
   }, {});
-
-  const aggregateUploadStatus = allUploaded ? "complete" : "uploading";
 
   return (
     <AppShell maxWidth="max-w-5xl">
@@ -301,26 +256,23 @@ export default function RecordingSessionPage() {
 
         <div className="space-y-4">
           <PanelTitle label="Event Tape" title="Recording Timeline" />
-          <SessionTimeline
-            events={timelineEvents}
-            isLoading={events.isLoading || syncMarkers.isLoading}
-          />
+          <SessionTimeline events={timelineEvents} isLoading={query.isFetching && !query.data} />
         </div>
 
         {/* ── Transcript Section ────────────────────────────────────────── */}
-        {transcript.data && transcript.data.length > 0 && (
+        {transcriptSegments && transcriptSegments.length > 0 ? (
           <div className="space-y-4">
             <PanelTitle label="AI Transcript" title="Session Transcript" />
 
             <AnalogCard className="p-6">
-              {chapters.data && chapters.data.length > 0 && (
+              {chapters && chapters.length > 0 ? (
                 <div className="border-border mb-6 border-b pb-4">
                   <div className="mb-3 flex items-center gap-2">
                     <BookOpen className="text-accent h-4 w-4" />
                     <h3 className="text-sm font-bold tracking-wider uppercase">Chapters</h3>
                   </div>
                   <div className="space-y-1">
-                    {chapters.data.map((ch) => (
+                    {chapters.map((ch) => (
                       <div
                         key={ch.id}
                         className="border-border bg-popover flex items-center gap-3 rounded border px-3 py-2"
@@ -333,10 +285,10 @@ export default function RecordingSessionPage() {
                     ))}
                   </div>
                 </div>
-              )}
+              ) : null}
 
               <div className="max-h-[400px] space-y-2 overflow-y-auto pr-2">
-                {transcript.data.map((seg) => (
+                {transcriptSegments.map((seg) => (
                   <div
                     key={seg.id}
                     className="hover:bg-popover/50 group rounded px-2 py-1.5 transition-colors"
@@ -354,27 +306,14 @@ export default function RecordingSessionPage() {
               </div>
             </AnalogCard>
           </div>
-        )}
-
-        {transcript.isLoading ? (
-          <AnalogCard className="flex items-center justify-center gap-3 p-12">
-            <RefreshCw className="text-accent h-5 w-5 animate-spin" />
-            <MonoLabel className="animate-pulse">Transcription in progress...</MonoLabel>
-          </AnalogCard>
         ) : null}
 
-        {transcript.isFetched && !transcript.isLoading && (transcript.data?.length ?? 0) === 0 ? (
+        {query.isSuccess && (transcriptSegments?.length ?? 0) === 0 ? (
           <AnalogCard className="p-8 text-center">
             <MonoLabel className="text-muted-foreground">
               No transcript yet. Stop a session with uploaded audio, Redis, worker, and
               OPENAI_API_KEY configured to generate one.
             </MonoLabel>
-          </AnalogCard>
-        ) : null}
-
-        {transcript.isError ? (
-          <AnalogCard className="p-8 text-center">
-            <MonoLabel className="text-led-on">Failed to load transcript</MonoLabel>
           </AnalogCard>
         ) : null}
 
