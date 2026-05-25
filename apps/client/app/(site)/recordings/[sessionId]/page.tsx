@@ -294,7 +294,7 @@ export default function RecordingSessionPage() {
             {Array.isArray(showNotes.keywords) && showNotes.keywords.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {(showNotes.keywords as string[]).map((kw) => (
-                  <StatusBadge key={kw} variant="default" className="text-[8px]">
+                  <StatusBadge key={kw} variant="default" className="text-[10px]">
                     {kw}
                   </StatusBadge>
                 ))}

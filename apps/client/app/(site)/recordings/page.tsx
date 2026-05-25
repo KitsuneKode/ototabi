@@ -76,27 +76,27 @@ export default function RecordingsIndexPage() {
                     </MonoLabel>
                     <div className="mt-2 flex flex-wrap gap-1">
                       {session.hasTranscript ? (
-                        <StatusBadge variant="ok" className="text-[8px]">
+                        <StatusBadge variant="ok" className="text-[10px]">
                           Transcript
                         </StatusBadge>
                       ) : null}
                       {session.hasChapters ? (
-                        <StatusBadge variant="ok" className="text-[8px]">
+                        <StatusBadge variant="ok" className="text-[10px]">
                           Chapters
                         </StatusBadge>
                       ) : null}
                       {session.hasShowNotes ? (
-                        <StatusBadge variant="ok" className="text-[8px]">
+                        <StatusBadge variant="ok" className="text-[10px]">
                           Notes
                         </StatusBadge>
                       ) : null}
                       {session.clipsReady ? (
-                        <StatusBadge variant="ok" className="text-[8px]">
+                        <StatusBadge variant="ok" className="text-[10px]">
                           Clips
                         </StatusBadge>
                       ) : null}
                       {session.aiStatus === "processing" ? (
-                        <StatusBadge variant="warn" className="text-[8px]">
+                        <StatusBadge variant="warn" className="text-[10px]">
                           AI processing
                         </StatusBadge>
                       ) : null}

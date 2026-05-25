@@ -148,7 +148,7 @@ export function DashboardRoomList({
                 <div className="flex items-center gap-2 truncate pr-2">
                   <span className="text-foreground text-sm font-bold uppercase">{room.name}</span>
                   {room.isShared ? (
-                    <StatusBadge variant="warn" className="shrink-0 text-[8px]">
+                    <StatusBadge variant="warn" className="shrink-0 text-[10px]">
                       SHARED
                     </StatusBadge>
                   ) : null}

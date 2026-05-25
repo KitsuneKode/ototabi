@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { authClient } from "@ototabi/auth/client";
 import { Button } from "@ototabi/ui/components/button";
 import { Form, FormField, FormItem, FormLabel, FormMessage } from "@ototabi/ui/components/form";
-import { Input } from "@ototabi/ui/components/input";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -13,6 +12,7 @@ import { z } from "zod";
 
 import { RedirectIfAuthenticated } from "@/components/auth/redirect-if-authenticated";
 import { AuthShell } from "@/components/layout/auth-shell";
+import { AnalogInput } from "@/components/ui/analog-input";
 import { useRefreshAuthSession } from "@/lib/hooks/use-session";
 import { Key, Mail, ShieldAlert } from "@/lib/icons";
 
@@ -87,11 +87,11 @@ export default function SignInPage() {
                       <span className="text-muted-foreground/60 absolute inset-y-0 left-3 flex items-center">
                         <Icon className="h-4 w-4" />
                       </span>
-                      <Input
+                      <AnalogInput
                         {...field}
                         type={type}
                         placeholder={placeholder}
-                        className="border-border bg-popover text-foreground placeholder:text-muted-foreground/40 focus-visible:ring-accent/60 h-11 rounded border pl-10 font-mono text-sm shadow-inner focus-visible:ring-1"
+                        className="h-11 pl-10"
                       />
                     </div>
                     <FormMessage className="text-destructive font-mono text-xs" />
@@ -109,8 +109,10 @@ export default function SignInPage() {
 
             <Button
               type="submit"
+              variant="analog"
+              size="lg"
               disabled={form.formState.isSubmitting}
-              className="btn-mechanical text-secondary-foreground h-11 w-full rounded font-bold tracking-widest uppercase"
+              className="h-11 w-full"
             >
               {form.formState.isSubmitting ? "AUTHENTICATING..." : "SIGN IN"}
             </Button>

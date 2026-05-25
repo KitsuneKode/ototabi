@@ -66,16 +66,29 @@ Logo, palette, taglines, and asset paths: **[brand.md](brand.md)**.
 
 ## Retro Analog v2 (Product Shell)
 
-| Term               | Definition                                                                                                        |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| **ProductShell**   | Shared page frame: noise texture, `min-h-[100dvh]`, centered `max-w-6xl` content column.                          |
-| **SiteHeader**     | Marketing/app chrome: brand block, primary nav, PWR/SYNC LEDs, mobile menu.                                       |
-| **Signal accent**  | Single amber-orange (`--accent`) for active UI — never purple gradients or multi-accent palettes.                 |
-| **Section rhythm** | Major sections use `py-20 md:py-28` and `border-t-2` separators — chapters, not stacked cards.                    |
-| **Feature bento**  | Asymmetric `grid-flow-dense` layout; outer radius = inner radius + padding (concentric radii).                    |
-| **Motion**         | Enter from `scale(0.96)` + opacity; exits faster than enters; `--ease-mechanical` for press, `--ease-out` for UI. |
+| Term               | Definition                                                                                                                                                       |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ProductShell**   | Shared page frame: noise texture, `min-h-[100dvh]`, centered `max-w-6xl` content column.                                                                         |
+| **SiteHeader**     | Marketing/app chrome: brand block, primary nav, PWR/SYNC LEDs, mobile menu.                                                                                      |
+| **Signal accent**  | Single amber-orange (`--accent`) for active UI — never purple gradients or multi-accent palettes.                                                                |
+| **Section rhythm** | Major sections use `py-20 md:py-28` and `border-t-2` separators — chapters, not stacked cards.                                                                   |
+| **Feature bento**  | Asymmetric `grid-flow-dense` layout; outer radius = inner radius + padding (concentric radii).                                                                   |
+| **Motion**         | Marketing: `AnalogMotionReveal` (`motion` + `whileInView`). Product: `AnalogReveal` (IntersectionObserver). Mechanical easing; respect `prefers-reduced-motion`. |
+| **Hero rules**     | One `<h1>` per landing page; no stamp `StatusBadge` above hero; tagline as mono line (e.g. LOCAL MASTERS. SYNCED.). Headline `max-w-[20ch]` with 2–3 lines max.  |
+| **Min type size**  | Production UI: **10px** floor (`text-[10px]` or `text-xs`). Avoid `text-[7px]` / `text-[8px]` in studio, dashboard, recordings.                                  |
+| **Bento recipe**   | `md:grid-cols-3` + `grid-flow-dense`: spans must tile with no empty cell (e.g. capstone `md:col-span-3`).                                                        |
 
 Default product theme: **dark** (studio console). Light mode remains available via system preference.
+
+### Primitives (client)
+
+| Component                                | Path                                                    | Use                               |
+| ---------------------------------------- | ------------------------------------------------------- | --------------------------------- |
+| `AnalogMotionReveal`                     | `apps/client/components/ui/analog-motion.tsx`           | Marketing scroll enter            |
+| `AnalogReveal`                           | `apps/client/components/ui/analog-reveal.tsx`           | IO-triggered enter (app/auth)     |
+| `AnalogInput`                            | `apps/client/components/ui/analog-input.tsx`            | LCD inset fields                  |
+| `MechButton` / `Button variant="analog"` | `retro-primitives` / `@ototabi/ui`                      | Primary tactile actions           |
+| `StudioControlDeck`                      | `apps/client/components/studio/studio-control-deck.tsx` | LiveKit footer + analog theme CSS |
 
 ## Typography
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { OtotabiLogoMark } from "@/components/brand/ototabi-logo";
 import { cn } from "@/lib/utils";
 
 const FOOTER_COLUMNS = [
@@ -39,17 +40,6 @@ const FOOTER_COLUMNS = [
 /** Fixed for static prerender — SiteFooter is rendered under client marketing shells. */
 const COPYRIGHT_YEAR = 2026;
 
-function BrandMark() {
-  return (
-    <div
-      className="border-border bg-card text-foreground chassis-shadow flex h-9 w-9 shrink-0 items-center justify-center rounded-md border font-mono text-sm font-bold"
-      aria-hidden="true"
-    >
-      O
-    </div>
-  );
-}
-
 function FooterLinkColumn({
   title,
   links,
@@ -84,7 +74,7 @@ export function SiteFooter({ className }: { className?: string }) {
       <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-8">
         <div className="flex flex-col gap-5 lg:col-span-4">
           <div className="flex items-center gap-3">
-            <BrandMark />
+            <OtotabiLogoMark className="h-9 w-9" />
             <span className="font-display text-foreground text-lg font-bold tracking-tight uppercase">
               Ototabi Studio
             </span>

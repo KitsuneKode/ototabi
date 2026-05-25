@@ -20,8 +20,8 @@ const delayClass: Record<NonNullable<AnalogRevealProps["delay"]>, string> = {
 };
 
 /**
- * Stagger-friendly enter animation. Adds `analog-enter-visible` after mount
- * so first paint does not flash unstyled content on hydration.
+ * Enter animation when the element scrolls into view (IntersectionObserver).
+ * Falls back to immediate visibility if IO is unavailable.
  */
 export function AnalogReveal({ children, className, delay = 0 }: AnalogRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -29,10 +29,29 @@ export function AnalogReveal({ children, className, delay = 0 }: AnalogRevealPro
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
-    const frame = requestAnimationFrame(() => {
-      node.classList.add("analog-enter-visible");
-    });
-    return () => cancelAnimationFrame(frame);
+
+    const show = () => node.classList.add("analog-enter-visible");
+
+    if (typeof IntersectionObserver === "undefined") {
+      const frame = requestAnimationFrame(show);
+      return () => cancelAnimationFrame(frame);
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            show();
+            observer.disconnect();
+            break;
+          }
+        }
+      },
+      { rootMargin: "-10% 0px", threshold: 0.08 },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
   }, []);
 
   return (

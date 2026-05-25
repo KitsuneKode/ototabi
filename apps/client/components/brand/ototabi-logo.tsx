@@ -61,8 +61,8 @@ export function OtotabiLogoMark({ className, title = "Ototabi" }: LogoMarkProps)
         strokeWidth="1"
         strokeLinecap="round"
       />
-      <circle cx="22.4" cy="10.8" r="2.35" className="fill-[#e8952a]" />
-      <circle cx="22.4" cy="10.8" r="1.1" fill="#fff5e6" fillOpacity="0.55" />
+      <circle cx="22.4" cy="10.8" r="2.35" className="fill-accent" />
+      <circle cx="22.4" cy="10.8" r="1.1" className="fill-accent-foreground/55" />
     </svg>
   );
 }

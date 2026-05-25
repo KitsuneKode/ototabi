@@ -295,7 +295,7 @@ function RoomJoinPageContent() {
                 </div>
               )}
               {/* Status overlay */}
-              <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 rounded border border-white/10 bg-black/80 px-2 py-0.5 font-mono text-[8px] text-zinc-300">
+              <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 rounded border border-white/10 bg-black/80 px-2 py-0.5 font-mono text-[10px] text-zinc-300">
                 <LedInline color={videoEnabled ? "green" : "red"} size="sm" />
                 FEED: {videoEnabled ? "ACTIVE" : "MUTED"}
               </div>

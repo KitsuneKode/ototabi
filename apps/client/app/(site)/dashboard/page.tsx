@@ -1,7 +1,5 @@
 "use client";
 
-import { Button } from "@ototabi/ui/components/button";
-import { Input } from "@ototabi/ui/components/input";
 import { Label } from "@ototabi/ui/components/label";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import Link from "next/link";
@@ -13,6 +11,7 @@ import { DashboardSessionsPanel } from "@/components/dashboard/dashboard-session
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { AnalogCard } from "@/components/ui/analog-card";
+import { AnalogInput } from "@/components/ui/analog-input";
 import { MechButton } from "@/components/ui/retro-primitives";
 import { useAuthGate } from "@/lib/hooks/use-session";
 import { Lock, Plus } from "@/lib/icons";
@@ -210,7 +209,7 @@ export default function DashboardPage() {
               <form onSubmit={handleCreateRoom} className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="room-name">Room Name</Label>
-                  <Input
+                  <AnalogInput
                     id="room-name"
                     type="text"
                     required
@@ -219,10 +218,14 @@ export default function DashboardPage() {
                     onChange={(e) => setNewRoomName(e.target.value)}
                   />
                 </div>
-                <Button type="submit" disabled={createRoomMutation.isPending}>
+                <MechButton
+                  type="submit"
+                  disabled={createRoomMutation.isPending}
+                  className="w-full"
+                >
                   <Plus className="h-4 w-4" />
                   {createRoomMutation.isPending ? "CONFIGURING..." : "CREATE ROOM"}
-                </Button>
+                </MechButton>
               </form>
             </AnalogCard>
 

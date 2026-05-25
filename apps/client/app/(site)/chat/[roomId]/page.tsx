@@ -1,6 +1,6 @@
 "use client";
 
-import { ControlBar, RoomAudioRenderer, RoomContext } from "@livekit/components-react";
+import { RoomAudioRenderer, RoomContext } from "@livekit/components-react";
 import "@livekit/components-styles";
 import { Button } from "@ototabi/ui/components/button";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -13,6 +13,7 @@ import type { RecorderManager } from "@/lib/recorder/recorder-manager";
 import { SessionStatusRail } from "@/components/layout/session-status-rail";
 import { StudioShell } from "@/components/layout/studio-shell";
 import { StudioChatPanel } from "@/components/studio/studio-chat-panel";
+import { StudioControlDeck } from "@/components/studio/studio-control-deck";
 import { StudioParticipantRoster } from "@/components/studio/studio-participant-roster";
 import { StudioVideoGrid } from "@/components/studio/studio-video-grid";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
@@ -339,7 +340,7 @@ function StudioPageContent() {
                   {" | "}Op: {operatorLabel}
                 </MonoLabel>
                 {isHost && (
-                  <StatusBadge variant="ok" className="text-[8px]">
+                  <StatusBadge variant="ok" className="text-[10px]">
                     <LedInline color="green" size="sm" />
                     HOST
                   </StatusBadge>
@@ -464,7 +465,7 @@ function StudioPageContent() {
         {/* ── Main Layout ─────────────────────────────────────────────────────── */}
         <div className="flex flex-1 overflow-hidden">
           {/* Video feed area */}
-          <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-[#111] will-change-transform">
+          <main className="bg-popover relative flex min-w-0 flex-1 flex-col overflow-hidden will-change-transform">
             {/* CRT scanline overlay on the entire video area */}
             <div
               className="pointer-events-none absolute inset-0 z-10 opacity-20 will-change-transform"
@@ -475,7 +476,7 @@ function StudioPageContent() {
             />
 
             {/* Corner label */}
-            <div className="absolute top-3 left-3 z-20 rounded border border-white/10 bg-black/60 px-2 py-0.5 font-mono text-[9px] tracking-widest text-[#888] uppercase">
+            <div className="text-muted-foreground border-border bg-background/80 absolute top-3 left-3 z-20 rounded border px-2 py-0.5 font-mono text-[10px] tracking-widest uppercase">
               CH 1 : Studio Feed
             </div>
 
@@ -545,7 +546,7 @@ function StudioPageContent() {
                         <Radio className="text-muted-foreground/30 h-8 w-8 animate-pulse" />
                         <div className="space-y-1">
                           <MonoLabel className="block">Standby Mode</MonoLabel>
-                          <p className="text-muted-foreground/60 max-w-[160px] font-mono text-[8px] leading-normal uppercase">
+                          <p className="text-muted-foreground/60 max-w-[160px] font-mono text-[10px] leading-normal uppercase">
                             Upload feeds populate once recorders activate.
                           </p>
                         </div>
@@ -558,7 +559,7 @@ function StudioPageContent() {
                               <span className="text-foreground max-w-[120px] truncate text-xs font-bold uppercase">
                                 {data.name}
                               </span>
-                              <StatusBadge className="text-[8px]">{data.type}</StatusBadge>
+                              <StatusBadge className="text-[10px]">{data.type}</StatusBadge>
                             </div>
 
                             <div className="flex items-center gap-2.5">
@@ -577,7 +578,7 @@ function StudioPageContent() {
                               </span>
                             </div>
 
-                            <div className="text-muted-foreground/60 mt-2 flex items-center justify-between font-mono text-[8px]">
+                            <div className="text-muted-foreground/60 mt-2 flex items-center justify-between font-mono text-[10px]">
                               <span className="max-w-[140px] truncate uppercase">
                                 SID: {trackSid.slice(-10)}
                               </span>
@@ -606,9 +607,9 @@ function StudioPageContent() {
                         .map(([trackSid, data]) => (
                           <AnalogInset key={trackSid} className="p-3">
                             <div className="mb-2 flex items-center justify-between">
-                              <MonoLabel className="text-[8px]">{data.type}</MonoLabel>
+                              <MonoLabel className="text-[10px]">{data.type}</MonoLabel>
                               {data.progress === 100 && (
-                                <span className="text-led-green flex items-center gap-0.5 font-mono text-[8px] font-bold">
+                                <span className="text-led-green flex items-center gap-0.5 font-mono text-[10px] font-bold">
                                   <CheckCircle className="h-3 w-3" />
                                   <span>DONE</span>
                                 </span>
@@ -644,7 +645,7 @@ function StudioPageContent() {
 
         {/* ── Control Footer ──────────────────────────────────────────────────── */}
         <footer className="border-border bg-card z-10 flex h-16 shrink-0 items-center justify-center border-t-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_0_0_var(--color-border)]">
-          <ControlBar variation="minimal" />
+          <StudioControlDeck />
         </footer>
 
         <KeyboardShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />

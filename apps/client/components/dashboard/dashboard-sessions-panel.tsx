@@ -39,7 +39,7 @@ function SessionAiBadges({ session }: { session: DashboardSession }) {
   const visible = badges.filter((b) => b.show);
   if (visible.length === 0 && session.aiStatus === "processing") {
     return (
-      <StatusBadge variant="warn" className="text-[8px]">
+      <StatusBadge variant="warn" className="text-[10px]">
         AI PROCESSING
       </StatusBadge>
     );
@@ -48,7 +48,7 @@ function SessionAiBadges({ session }: { session: DashboardSession }) {
   return (
     <div className="flex flex-wrap gap-1">
       {visible.map((b) => (
-        <StatusBadge key={b.label} variant="ok" className="text-[8px]">
+        <StatusBadge key={b.label} variant="ok" className="text-[10px]">
           {b.label}
         </StatusBadge>
       ))}

@@ -43,7 +43,7 @@ export function StudioChatPanel({ roomDbId, sessionUserName }: StudioChatPanelPr
         ),
     );
 
-    return [...dedupedPersisted, ...chatMessages].sort((a, b) => a.timestamp - b.timestamp);
+    return [...dedupedPersisted, ...chatMessages].toSorted((a, b) => a.timestamp - b.timestamp);
   }, [persistedMessagesQuery.data, chatMessages]);
 
   const handleSend = async () => {
@@ -67,7 +67,7 @@ export function StudioChatPanel({ roomDbId, sessionUserName }: StudioChatPanelPr
           <AnalogInset className="flex flex-col items-center justify-center gap-3 border-dashed p-6 text-center">
             <div className="space-y-1">
               <MonoLabel className="block">No Messages</MonoLabel>
-              <p className="text-muted-foreground/60 max-w-[160px] font-mono text-[8px] leading-normal uppercase">
+              <p className="text-muted-foreground/60 max-w-[160px] font-mono text-[10px] leading-normal uppercase">
                 Chat messages will appear here.
               </p>
             </div>
@@ -85,10 +85,10 @@ export function StudioChatPanel({ roomDbId, sessionUserName }: StudioChatPanelPr
                   }`}
                 >
                   <div className="mb-0.5 flex items-center gap-2">
-                    <span className="text-muted-foreground font-mono text-[8px] font-bold uppercase">
+                    <span className="text-muted-foreground font-mono text-[10px] font-bold uppercase">
                       {msg.from?.name || msg.from?.identity || "Unknown"}
                     </span>
-                    <span className="text-muted-foreground/50 font-mono text-[7px]">
+                    <span className="text-muted-foreground/50 font-mono text-[10px]">
                       {formatTime(msg.timestamp)}
                     </span>
                   </div>

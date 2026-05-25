@@ -15,8 +15,9 @@ import { MarketingPrimaryCta } from "@/components/marketing/marketing-primary-ct
 import { PricingTierCta } from "@/components/marketing/pricing-tier-cta";
 import { PRICING_TIERS } from "@/components/marketing/pricing-tiers";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
+import { AnalogMotionReveal } from "@/components/ui/analog-motion";
 import { AnalogReveal } from "@/components/ui/analog-reveal";
-import { MonoLabel, StatusBadge } from "@/components/ui/retro-primitives";
+import { MonoLabel } from "@/components/ui/retro-primitives";
 import { CloudUpload, Layers, Mic, Shield, Users, Video, Waveform } from "@/lib/icons";
 
 const SIGNAL_METRICS = [
@@ -27,17 +28,17 @@ const SIGNAL_METRICS = [
 
 const WORKFLOW_STEPS = [
   {
-    step: "01",
+    channel: "CH-01",
     title: "Spin up a studio",
     body: "Create a room, copy the join link, and invite guests — no installs, no plugins.",
   },
   {
-    step: "02",
+    channel: "CH-02",
     title: "Record locally",
     body: "Each participant captures lossless tracks in the browser while LiveKit keeps everyone in sync.",
   },
   {
-    step: "03",
+    channel: "CH-03",
     title: "Upload & produce",
     body: "Chunks resume after crashes. Review sessions, export aligned tracks, and run AI post-production.",
   },
@@ -70,7 +71,7 @@ const BENTO_FEATURES = [
     title: "AI-native post",
     body: "Transcripts, chapters, clips, and show notes — editable artifacts, not black-box exports.",
     icon: Waveform,
-    span: "md:col-span-2",
+    span: "md:col-span-3",
   },
 ] as const;
 
@@ -103,7 +104,10 @@ const PROOF_ITEMS = [
 
 function HeroDeviceMockup() {
   return (
-    <AnalogCard className="w-full max-w-2xl rotate-1 p-6 transition-transform duration-300 ease-[var(--ease-mechanical)] hover:rotate-0 md:p-8">
+    <AnalogCard
+      interactive
+      className="w-full max-w-2xl rotate-1 p-6 transition-transform duration-300 ease-[var(--ease-mechanical)] hover:rotate-0 md:p-8"
+    >
       <div className="mb-5 flex items-center justify-between">
         <MonoLabel>CH 1 : Monitor bus</MonoLabel>
         <div className="flex items-center gap-2">
@@ -112,7 +116,7 @@ function HeroDeviceMockup() {
         </div>
       </div>
 
-      <div className="scanlines relative mb-6 flex aspect-video w-full items-end overflow-hidden rounded-md border-4 border-[#1a1a1a] bg-[#0d0d0c] px-4 pb-4 shadow-[inset_0_0_24px_rgba(0,0,0,0.85)]">
+      <div className="scanlines border-border bg-popover relative mb-6 flex aspect-video w-full items-end overflow-hidden rounded-md border-4 px-4 pb-4 shadow-[inset_0_0_24px_rgba(0,0,0,0.85)]">
         <div className="relative z-10 flex h-16 w-full items-end gap-0.5 opacity-90">
           {HERO_WAVEFORM_HEIGHTS.map((height, index) => (
             <div
@@ -177,10 +181,9 @@ function SignalStrip() {
 function WorkflowSection() {
   return (
     <section id="workflow" className="border-border scroll-mt-24 border-t py-20 md:py-28">
-      <AnalogReveal>
+      <AnalogMotionReveal>
         <div className="mb-12 max-w-2xl">
-          <MonoLabel>Workflow</MonoLabel>
-          <h2 className="mt-2 text-4xl font-bold tracking-tight text-balance uppercase md:text-5xl">
+          <h2 className="text-4xl font-bold tracking-tight text-balance uppercase md:text-5xl">
             From invite link to publishable masters
           </h2>
           <p className="text-muted-foreground mt-4 max-w-xl text-base leading-relaxed text-pretty">
@@ -188,23 +191,21 @@ function WorkflowSection() {
             reliability before flashy AI demos.
           </p>
         </div>
-      </AnalogReveal>
+      </AnalogMotionReveal>
 
       <ol className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {WORKFLOW_STEPS.map((item, index) => (
-          <AnalogReveal key={item.step} delay={(index + 1) as 1 | 2 | 3}>
+          <AnalogMotionReveal key={item.channel} staggerIndex={index + 1}>
             <li>
-              <AnalogCard className="flex h-full flex-col gap-4 p-6">
-                <span className="text-accent font-mono text-2xl font-bold tabular-nums">
-                  {item.step}
-                </span>
+              <AnalogCard interactive className="flex h-full flex-col gap-4 p-6">
+                <MonoLabel className="text-accent">{item.channel}</MonoLabel>
                 <h3 className="text-lg font-bold tracking-tight uppercase">{item.title}</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
                   {item.body}
                 </p>
               </AnalogCard>
             </li>
-          </AnalogReveal>
+          </AnalogMotionReveal>
         ))}
       </ol>
     </section>
@@ -214,31 +215,23 @@ function WorkflowSection() {
 function FeaturesBento() {
   return (
     <section id="features" className="border-border scroll-mt-24 border-t py-20 md:py-28">
-      <AnalogReveal>
-        <div className="mb-12 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-xl">
-            <MonoLabel>Capabilities</MonoLabel>
-            <h2 className="mt-2 text-4xl font-bold tracking-tight text-balance uppercase md:text-5xl">
-              Studio hardware, browser-native
-            </h2>
-          </div>
-          <StatusBadge variant="ok">
-            <span className="led-green mr-1 inline-block h-1.5 w-1.5 rounded-full" />
-            Built for capture-first workflows
-          </StatusBadge>
+      <AnalogMotionReveal>
+        <div className="mb-12 max-w-xl">
+          <h2 className="text-4xl font-bold tracking-tight text-balance uppercase md:text-5xl">
+            Studio hardware, browser-native
+          </h2>
+          <p className="text-muted-foreground mt-4 max-w-lg text-base leading-relaxed text-pretty">
+            Capture-first workflows with mechanical reliability — not a single compressed stream.
+          </p>
         </div>
-      </AnalogReveal>
+      </AnalogMotionReveal>
 
       <div className="grid auto-rows-fr grid-cols-1 gap-4 md:grid-flow-dense md:grid-cols-3">
         {BENTO_FEATURES.map((feature, index) => {
           const Icon = feature.icon;
           return (
-            <AnalogReveal
-              key={feature.id}
-              delay={(index + 1) as 1 | 2 | 3 | 4}
-              className={feature.span}
-            >
-              <AnalogCard className="flex h-full flex-col gap-4 p-6 md:p-8">
+            <AnalogMotionReveal key={feature.id} staggerIndex={index} className={feature.span}>
+              <AnalogCard interactive className="flex h-full flex-col gap-4 p-6 md:p-8">
                 <div className="bg-popover border-border flex h-11 w-11 items-center justify-center rounded-md border">
                   <Icon className="text-accent h-5 w-5" />
                 </div>
@@ -247,7 +240,7 @@ function FeaturesBento() {
                   {feature.body}
                 </p>
               </AnalogCard>
-            </AnalogReveal>
+            </AnalogMotionReveal>
           );
         })}
       </div>
@@ -285,10 +278,9 @@ const COMPARISON_ROWS = [
 function ComparisonStrip() {
   return (
     <section className="border-border scroll-mt-24 border-t py-16 md:py-20">
-      <AnalogReveal>
+      <AnalogMotionReveal>
         <div className="mb-8 max-w-2xl">
-          <MonoLabel>Compare</MonoLabel>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight uppercase md:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight uppercase md:text-4xl">
             Stream tools vs local masters
           </h2>
         </div>
@@ -322,16 +314,16 @@ function ComparisonStrip() {
             </tbody>
           </table>
         </AnalogCard>
-      </AnalogReveal>
+      </AnalogMotionReveal>
     </section>
   );
 }
 
 function ProofSection() {
   return (
-    <section className="border-border border-t py-12 md:py-16">
-      <AnalogReveal>
-        <MonoLabel className="mb-6 block text-center">Built for</MonoLabel>
+    <section className="border-border border-t py-20 md:py-28">
+      <AnalogMotionReveal>
+        <h2 className="sr-only">Built for</h2>
         <ul className="mx-auto grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-3">
           {PROOF_ITEMS.map((line) => (
             <li key={line}>
@@ -341,7 +333,7 @@ function ProofSection() {
             </li>
           ))}
         </ul>
-      </AnalogReveal>
+      </AnalogMotionReveal>
     </section>
   );
 }
@@ -408,11 +400,10 @@ function PricingSection() {
 function DifferentiatorBand() {
   return (
     <section className="border-border border-t py-20 md:py-28">
-      <AnalogReveal>
-        <AnalogCard className="grid grid-cols-1 gap-8 p-8 md:grid-cols-2 md:p-10">
+      <AnalogMotionReveal>
+        <AnalogCard interactive className="grid grid-cols-1 gap-8 p-8 md:grid-cols-2 md:p-10">
           <div>
-            <MonoLabel>Why Ototabi</MonoLabel>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-balance uppercase md:text-4xl">
+            <h2 className="text-3xl font-bold tracking-tight text-balance uppercase md:text-4xl">
               Trust the capture. Automate the edit.
             </h2>
             <p className="text-muted-foreground mt-4 text-sm leading-relaxed text-pretty">
@@ -425,15 +416,17 @@ function DifferentiatorBand() {
               "Private media by default — scoped keys, no public bucket URLs",
               "Server-authoritative room and upload permissions",
               "Editable AI artifacts: chapters, clips, show notes",
-            ].map((line) => (
-              <li key={line} className="flex items-start gap-3">
-                <Shield className="text-accent mt-0.5 h-4 w-4 shrink-0" />
-                <span className="text-sm leading-relaxed">{line}</span>
+            ].map((line, index) => (
+              <li key={line}>
+                <AnalogMotionReveal staggerIndex={index} className="flex items-start gap-3">
+                  <Shield className="text-accent mt-0.5 h-4 w-4 shrink-0" />
+                  <span className="text-sm leading-relaxed">{line}</span>
+                </AnalogMotionReveal>
               </li>
             ))}
           </ul>
         </AnalogCard>
-      </AnalogReveal>
+      </AnalogMotionReveal>
     </section>
   );
 }
@@ -470,12 +463,11 @@ function FaqSection() {
 
 function FinalCta() {
   return (
-    <section className="border-border border-t py-20 md:py-24">
-      <AnalogReveal>
+    <section className="border-border border-t py-20 md:py-28">
+      <AnalogMotionReveal>
         <AnalogInset className="flex flex-col items-start gap-6 p-8 md:flex-row md:items-center md:justify-between md:p-10">
           <div>
-            <MonoLabel>Ready</MonoLabel>
-            <h2 className="mt-2 text-3xl font-bold tracking-tight uppercase md:text-4xl">
+            <h2 className="text-3xl font-bold tracking-tight uppercase md:text-4xl">
               Start your first studio session
             </h2>
             <p className="text-muted-foreground mt-3 max-w-md text-sm text-pretty">
@@ -490,13 +482,13 @@ function FinalCta() {
             />
             <Link
               href="/demo"
-              className="text-subtle-foreground hover:text-foreground w-full py-3 text-center font-mono text-xs font-bold tracking-widest uppercase transition-colors duration-150 sm:w-auto"
+              className="border-border bg-card text-foreground hover:border-accent/50 hover:text-accent inline-flex min-h-11 w-full items-center justify-center rounded-md border px-6 py-3 font-mono text-xs font-bold tracking-widest uppercase transition-colors duration-150 sm:w-auto"
             >
               View Demo
             </Link>
           </div>
         </AnalogInset>
-      </AnalogReveal>
+      </AnalogMotionReveal>
     </section>
   );
 }
@@ -507,16 +499,15 @@ export function LandingPage() {
       <SiteHeader />
 
       <section className="flex flex-1 flex-col gap-14 lg:flex-row lg:items-center lg:gap-10">
-        <AnalogReveal className="max-w-xl flex-1 space-y-8" delay={1}>
-          <StatusBadge variant="default">
-            <span className="led-amber mr-1.5 inline-block h-1.5 w-1.5 rounded-full" />
-            Studio-grade remote recording
-          </StatusBadge>
+        <AnalogMotionReveal className="max-w-2xl flex-1 space-y-8" delay={0.05}>
+          <p className="text-accent font-mono text-[10px] font-bold tracking-[0.2em] uppercase">
+            Local masters. Synced.
+          </p>
 
-          <h2 className="max-w-[14ch] text-5xl leading-[0.92] font-bold tracking-tighter text-balance uppercase md:text-7xl">
+          <h1 className="max-w-[20ch] text-5xl leading-[0.92] font-bold tracking-tighter text-balance uppercase md:text-6xl lg:text-7xl">
             Record locally.
             <span className="text-foreground/55 block">Stay synced.</span>
-          </h2>
+          </h1>
 
           <p className="text-muted-foreground max-w-md text-base leading-relaxed text-pretty md:text-lg">
             High-definition video and lossless audio captured on every participant&apos;s device —
@@ -535,11 +526,11 @@ export function LandingPage() {
               See Workflow
             </Link>
           </div>
-        </AnalogReveal>
+        </AnalogMotionReveal>
 
-        <AnalogReveal className="relative w-full flex-1 lg:max-w-[52%]" delay={2}>
+        <AnalogMotionReveal className="relative w-full flex-1 lg:max-w-[52%]" delay={0.12}>
           <HeroDeviceMockup />
-        </AnalogReveal>
+        </AnalogMotionReveal>
       </section>
 
       <SignalStrip />

@@ -24,7 +24,7 @@ export function StudioVideoGrid() {
         justifyContent: "center",
       }}
     >
-      <ParticipantTile className="border-border/60 bg-card overflow-hidden rounded border-2 shadow-[0_4px_12px_rgba(0,0,0,0.4)]" />
+      <ParticipantTile className="border-border bg-card scanlines relative overflow-hidden rounded-md border-2 shadow-[inset_0_0_20px_rgba(0,0,0,0.5),0_4px_12px_rgba(0,0,0,0.4)]" />
     </GridLayout>
   );
 }

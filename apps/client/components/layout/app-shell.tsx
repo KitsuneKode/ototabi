@@ -101,7 +101,7 @@ export function AppShell({
   const userEmail = authState.data?.user?.email ?? "";
 
   return (
-    <div className="bg-background text-foreground relative flex min-h-[100dvh] font-sans">
+    <div className="bg-background text-foreground relative flex min-h-[100dvh] overflow-x-hidden font-sans">
       <NoiseBackground />
 
       <aside
@@ -179,7 +179,12 @@ export function AppShell({
       </aside>
 
       <div className="relative z-10 flex min-w-0 flex-1 flex-col">
-        <main className={cn("mx-auto w-full flex-1 px-4 py-6 md:px-8 md:py-8", maxWidth)}>
+        <main
+          className={cn(
+            "mx-auto w-full max-w-full flex-1 overflow-x-hidden px-4 py-6 md:px-8 md:py-8",
+            maxWidth,
+          )}
+        >
           {children}
         </main>
       </div>

@@ -51,7 +51,7 @@ export function StudioParticipantRoster({
                   {entry.label}
                 </span>
                 <div className="flex shrink-0 items-center gap-1.5">
-                  {entry.isLocal ? <MonoLabel className="text-[8px]">YOU</MonoLabel> : null}
+                  {entry.isLocal ? <MonoLabel className="text-[10px]">YOU</MonoLabel> : null}
                   <LedInline color="green" size="sm" />
                 </div>
               </AnalogInset>

@@ -13,7 +13,7 @@ export function StudioShell({ children, className }: StudioShellProps) {
   return (
     <div
       className={cn(
-        "bg-background text-foreground relative flex h-[100dvh] flex-col overflow-hidden font-sans",
+        "bg-background text-foreground relative flex h-[100dvh] flex-col overflow-x-hidden overflow-y-hidden font-sans",
         className,
       )}
     >

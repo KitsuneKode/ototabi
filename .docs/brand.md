@@ -88,8 +88,9 @@ After a clip’s base 9:16 render is `ready`, use **Reels preset** buttons (`bol
 
 ## Applications
 
-- **Marketing:** `SiteHeader` lockup + PWR/SYNC LEDs
+- **Marketing:** `SiteHeader` lockup + PWR/SYNC LEDs; landing hero `<h1>` + tagline (no stamp badges above headline)
 - **Product:** `AppShell` sidebar lockup; favicon from `app/icon.svg`
+- **Footer / auth:** `OtotabiLogoMark` in `SiteFooter`; `OtotabiLogoLockup` in `AuthShell` (not text-only wordmark)
 - **Social / SEO:** `og.png`, `twitter.png` wired in [`apps/client/app/layout.tsx`](../apps/client/app/layout.tsx); optional `banner.png` for static pages
 - **Export / recovery UI:** reuse mark at small sizes (≥24px)
 
