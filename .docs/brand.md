@@ -82,6 +82,10 @@ Use design tokens from [`packages/ui/src/styles/globals.css`](../packages/ui/src
 - Monospace for status, timecodes, track IDs
 - No buzzword soup; explain reliability and alignment
 
+## Reels presets (Batch 6)
+
+After a clip’s base 9:16 render is `ready`, use **Reels preset** buttons (`bold-captions`, `minimal-lower-third`) on recordings/export. Worker burns clip rationale as caption via ffmpeg `drawtext` + `textfile`.
+
 ## Applications
 
 - **Marketing:** `SiteHeader` lockup + PWR/SYNC LEDs
