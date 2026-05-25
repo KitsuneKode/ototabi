@@ -15,8 +15,9 @@ import { bearer } from "better-auth/plugins";
  * - Browser calls:     Next :3000/api/auth/* (rewritten to :8080 in next.config.js)
  * - Therefore:         BETTER_AUTH_URL=http://localhost:3000 and authClient uses origin :3000
  *
- * If the client called :8080 directly (no proxy), baseURL would be :8080 and you'd need
- * cross-origin cookie settings (trustedOrigins + SameSite=None). See Better Auth "Cookies".
+ * Split deploy (Vercel client + Railway API): set BETTER_AUTH_URL to the Vercel origin;
+ * set ALLOWED_ORIGINS to all Vercel preview/production URLs. API CORS must match.
+ * See `.docs/deploy-railway.md`.
  */
 const appBaseUrl =
   process.env.BETTER_AUTH_URL ?? process.env.FRONTEND_URL ?? "http://localhost:3000";
