@@ -1,5 +1,9 @@
 import { DemoCursorLogger } from "@/lib/demo/demo-cursor-logger";
-import { DEMO_DISPLAY_TRACK_SID, DEMO_MIC_TRACK_SID } from "@/lib/demo/demo-track-ids";
+import {
+  DEMO_DISPLAY_TRACK_SID,
+  DEMO_MIC_TRACK_SID,
+  DEMO_WEBCAM_TRACK_SID,
+} from "@/lib/demo/demo-track-ids";
 import { db } from "@/lib/localDB";
 import { opfsStorage } from "@/lib/localDB/opfs-storage";
 import { S3Uploader } from "@/lib/uploader/s3-uploader";
@@ -12,7 +16,7 @@ import { UploadWorkerPool } from "@/lib/uploader/upload-worker-pool";
 
 type RecordingState = "idle" | "recording" | "stopped";
 
-type TrackKind = "SCREENSHARE" | "MICROPHONE";
+type TrackKind = "SCREENSHARE" | "MICROPHONE" | "CAMERA";
 
 export class DemoCaptureManager {
   private state: RecordingState = "idle";
@@ -27,8 +31,9 @@ export class DemoCaptureManager {
   private readonly cursorLogger = new DemoCursorLogger();
   private displayStream: MediaStream | null = null;
   private micStream: MediaStream | null = null;
+  private webcamStream: MediaStream | null = null;
 
-  async startCapture(sessionId: string, options: { includeMic: boolean }) {
+  async startCapture(sessionId: string, options: { includeMic: boolean; includeWebcam?: boolean }) {
     if (this.state === "recording") return;
     this.sessionId = sessionId;
     this.state = "recording";
@@ -43,6 +48,17 @@ export class DemoCaptureManager {
         this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch {
         this.micStream = null;
+      }
+    }
+
+    if (options.includeWebcam) {
+      try {
+        this.webcamStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 640, height: 360, facingMode: "user" },
+          audio: false,
+        });
+      } catch {
+        this.webcamStream = null;
       }
     }
 
@@ -65,6 +81,15 @@ export class DemoCaptureManager {
         audioOnly,
         "MICROPHONE",
         "audio/webm;codecs=opus",
+      );
+    }
+
+    if (this.webcamStream) {
+      await this.startTrackRecorder(
+        DEMO_WEBCAM_TRACK_SID,
+        this.webcamStream,
+        "CAMERA",
+        "video/webm;codecs=vp9",
       );
     }
 
@@ -96,8 +121,10 @@ export class DemoCaptureManager {
 
     this.displayStream?.getTracks().forEach((t) => t.stop());
     this.micStream?.getTracks().forEach((t) => t.stop());
+    this.webcamStream?.getTracks().forEach((t) => t.stop());
     this.displayStream = null;
     this.micStream = null;
+    this.webcamStream = null;
 
     const cursorEvents = this.cursorLogger.stop();
     return { cursorEvents };

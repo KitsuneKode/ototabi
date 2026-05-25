@@ -2,23 +2,11 @@
 
 import type { CursorEvent } from "@/lib/demo/demo-types";
 
-function findCursorAtTime(events: CursorEvent[], timeMs: number): CursorEvent | null {
-  if (events.length === 0) return null;
-  let last: CursorEvent | null = null;
-  for (const event of events) {
-    if (event.t > timeMs) break;
-    last = event;
-  }
-  return last;
-}
-
-function scaleForTime(
-  zoomRegions: { startMs: number; endMs: number; scale: number }[],
-  timeMs: number,
-): number {
-  const active = zoomRegions.find((z) => timeMs >= z.startMs && timeMs <= z.endMs);
-  return active?.scale ?? 1;
-}
+import {
+  activeZoomScale,
+  DEMO_CAPTURE_VIEWPORT,
+  findCursorAtTime,
+} from "@/lib/demo/demo-zoom-preview";
 
 export function DemoCursorOverlay({
   events,
@@ -34,36 +22,35 @@ export function DemoCursorOverlay({
   frameHeight: number;
 }) {
   const cursor = findCursorAtTime(events, previewTimeMs);
-  const zoom = scaleForTime(zoomRegions, previewTimeMs);
+  const zoom = activeZoomScale(zoomRegions, previewTimeMs);
   if (!cursor) return null;
 
-  const xPct = (cursor.x / window.innerWidth) * 100;
-  const yPct = (cursor.y / window.innerHeight) * 100;
+  const viewport =
+    typeof window !== "undefined"
+      ? { width: window.innerWidth, height: window.innerHeight }
+      : DEMO_CAPTURE_VIEWPORT;
+
+  const xPct = (cursor.x / viewport.width) * 100;
+  const yPct = (cursor.y / viewport.height) * 100;
 
   return (
-    <div
-      className="pointer-events-none absolute inset-0 overflow-hidden"
-      style={{
-        transform: `scale(${zoom})`,
-        transformOrigin: `${xPct}% ${yPct}%`,
-      }}
-      aria-hidden
-    >
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
       <div
-        className="border-accent bg-accent/30 absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 shadow-[0_0_12px_rgba(251,191,36,0.6)]"
+        className="border-accent bg-accent/30 absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 shadow-[0_0_12px_rgba(251,191,36,0.6)]"
         style={{
-          left: `${(cursor.x / window.innerWidth) * 100}%`,
-          top: `${(cursor.y / window.innerHeight) * 100}%`,
+          left: `${xPct}%`,
+          top: `${yPct}%`,
           width: frameWidth > 0 ? `${(16 / frameWidth) * 100}%` : "12px",
           height: frameHeight > 0 ? `${(16 / frameHeight) * 100}%` : "12px",
+          opacity: zoom > 1 ? 0.9 : 1,
         }}
       />
       {cursor.type === "down" ? (
         <div
           className="border-accent/60 absolute -translate-x-1/2 -translate-y-1/2 rounded-full border"
           style={{
-            left: `${(cursor.x / window.innerWidth) * 100}%`,
-            top: `${(cursor.y / window.innerHeight) * 100}%`,
+            left: `${xPct}%`,
+            top: `${yPct}%`,
             width: "2.5rem",
             height: "2.5rem",
             animation: "pulse 0.4s ease-out",

@@ -228,6 +228,64 @@ Out of scope: chat studio, rooms.policy co-host, timeline MVP.
 
 ---
 
+## Wave 3 Stream 5 — Demo browser v1.1 (PR5)
+
+| Field             | Value                                  |
+| ----------------- | -------------------------------------- |
+| **Wave / stream** | Wave 3 — Demo browser v1.1             |
+| **Branch**        | `feat/parity-stream5-demo` (merged)    |
+| **Plan refs**     | Plan 24, parity subagent plan Stream 5 |
+
+### Scope
+
+Shipped grill bundle: auto-zoom suggestion + live preview punch-in, optional webcam PiP capture + FFmpeg overlay export, trim/playback speed in editor store + export pipeline, background blur presets (preview + export). Demo export path on export console uses `demo-export-pipeline.ts` with saved edit metadata.
+
+Out of scope: studio chat, usage module, Capture desktop app.
+
+### Files touched
+
+- `apps/client/lib/demo/` — `demo-export-pipeline.ts`, `demo-zoom-preview.ts`, presets, capture manager webcam track
+- `apps/client/lib/stores/demo-editor-store.ts`
+- `apps/client/components/demo/demo-editor-preview.tsx`, `demo-cursor-overlay.tsx`
+- `apps/client/app/(site)/demo/[sessionId]/edit/page.tsx`, `demo/record/page.tsx`
+- `apps/client/app/(site)/export/[sessionId]/page.tsx` (demo export handler)
+- `packages/trpc/src/modules/demo/*`, `packages/store/prisma/schema.prisma` + migration `20260526200000_demo_v11_edit_fields`
+- `.docs/try-demo-smoke.md`
+
+### Tests added
+
+- `apps/client/lib/demo/suggest-zoom-from-cursor.test.ts`
+- `apps/client/lib/demo/demo-background-presets.test.ts`
+- `apps/client/lib/demo/demo-export-pipeline.test.ts`
+
+**Gate:** `bun fmt && bun lint && bun typecheck && bun run test`
+
+### Smoke steps
+
+[try-demo-smoke.md](./try-demo-smoke.md)
+
+---
+
+## Wave 3 Stream 6 — Worker export hardening (PR6)
+
+| Field             | Value                                        |
+| ----------------- | -------------------------------------------- |
+| **Wave / stream** | Wave 3 — Worker-first session exports        |
+| **Branch**        | `feat/parity-stream6-worker-export` (merged) |
+| **Plan refs**     | Plan 13 Phase 4 slice, parity plan Stream 6  |
+
+### Scope
+
+Shipped: `export-routing` thresholds (≥30 min or ≥4 tracks → worker); `sessionReview.get` exposes `exports.routing`; stable BullMQ job IDs; `queueSessionExport` on `hostProProcedure` (Pro+).
+
+### Files touched
+
+- `packages/common/src/export-routing.ts`, `export-routing.test.ts`
+- `packages/trpc/src/modules/session-review/*`
+- `apps/worker/src/processors/export-render.ts`, `export-render.test.ts`
+
+---
+
 ## Wave 4 Stream 7 — Timeline MVP (PR7)
 
 | Field             | Value                                               |
@@ -306,9 +364,14 @@ Out of scope: actual Railway deploy (no credentials assumed); Capture desktop ap
 
 ### Blockers / merge recommendation
 
-| Item             | Detail                                                                                |
-| ---------------- | ------------------------------------------------------------------------------------- |
-| Merge base       | Rebase onto `feat/parity-stream7-timeline` or integration branch after Wave 4 merge   |
-| User merge order | `stream7-timeline` → `stream8-wave5` → optional `integration/parity-v1` → `main`      |
-| E2E              | Run `e2e/` only with live preview URL; keep out of `bun run check` until CI job added |
-| Capture app      | Spec only — implementation tracked in Plan 29 (~6–8w)                                 |
+| Item          | Detail                                                                                       |
+| ------------- | -------------------------------------------------------------------------------------------- |
+| Merge to main | Merge `feat/parity-stream8-wave5` into `main` (all parity streams integrated on this branch) |
+| E2E           | Run `e2e/` only with live preview URL; keep out of `bun run check` until CI job added        |
+| Capture app   | Spec only — implementation tracked in Plan 29 (~6–8w)                                        |
+
+---
+
+## Integration branch (`feat/parity-stream8-wave5`)
+
+All parity streams **1, 2, 3, 4, 5 (demo), 6 (worker), 7, 8** are merged into this branch. Merge to `main` after `bun run check` and `bun run db:migrate`.

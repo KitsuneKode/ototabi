@@ -22,6 +22,7 @@ export default function DemoRecordPage() {
   const captureRef = useRef<DemoCaptureManager | null>(null);
 
   const [includeMic, setIncludeMic] = useState(true);
+  const [includeWebcam, setIncludeWebcam] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [phase, setPhase] = useState<"idle" | "recording" | "stopping">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -37,14 +38,14 @@ export default function DemoRecordPage() {
       const manager = new DemoCaptureManager();
       captureRef.current = manager;
       setPhase("recording");
-      await manager.startCapture(id, { includeMic });
+      await manager.startCapture(id, { includeMic, includeWebcam });
     } catch (err) {
       setPhase("idle");
       setSessionId(null);
       captureRef.current = null;
       setError(err instanceof Error ? err.message : "Could not start screen capture");
     }
-  }, [includeMic, startMutation]);
+  }, [includeMic, includeWebcam, startMutation]);
 
   const handleStop = useCallback(async () => {
     if (!sessionId || !captureRef.current) return;
@@ -126,6 +127,17 @@ export default function DemoRecordPage() {
             className="accent-accent h-4 w-4"
           />
           <MonoLabel>Also record microphone (separate track)</MonoLabel>
+        </label>
+
+        <label className="border-border flex cursor-pointer items-center gap-3 rounded border px-4 py-3">
+          <input
+            type="checkbox"
+            checked={includeWebcam}
+            disabled={phase !== "idle"}
+            onChange={(e) => setIncludeWebcam(e.target.checked)}
+            className="accent-accent h-4 w-4"
+          />
+          <MonoLabel>Webcam PiP track (composited on export)</MonoLabel>
         </label>
 
         {error ? <MonoLabel className="text-destructive text-[10px]">{error}</MonoLabel> : null}

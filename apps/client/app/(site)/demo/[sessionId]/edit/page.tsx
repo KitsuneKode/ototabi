@@ -11,9 +11,14 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { AnalogCard } from "@/components/ui/analog-card";
 import { MechButton, MonoLabel, PanelTitle } from "@/components/ui/retro-primitives";
-import { DEMO_BACKGROUND_PRESETS } from "@/lib/demo/demo-background-presets";
+import {
+  DEMO_BACKGROUND_PRESETS,
+  DEMO_BLUR_PRESETS,
+  type BackgroundBlurPreset,
+} from "@/lib/demo/demo-background-presets";
 import { DEMO_EXPORT_LIMITS } from "@/lib/demo/demo-export-presets";
 import { DEMO_DISPLAY_TRACK_SID } from "@/lib/demo/demo-track-ids";
+import { DEMO_PLAYBACK_SPEEDS } from "@/lib/demo/demo-types";
 import { suggestZoomRegionsFromCursor } from "@/lib/demo/suggest-zoom-from-cursor";
 import { useAuthGate } from "@/lib/hooks/use-session";
 import { Download } from "@/lib/icons";
@@ -45,6 +50,9 @@ export default function DemoEditPage() {
     zoomRegions,
     trimStartMs,
     trimEndMs,
+    playbackSpeed,
+    backgroundBlur,
+    pipEnabled,
     background,
     previewTimeMs,
     isDirty,
@@ -56,6 +64,9 @@ export default function DemoEditPage() {
     removeZoomRegion,
     setTrimStartMs,
     setTrimEndMs,
+    setPlaybackSpeed,
+    setBackgroundBlur,
+    setPipEnabled,
     setBackground,
     markSaved,
   } = useDemoEditorStore();
@@ -77,6 +88,9 @@ export default function DemoEditPage() {
       zoomRegions: demoQuery.data.demo.zoomRegions,
       trimStartMs: demoQuery.data.demo.trimStartMs,
       trimEndMs: demoQuery.data.demo.trimEndMs,
+      playbackSpeed: demoQuery.data.demo.playbackSpeed,
+      backgroundBlur: demoQuery.data.demo.backgroundBlur,
+      pipEnabled: demoQuery.data.demo.pipEnabled,
       background: demoQuery.data.demo.background,
     });
   }, [demoQuery.data, sessionId, bindSession]);
@@ -89,6 +103,14 @@ export default function DemoEditPage() {
       null
     );
   }, [demoQuery.data?.session.tracks]);
+
+  const hasWebcamTrack = useMemo(
+    () =>
+      (demoQuery.data?.session.tracks ?? []).some(
+        (t) => t.type === "CAMERA" && t.status === "COMPLETED",
+      ),
+    [demoQuery.data?.session.tracks],
+  );
 
   const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string | null>(null);
 
@@ -114,9 +136,22 @@ export default function DemoEditPage() {
       zoomRegions,
       trimStartMs,
       trimEndMs,
+      playbackSpeed,
+      backgroundBlur,
+      pipEnabled,
       background,
     });
-  }, [saveMutation, sessionId, zoomRegions, trimStartMs, trimEndMs, background]);
+  }, [
+    saveMutation,
+    sessionId,
+    zoomRegions,
+    trimStartMs,
+    trimEndMs,
+    playbackSpeed,
+    backgroundBlur,
+    pipEnabled,
+    background,
+  ]);
 
   if (isBooting || !sessionReady) {
     return (
@@ -156,7 +191,7 @@ export default function DemoEditPage() {
       <PageHeader
         label="Demo editor"
         title="Manual zoom &amp; frame"
-        description="v1: CSS preview overlay + trim metadata. Full FFmpeg cursor draw ships in v1.1."
+        description="v1.1: live zoom preview, trim/speed for export, blur presets, and optional webcam PiP."
         actions={
           <div className="flex flex-wrap gap-2">
             <MechButton
@@ -183,11 +218,12 @@ export default function DemoEditPage() {
           zoomRegions={zoomRegions}
           previewTimeMs={previewTimeMs}
           background={background}
+          backgroundBlur={backgroundBlur}
           onTimeUpdate={setPreviewTimeMs}
         />
 
         <AnalogCard className="space-y-4 p-6">
-          <PanelTitle label="Trim" title="In / out points (ms)" />
+          <PanelTitle label="Trim &amp; speed" title="Export in/out + playback rate" />
           <div className="grid gap-4 sm:grid-cols-2">
             <label>
               <MonoLabel className="mb-1 block text-[9px]">Trim start (ms)</MonoLabel>
@@ -214,10 +250,24 @@ export default function DemoEditPage() {
               />
             </label>
           </div>
+          <label>
+            <MonoLabel className="mb-1 block text-[9px]">Playback speed (export)</MonoLabel>
+            <select
+              value={playbackSpeed}
+              onChange={(e) => setPlaybackSpeed(Number(e.target.value) as typeof playbackSpeed)}
+              className="bg-card border-border w-full max-w-xs rounded border px-2 py-1.5 font-mono text-xs"
+            >
+              {DEMO_PLAYBACK_SPEEDS.map((speed) => (
+                <option key={speed} value={speed}>
+                  {speed}×
+                </option>
+              ))}
+            </select>
+          </label>
         </AnalogCard>
 
         <AnalogCard className="space-y-4 p-6">
-          <PanelTitle label="Background" title="Retro Analog presets" />
+          <PanelTitle label="Background" title="Frame + blur presets" />
           <div className="flex flex-wrap gap-2">
             {DEMO_BACKGROUND_PRESETS.map((preset) => {
               const active = preset.type === background.type && preset.value === background.value;
@@ -237,12 +287,46 @@ export default function DemoEditPage() {
               );
             })}
           </div>
+          <div className="flex flex-wrap gap-2">
+            {DEMO_BLUR_PRESETS.map((preset) => {
+              const active = backgroundBlur === preset.level;
+              return (
+                <MechButton
+                  key={preset.level}
+                  type="button"
+                  onClick={() => setBackgroundBlur(preset.level as BackgroundBlurPreset)}
+                  className={`text-xs ${active ? "border-accent" : ""}`}
+                >
+                  Blur: {preset.label}
+                </MechButton>
+              );
+            })}
+          </div>
         </AnalogCard>
 
         <AnalogCard className="space-y-4 p-6">
-          <PanelTitle label="Auto zoom" title="Cursor clusters (v1.1)" />
+          <PanelTitle label="PiP" title="Webcam overlay on export" />
+          <label className="border-border flex cursor-pointer items-center gap-3 rounded border px-4 py-3">
+            <input
+              type="checkbox"
+              checked={pipEnabled}
+              disabled={!hasWebcamTrack}
+              onChange={(e) => setPipEnabled(e.target.checked)}
+              className="accent-accent h-4 w-4"
+            />
+            <MonoLabel>
+              {hasWebcamTrack
+                ? "Composite webcam bottom-right on export"
+                : "No webcam track — enable on record page"}
+            </MonoLabel>
+          </label>
+        </AnalogCard>
+
+        <AnalogCard className="space-y-4 p-6">
+          <PanelTitle label="Auto zoom" title="Cursor clusters" />
           <MonoLabel className="text-muted-foreground block text-[10px] leading-relaxed">
-            Suggests zoom regions from pointer-down clusters. Review and edit before save.
+            Suggests zoom regions from pointer-down clusters. Preview applies punch-in while the
+            playhead moves.
           </MonoLabel>
           <MechButton
             type="button"
