@@ -69,3 +69,6 @@ jobs:
 
       - name: Build (affected only)
         run: turbo run build --affected
+
+      - name: Test
+        run: bun run test

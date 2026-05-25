@@ -51,5 +51,8 @@ export const auth = betterAuth({
     process.env.FRONTEND_URL || "http://localhost:3000",
     "http://localhost:3000",
     "http://localhost:8080",
+    ...(process.env.ALLOWED_ORIGINS?.split(",")
+      .map((o) => o.trim())
+      .filter(Boolean) ?? []),
   ],
 });

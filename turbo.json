@@ -1,7 +1,20 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
-  "globalEnv": ["DATABASE_URL", "NODE_ENV", "PORT"],
+  "globalEnv": [
+    "DATABASE_URL",
+    "NODE_ENV",
+    "PORT",
+    "NEXT_PUBLIC_API_URL",
+    "NEXT_PUBLIC_APP_URL",
+    "NEXT_PUBLIC_LIVEKIT_URL",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "FRONTEND_URL",
+    "ALLOWED_ORIGINS",
+    "REDIS_URL",
+    "OPENAI_API_KEY"
+  ],
   "globalDependencies": [".env", ".env.*"],
   "tasks": {
     "build": {
