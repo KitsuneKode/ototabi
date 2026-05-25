@@ -35,6 +35,7 @@ export {
   IconVideo as Video,
   IconVideoOff as VideoOff,
   IconDeviceDesktop as Monitor,
+  IconPresentation as Presentation,
   IconAdjustmentsHorizontal as Sliders,
   IconArrowsJoin2 as Combine,
   IconDeviceFloppy as Save,

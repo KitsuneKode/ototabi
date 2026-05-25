@@ -2,7 +2,15 @@ import { create } from "zustand";
 
 export type ExportProcessingStatus = "idle" | "loading-ffmpeg" | "processing" | "done" | "error";
 
-export type ExportProcessingMode = "merge" | "trim" | "720p" | "1080p" | "cuts" | null;
+export type ExportProcessingMode =
+  | "merge"
+  | "trim"
+  | "720p"
+  | "1080p"
+  | "9:16"
+  | "16:9"
+  | "cuts"
+  | null;
 
 type ExportConsoleState = {
   sessionId: string | null;

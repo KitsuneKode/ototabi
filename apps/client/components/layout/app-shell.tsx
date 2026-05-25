@@ -20,12 +20,14 @@ import {
   LogOut,
   Settings,
   Sliders,
+  Presentation,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { useTRPC } from "@/trpc/client";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/demo/record", label: "Product demo", icon: Presentation },
   { href: "/recordings", label: "Recordings", icon: Film },
   { href: "/recovery", label: "Recovery", icon: HardDrive },
   { href: "/settings", label: "Settings", icon: Settings },

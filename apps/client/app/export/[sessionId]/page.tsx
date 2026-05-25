@@ -14,6 +14,11 @@ import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { Led, LedInline } from "@/components/ui/led";
 import { MonoLabel, PanelTitle, StatusBadge, MechButton } from "@/components/ui/retro-primitives";
 import { formatDateTime, formatTimestamp } from "@/lib/date-utils";
+import {
+  DEMO_ASPECT_LABELS,
+  DEMO_ASPECT_SCALES,
+  type DemoAspectPreset,
+} from "@/lib/demo/demo-export-presets";
 import { useExportConsole } from "@/lib/hooks/use-export-console";
 import { useSessionReview } from "@/lib/hooks/use-session-review";
 import {
@@ -300,6 +305,91 @@ export default function ExportSessionPage() {
       } catch (err) {
         setProcessingStatus("error");
         setErrorMessage(err instanceof Error ? err.message : `${resolution} export failed`);
+      }
+    },
+    [
+      session,
+      selectedTrackIds,
+      beginProcessing,
+      loadFfmpeg,
+      sessionId,
+      noiseReduction,
+      syncOffsetMs,
+      setErrorMessage,
+      setProcessingStatus,
+    ],
+  );
+
+  const handleDemoAspectExport = useCallback(
+    async (preset: DemoAspectPreset) => {
+      if (!session) return;
+      const tracks = session.tracks.filter(
+        (t) => selectedTrackIds.includes(t.id) && t.status === "COMPLETED" && (t.s3Url || t.s3Key),
+      );
+      if (tracks.length === 0) return;
+
+      const mode = preset;
+      beginProcessing(mode);
+
+      try {
+        await loadFfmpeg();
+        const ffmpeg = ffmpegRef.current;
+        const scale = DEMO_ASPECT_SCALES[preset];
+
+        let content = "";
+        for (let i = 0; i < tracks.length; i++) {
+          const name = `input_${i}.mp4`;
+          const mediaRef = tracks[i]!.s3Url ?? tracks[i]!.s3Key;
+          const downloadUrl = await resolveTrackDownloadUrl(trpcClient, mediaRef);
+          if (!downloadUrl) throw new Error(`Could not resolve download URL for track ${i + 1}`);
+          const data = await fetchFile(downloadUrl);
+          await ffmpeg.writeFile(name, data);
+          content += `file '${name}'\n`;
+        }
+
+        await ffmpeg.writeFile("concat_list.txt", new TextEncoder().encode(content));
+        const audioFilters: string[] = [];
+        if (noiseReduction) audioFilters.push("afftdn");
+        if (syncOffsetMs > 0) audioFilters.push(`adelay=${syncOffsetMs}|${syncOffsetMs}`);
+        const exportArgs = [
+          "-f",
+          "concat",
+          "-safe",
+          "0",
+          "-i",
+          "concat_list.txt",
+          ...(audioFilters.length > 0 ? ["-af", audioFilters.join(",")] : []),
+          "-vf",
+          `scale=${scale}:force_original_aspect_ratio=decrease,pad=${scale}:(ow-iw)/2:(oh-ih)/2`,
+          "-c:v",
+          "libx264",
+          "-preset",
+          "fast",
+          "-crf",
+          "23",
+          "-c:a",
+          "aac",
+          "-b:a",
+          "128k",
+          "output.mp4",
+        ];
+        await ffmpeg.exec(exportArgs);
+
+        await downloadFile(
+          ffmpeg,
+          "output.mp4",
+          `demo-${sessionId.slice(-8)}-${preset.replace(":", "x")}.mp4`,
+        );
+
+        for (let i = 0; i < tracks.length; i++) {
+          await ffmpeg.deleteFile(`input_${i}.mp4`);
+        }
+        await ffmpeg.deleteFile("concat_list.txt");
+
+        setProcessingStatus("done");
+      } catch (err) {
+        setProcessingStatus("error");
+        setErrorMessage(err instanceof Error ? err.message : `${preset} export failed`);
       }
     },
     [
@@ -782,6 +872,35 @@ export default function ExportSessionPage() {
                 <Download className="h-3.5 w-3.5" />
                 Export 1080p
               </MechButton>
+
+              {session.mode === "DEMO" ? (
+                <>
+                  <MechButton
+                    onClick={() => handleDemoAspectExport("16:9")}
+                    disabled={
+                      selectedTrackIds.length === 0 ||
+                      processingStatus === "processing" ||
+                      processingStatus === "loading-ffmpeg"
+                    }
+                    className="disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    {DEMO_ASPECT_LABELS["16:9"]}
+                  </MechButton>
+                  <MechButton
+                    onClick={() => handleDemoAspectExport("9:16")}
+                    disabled={
+                      selectedTrackIds.length === 0 ||
+                      processingStatus === "processing" ||
+                      processingStatus === "loading-ffmpeg"
+                    }
+                    className="disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    {DEMO_ASPECT_LABELS["9:16"]}
+                  </MechButton>
+                </>
+              ) : null}
             </div>
 
             {/* Progress bar */}
