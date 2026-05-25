@@ -70,6 +70,9 @@ jobs:
         run: bunx turbo run typecheck --affected
 
       - name: Build client (prerender + Next compile)
+        env:
+          # Next production build must not run with NODE_ENV=development (breaks static prerender).
+          NODE_ENV: production
         run: bunx turbo run build --filter=@ototabi/client
 
       - name: Test
