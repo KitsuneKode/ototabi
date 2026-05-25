@@ -4,6 +4,7 @@ import { prisma } from "@ototabi/store";
 import { TRPCError } from "@trpc/server";
 
 import { roomsRepository } from "../rooms/rooms.repository";
+import { usageService } from "../usage/usage.service";
 
 export const clipsService = {
   async listForSession(params: { actorId: string; sessionId: string }) {
@@ -26,6 +27,9 @@ export const clipsService = {
       where: { id: params.clipId, sessionId: params.sessionId },
     });
     if (!clip) throw new TRPCError({ code: "NOT_FOUND", message: "Clip not found" });
+
+    await usageService.assertCanUseClipOperation(params.actorId);
+    await usageService.recordClipOperation(params.actorId);
 
     await prisma.clipCandidate.update({
       where: { id: clip.id },
@@ -67,6 +71,9 @@ export const clipsService = {
     });
     if (!clip) throw new TRPCError({ code: "NOT_FOUND", message: "Clip not found" });
 
+    await usageService.assertCanUseClipOperation(params.actorId);
+    await usageService.recordClipOperation(params.actorId);
+
     await prisma.clipCandidate.update({
       where: { id: clip.id },
       data: { renderStatus: "processing", renderError: null },
@@ -87,6 +94,8 @@ export const clipsService = {
     if (!canAccess) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" });
     }
+    await usageService.assertCanUseClipOperation(params.actorId);
+    await usageService.recordClipOperation(params.actorId);
     await prisma.clipCandidate.deleteMany({ where: { sessionId: params.sessionId } });
     await getClipsQueue().add(`clips-${params.sessionId}`, { sessionId: params.sessionId });
     return { status: "queued" as const };

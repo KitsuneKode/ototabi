@@ -2,6 +2,7 @@
 
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL, fetchFile } from "@ffmpeg/util";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useRef, useCallback } from "react";
 
@@ -24,6 +25,7 @@ import {
   type DemoAspectPreset,
 } from "@/lib/demo/demo-export-presets";
 import { useExportConsole } from "@/lib/hooks/use-export-console";
+import { useAuthGate } from "@/lib/hooks/use-session";
 import { useSessionReview } from "@/lib/hooks/use-session-review";
 import {
   ArrowLeft,
@@ -38,6 +40,7 @@ import {
 } from "@/lib/icons";
 import { getSyncConfidenceWarning, getSyncMarkerOffsetMs } from "@/lib/merge-session-timeline";
 import { resolveTrackDownloadUrl } from "@/lib/resolve-track-download";
+import { useTRPC } from "@/trpc/client";
 import { trpcClient } from "@/trpc/vanilla";
 
 const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -130,6 +133,27 @@ function TrackStatusBadge({ status }: { status: string }) {
 export default function ExportSessionPage() {
   const { sessionId } = useParams() as { sessionId: string };
   const router = useRouter();
+  const trpc = useTRPC();
+  const { sessionReady } = useAuthGate();
+
+  const usage = useQuery({
+    ...trpc.usage.get.queryOptions(),
+    enabled: sessionReady,
+  });
+  const canTextEdit = usage.data?.features.textBasedEditing ?? false;
+
+  const checkout = useMutation(
+    trpc.billing.checkout.mutationOptions({
+      onSuccess: (data) => {
+        if (data.url) window.location.href = data.url;
+      },
+    }),
+  );
+
+  const startProCheckout = useCallback(() => {
+    const successUrl = `${window.location.origin}/export/${sessionId}?billing=success`;
+    checkout.mutate({ plan: "pro", successUrl });
+  }, [checkout, sessionId]);
 
   const {
     query,
@@ -808,40 +832,66 @@ export default function ExportSessionPage() {
           </div>
         ) : null}
 
-        {/* ── Text-Based Editing ─────────────────────────────────────────── */}
+        {/* ── Text-Based Editing (Pro+) ─────────────────────────────────── */}
         {transcriptSegments && transcriptSegments.length > 0 && completedTracks.length > 0 ? (
           <div className="space-y-4">
-            <TranscriptEditor
-              segments={transcriptSegments}
-              cutSegmentIds={cutSegmentIds}
-              onToggleCutSegment={toggleCutSegment}
-              previewRange={previewCutRange}
-              onPreviewRange={(startTime, endTime) => setPreviewCutRange({ startTime, endTime })}
-            />
-            {previewCutRange ? (
-              <AnalogInset className="p-3">
-                <MonoLabel className="text-[9px]">
-                  Preview range {formatTimestamp(previewCutRange.startTime)} –{" "}
-                  {formatTimestamp(previewCutRange.endTime)} (click segment to change)
-                </MonoLabel>
+            <PanelTitle label="Pro feature" title="Text-based editing" />
+            {!canTextEdit ? (
+              <AnalogInset className="space-y-3 p-4">
+                <p className="text-muted-foreground font-mono text-[11px] leading-relaxed">
+                  Cut and remove segments from the transcript requires a Pro plan or higher.
+                  {usage.data?.effectivePlan === "TRIAL"
+                    ? " Trial includes one lifetime transcript; unlimited editing is on Pro."
+                    : null}
+                </p>
+                <MechButton
+                  type="button"
+                  onClick={startProCheckout}
+                  disabled={checkout.isPending}
+                  className="w-full justify-center sm:w-auto"
+                >
+                  Upgrade to Pro
+                </MechButton>
               </AnalogInset>
             ) : null}
-            <MechButton
-              onClick={handleCuts}
-              disabled={
-                cutSegmentIds.length === 0 ||
-                processingStatus === "processing" ||
-                processingStatus === "loading-ffmpeg"
+            <div
+              className={
+                canTextEdit ? "space-y-4" : "pointer-events-none space-y-4 opacity-50 select-none"
               }
-              className="mt-2 w-full disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <Scissors className="h-3.5 w-3.5" />
-              Remove {cutSegmentIds.length} Selected Segment
-              {cutSegmentIds.length !== 1 ? "s" : ""}
-              {selectedTrackIds.length > 0
-                ? ` (${selectedTrackIds.length} track${selectedTrackIds.length !== 1 ? "s" : ""})`
-                : " (all completed tracks)"}
-            </MechButton>
+              <TranscriptEditor
+                segments={transcriptSegments}
+                cutSegmentIds={cutSegmentIds}
+                onToggleCutSegment={toggleCutSegment}
+                previewRange={previewCutRange}
+                onPreviewRange={(startTime, endTime) => setPreviewCutRange({ startTime, endTime })}
+              />
+              {previewCutRange ? (
+                <AnalogInset className="p-3">
+                  <MonoLabel className="text-[9px]">
+                    Preview range {formatTimestamp(previewCutRange.startTime)} –{" "}
+                    {formatTimestamp(previewCutRange.endTime)} (click segment to change)
+                  </MonoLabel>
+                </AnalogInset>
+              ) : null}
+              <MechButton
+                onClick={handleCuts}
+                disabled={
+                  !canTextEdit ||
+                  cutSegmentIds.length === 0 ||
+                  processingStatus === "processing" ||
+                  processingStatus === "loading-ffmpeg"
+                }
+                className="mt-2 w-full disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Scissors className="h-3.5 w-3.5" />
+                Remove {cutSegmentIds.length} Selected Segment
+                {cutSegmentIds.length !== 1 ? "s" : ""}
+                {selectedTrackIds.length > 0
+                  ? ` (${selectedTrackIds.length} track${selectedTrackIds.length !== 1 ? "s" : ""})`
+                  : " (all completed tracks)"}
+              </MechButton>
+            </div>
 
             {errorMessage && processingMode === "cuts" ? (
               <div className="border-led-on/30 bg-led-on/5 flex items-start gap-2 rounded border p-3">

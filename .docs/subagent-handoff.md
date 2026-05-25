@@ -58,3 +58,47 @@ What Wave N+1 needs from this stream (schema, env, product decision).
 | **Billing / usage** | Trial session cap (3) and Creator 10 clips/month need usage counter + schema; client export must read `billing.getSubscription` for Trial UI |
 | **Studio trust**    | Preflight route + consent UI not built; health panel placeholder only — depends on `apps/client/lib/studio/readiness.ts` (Wave 1 Stream 2)   |
 | **Shared**          | `DODO_PAYMENTS_API_KEY` unset → `shouldBypassPlanGates()` skips server plan checks (dev only)                                                |
+
+---
+
+## Wave 1 Stream 1 — Billing & usage caps
+
+| Field             | Value                                                          |
+| ----------------- | -------------------------------------------------------------- |
+| **Wave / stream** | Wave 1 — Billing & usage caps                                  |
+| **Branch**        | `feat/parity-stream1-usage` (or merged to integration branch)  |
+| **Plan refs**     | `.plans/08`, `.plans/28`, parity subagent plan Wave 1 Stream 1 |
+
+### Scope
+
+Shipped usage counters, trial transcript teaser (1 lifetime Whisper per host), trial session cap (3 completed studio sessions), Creator clip monthly cap (10 ops), export page Pro+ cut UI gate, and `usage.get` snapshot for client.
+
+Out of scope: studio preflight/consent (Stream 2), settings trial banner, worker export routing.
+
+### Files touched
+
+- `packages/store/prisma/schema.prisma` + `migrations/20260526180000_usage_counter/`
+- `packages/trpc/src/modules/usage/` (dto, policy, repository, service, router, policy tests)
+- `packages/trpc/src/lib/schedule-transcript.ts`, `schedule-transcript.gates.ts`, `*.gates.test.ts`
+- `packages/trpc/src/modules/rooms/rooms.service.ts` (session cap, transcript via scheduler)
+- `packages/trpc/src/modules/clips/clips.service.ts` (clip cap)
+- `packages/trpc/src/routers/_app.ts`
+- `apps/client/app/(site)/export/[sessionId]/page.tsx`
+- `.docs/try-billing-smoke.md`, `.docs/subagent-handoff.md`
+
+### Tests added / updated
+
+| Package         | Tests                                                                            |
+| --------------- | -------------------------------------------------------------------------------- |
+| `@ototabi/trpc` | `usage.policy.test.ts` (new), `schedule-transcript.gates.test.ts` (teaser cases) |
+
+**Gate:** `bun fmt && bun lint && bun typecheck && bun run test`
+
+### Smoke steps
+
+[try-billing-smoke.md](./try-billing-smoke.md) — sections 1–4 with real steps (no longer N/A).
+
+### Blockers for Stream 2
+
+- None from usage module. Stream 2 may proceed in parallel; avoid editing `rooms.policy.ts` co-host extensions per ownership split.
+- Stream 3 health panel still merges after Stream 2 on `chat/[roomId]/page.tsx`.

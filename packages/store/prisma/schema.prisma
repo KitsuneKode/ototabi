@@ -33,9 +33,26 @@ model User {
   roomMemberships    RoomMember[]
   studioJoinRequests StudioJoinRequest[]
   chatMessages       ChatMessage[]
+  usageCounters      UsageCounter[]
 
   @@unique([email])
   @@map("user")
+}
+
+/// Per-user usage counters for plan caps (trial transcript teaser, clip monthly, etc.).
+model UsageCounter {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String // TRANSCRIPT_LIFETIME | CLIPS_MONTH
+  periodKey String   @default("") // YYYY-MM for monthly; empty string for lifetime
+  count     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, kind, periodKey])
+  @@index([userId, kind])
+  @@map("usage_counter")
 }
 
 model Session {
@@ -152,12 +169,13 @@ model RoomMember {
 }
 
 model RoomParticipant {
-  id       String   @id @default(cuid())
-  roomId   String
-  room     Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  userId   String
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  joinedAt DateTime @default(now())
+  id                   String    @id @default(cuid())
+  roomId               String
+  room                 Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId               String
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt             DateTime  @default(now())
+  recordingConsentedAt DateTime?
 
   @@unique([roomId, userId])
   @@map("room_participant")

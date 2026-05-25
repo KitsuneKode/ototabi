@@ -9,6 +9,7 @@ import { sessionReviewRouter } from "../modules/session-review/session-review.ro
 import { syncMarkersRouter } from "../modules/sync-markers/sync-markers.router";
 import { transcriptRouter } from "../modules/transcript/transcript.router";
 import { uploadsRouter } from "../modules/uploads/uploads.router";
+import { usageRouter } from "../modules/usage/usage.router";
 import { createTRPCRouter } from "../trpc";
 import { authRouter } from "./auth";
 import { billingRouter } from "./billing";
@@ -17,6 +18,7 @@ import { userRouter } from "./user";
 export const appRouter = createTRPCRouter({
   auth: authRouter,
   billing: billingRouter,
+  usage: usageRouter,
   user: userRouter,
   dashboard: dashboardRouter,
   rooms: roomsRouter,

@@ -9,45 +9,53 @@ Run after [quick-start.md](./quick-start.md) infra + `bun dev`. For **real** gat
 | API + worker  | `bun dev`                                                          |
 | Dodo optional | Without Dodo, all authenticated users bypass plan middleware (dev) |
 | Test user     | Trial account (no paid sub) and optionally Creator / Pro test subs |
+| DB migrated   | `bun run db:migrate` includes `usage_counter` table                |
 
 ## 1. Trial transcript teaser
 
 1. Sign in as **Trial** user (no active paid subscription).
-2. Open `/recordings/{sessionId}` after a short completed session.
-3. **Expect:** transcript may show limited/teaser UX or Pro-gated actions disabled (per product wiring).
-4. Call **retry transcript** / schedule transcript as Trial → **403** with message from `planGateError("PRO")` when Dodo configured.
+2. Complete a short studio session and stop recording.
+3. **Expect:** first session queues Whisper (`transcriptStatus` → processing); `usage_counter` row `TRANSCRIPT_LIFETIME` count = 1 for host.
+4. Complete a **second** session (or retry transcript on another session).
+5. **Expect:** `scheduleTranscript` / retry returns `plan_upgrade_required` when Dodo configured; no second queue job.
 
-## 2. Session cap (Trial — not implemented yet)
+## 2. Session cap (Trial)
 
-**Wave 1:** fourth recording in a rolling window should fail with usage error.
+1. As **Trial** host, complete **3** studio sessions (`status = COMPLETED`).
+2. Start a **fourth** recording in the same room.
+3. **Expect:** `rooms.startRecordingSession` → **403** with session cap message.
 
-Until then, document as **N/A** — only verify counter does not exist in UI.
+## 3. Clip cap (Creator)
 
-## 3. Clip cap (Creator — not implemented yet)
+1. As **Creator** (not Pro), perform clip operations (regenerate and/or queue renders) until monthly counter reaches 10.
+2. Attempt an **11th** operation in the same UTC month.
+3. **Expect:** **403** with clip cap message.
 
-**Wave 1:** Creator tier — 11th clip in calendar month should 403.
+Also verify **clips regen** requires Creator+:
 
-Until usage module ships, verify **clips regen** requires Creator+:
-
-1. Trial user → **Regenerate clips** → **403** (`CREATOR` minimum).
-2. Creator user → succeeds (subject to future monthly cap).
+1. Trial user → **Regenerate clips** → **403** (`CREATOR` minimum via `creatorProcedure`).
+2. Creator user → succeeds until monthly cap.
 
 ## 4. Pro cut / text-edit UI gate
 
-1. Open `/export/{sessionId}` as **Trial**.
-2. **Expect (Wave 1 target):** browser FFmpeg cut controls hidden or disabled; upgrade CTA.
-3. As **Pro**, cut concat controls available (client-side today).
+1. Open `/export/{sessionId}` as **Trial** or **Creator** (below Pro).
+2. **Expect:** transcript cut UI disabled (reduced opacity); **Upgrade to Pro** CTA visible.
+3. As **Pro**, cut controls enabled; `usage.get` → `features.textBasedEditing: true`.
 
 ## 5. Policy unit tests (CI parity)
 
 ```bash
+bun run test --filter=@ototabi/trpc
 bun run test --filter=@ototabi/billing
 ```
 
-All `plan-policy` tests pass (rank, `resolveEffectivePlan`, `satisfiesMinimumPlan`, `planGateError`).
+- `usage.policy.test.ts` — session cap, clip cap, transcript teaser
+- `schedule-transcript.gates.test.ts` — `evaluateTranscriptPlanGate`
+- `plan-policy.test.ts` — rank, `resolveEffectivePlan`, `satisfiesMinimumPlan`
 
 ## Sign-off
 
-- [ ] Trial blocked from Pro procedures when Dodo on
-- [ ] Creator+ clips path allowed when subscribed
+- [ ] Trial: 1 lifetime transcript, 3 session cap when Dodo on
+- [ ] Creator: 10 clip ops/month when Dodo on
+- [ ] Export page disables cut mode below Pro
 - [ ] Handoff updated in [subagent-handoff.md](./subagent-handoff.md)

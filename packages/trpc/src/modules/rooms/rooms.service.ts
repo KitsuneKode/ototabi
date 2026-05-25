@@ -1,10 +1,10 @@
-import { transcriptJobId } from "@ototabi/common/pipeline-status";
-import { getTranscriptQueue } from "@ototabi/jobs/queues";
 import { prisma } from "@ototabi/store";
 import { TRPCError } from "@trpc/server";
 import crypto from "node:crypto";
 
+import { scheduleTranscriptForSession } from "../../lib/schedule-transcript";
 import { recordingEventsService } from "../recording-events/recording-events.service";
+import { usageService } from "../usage/usage.service";
 import {
   defaultLobbyInviteExpiresAt,
   DEFAULT_LOBBY_MAX_USES,
@@ -215,8 +215,9 @@ export const roomsService = {
   async lockRoom(params: { actorId: string; roomId: string }) {
     const room = await roomsRepository.findById(params.roomId);
     if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
-    if (!roomsPolicy.canToggleRoomLock(room, params.actorId)) {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Only the host can lock this room" });
+    const actorMember = await roomsRepository.findMember(params.roomId, params.actorId);
+    if (!roomsPolicy.canToggleRoomLock(actorMember, room, params.actorId)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to lock this room" });
     }
     return roomsRepository.setRoomLocked(params.roomId, true);
   },
@@ -224,8 +225,9 @@ export const roomsService = {
   async unlockRoom(params: { actorId: string; roomId: string }) {
     const room = await roomsRepository.findById(params.roomId);
     if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
-    if (!roomsPolicy.canToggleRoomLock(room, params.actorId)) {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Only the host can unlock this room" });
+    const actorMember = await roomsRepository.findMember(params.roomId, params.actorId);
+    if (!roomsPolicy.canToggleRoomLock(actorMember, room, params.actorId)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to unlock this room" });
     }
     return roomsRepository.setRoomLocked(params.roomId, false);
   },
@@ -286,6 +288,89 @@ export const roomsService = {
     return roomsRepository.listParticipants(roomId);
   },
 
+  async getStudioContext(params: { userId: string; roomId: string }) {
+    const room = await roomsRepository.findById(params.roomId);
+    if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
+    const member = await roomsRepository.findMember(params.roomId, params.userId);
+    const recordingConsentedAt = await roomsRepository.getRecordingConsent(
+      params.roomId,
+      params.userId,
+    );
+    return {
+      canControlStudio: roomsPolicy.canControlStudio(member, room, params.userId),
+      memberRole: member?.role ?? (room.creatorId === params.userId ? "creator" : null),
+      recordingConsentedAt,
+      hasRecordingConsent: !!recordingConsentedAt,
+    };
+  },
+
+  async acknowledgeRecordingConsent(params: { userId: string; roomId: string }) {
+    const room = await roomsRepository.findById(params.roomId);
+    if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
+    const { member, participant } = await roomsRepository.findAccessContext(
+      params.roomId,
+      params.userId,
+    );
+    if (
+      !roomsPolicy.canJoinRoom({
+        room,
+        userId: params.userId,
+        member,
+        participant,
+        inviteUsable: false,
+      })
+    ) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized in this room" });
+    }
+    const consentedAt = new Date();
+    await roomsRepository.setRecordingConsent(params.roomId, params.userId, consentedAt);
+    return { recordingConsentedAt: consentedAt };
+  },
+
+  async removeGuest(params: { actorId: string; roomId: string; targetUserId: string }) {
+    const room = await roomsRepository.findById(params.roomId);
+    if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
+    if (params.targetUserId === room.creatorId) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Cannot remove the room creator" });
+    }
+    const actorMember = await roomsRepository.findMember(params.roomId, params.actorId);
+    if (!roomsPolicy.canRemoveGuest(actorMember, room, params.actorId)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to remove guests" });
+    }
+    const target = await roomsRepository.findParticipant(params.roomId, params.targetUserId);
+    if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Guest not in room" });
+    await roomsRepository.removeParticipant(params.roomId, params.targetUserId);
+    const activeSession = await roomsRepository.findActiveSessionByRoom(params.roomId);
+    if (activeSession) {
+      await recordingEventsService.createEvent({
+        actorId: params.actorId,
+        sessionId: activeSession.id,
+        type: "LEAVE",
+        message: "Guest removed by host",
+        metadata: { userId: params.targetUserId, removedByHost: true },
+      });
+    }
+    return { success: true };
+  },
+
+  async requestParticipantMute(params: { actorId: string; roomId: string; targetUserId: string }) {
+    const room = await roomsRepository.findById(params.roomId);
+    if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
+    const actorMember = await roomsRepository.findMember(params.roomId, params.actorId);
+    if (!roomsPolicy.canRequestMute(actorMember, room, params.actorId)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to request mute" });
+    }
+    if (params.targetUserId === params.actorId) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Cannot mute yourself via host request",
+      });
+    }
+    const target = await roomsRepository.findParticipant(params.roomId, params.targetUserId);
+    if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Guest not in room" });
+    return { success: true, targetUserId: params.targetUserId };
+  },
+
   async startRecordingSession(params: { actorId: string; roomId: string }) {
     const { room, member, participant } = await roomsRepository.findAccessContext(
       params.roomId,
@@ -303,6 +388,8 @@ export const roomsService = {
     ) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to start recording" });
     }
+
+    await usageService.assertCanStartStudioSession(room.creatorId);
 
     await roomsRepository.endActiveSessions(params.roomId);
     const session = await roomsRepository.createSession(params.roomId);
@@ -331,30 +418,10 @@ export const roomsService = {
       message: "Recording stopped",
     });
 
-    // Queue background jobs
     try {
-      const jobId = transcriptJobId(params.sessionId);
-      const audioTrack = await roomsRepository.findFirstAudioTrack(params.sessionId);
-      await prisma.recordingSession.update({
-        where: { id: params.sessionId },
-        data: { transcriptStatus: "processing", transcriptError: null },
-      });
-      if (audioTrack?.s3Key) {
-        await getTranscriptQueue().add(
-          jobId,
-          { sessionId: params.sessionId, audioTrackS3Key: audioTrack.s3Key },
-          { jobId },
-        );
-      } else {
-        // Queue without audio URL — worker will retry until upload completes
-        await getTranscriptQueue().add(
-          jobId,
-          { sessionId: params.sessionId, audioTrackS3Key: "" },
-          { jobId, delay: 30000 },
-        );
-      }
+      await scheduleTranscriptForSession(params.sessionId);
     } catch {
-      // Queue is optional — don't block session completion
+      // Transcript queue is optional — don't block session completion
     }
 
     return result;

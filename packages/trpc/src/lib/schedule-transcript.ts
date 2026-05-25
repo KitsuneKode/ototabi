@@ -1,13 +1,9 @@
-import {
-  resolveEffectivePlan,
-  satisfiesMinimumPlan,
-  shouldBypassPlanGates,
-} from "@ototabi/billing/plan-policy";
 import { transcriptJobId } from "@ototabi/common/pipeline-status";
 import { getTranscriptQueue } from "@ototabi/jobs/queues";
 import { prisma } from "@ototabi/store";
 
 import { roomsRepository } from "../modules/rooms/rooms.repository";
+import { usageService } from "../modules/usage/usage.service";
 import { resetAiPipelineForRetry } from "./ai-pipeline-reset";
 import {
   evaluateScheduleTranscript,
@@ -44,17 +40,11 @@ export async function scheduleTranscriptForSession(
     return gate;
   }
 
-  if (!shouldBypassPlanGates()) {
-    const hostUserId = await roomsRepository.findSessionHostUserId(sessionId);
-    if (hostUserId) {
-      const sub = await prisma.subscription.findUnique({
-        where: { userId: hostUserId },
-        select: { plan: true, status: true, trialEndsAt: true },
-      });
-      const effective = resolveEffectivePlan(sub);
-      if (!satisfiesMinimumPlan(effective, "PRO")) {
-        return { status: "plan_upgrade_required" };
-      }
+  const hostUserId = await roomsRepository.findSessionHostUserId(sessionId);
+  if (hostUserId) {
+    const planGate = await usageService.evaluateTranscriptScheduleForHost(hostUserId);
+    if (planGate === "plan_upgrade_required") {
+      return { status: "plan_upgrade_required" };
     }
   }
 

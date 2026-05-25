@@ -1,7 +1,10 @@
 import { transcriptJobId } from "@ototabi/common/pipeline-status";
 import { describe, expect, test } from "bun:test";
 
-import { evaluateScheduleTranscript } from "./schedule-transcript.gates";
+import {
+  evaluateScheduleTranscript,
+  evaluateTranscriptPlanGate,
+} from "./schedule-transcript.gates";
 
 describe("transcriptJobId", () => {
   test("uses transcript-{sessionId} for BullMQ dedup", () => {
@@ -53,5 +56,31 @@ describe("evaluateScheduleTranscript", () => {
         hasAudioKey: false,
       }),
     ).toEqual({ status: "waiting_for_upload" });
+  });
+});
+
+describe("evaluateTranscriptPlanGate (trial teaser)", () => {
+  test("allows first Trial lifetime transcript", () => {
+    expect(evaluateTranscriptPlanGate({ effectivePlan: "TRIAL", lifetimeTranscriptCount: 0 })).toBe(
+      "queued",
+    );
+  });
+
+  test("blocks second Trial lifetime transcript", () => {
+    expect(evaluateTranscriptPlanGate({ effectivePlan: "TRIAL", lifetimeTranscriptCount: 1 })).toBe(
+      "plan_upgrade_required",
+    );
+  });
+
+  test("allows Pro regardless of lifetime count", () => {
+    expect(evaluateTranscriptPlanGate({ effectivePlan: "PRO", lifetimeTranscriptCount: 99 })).toBe(
+      "queued",
+    );
+  });
+
+  test("blocks Creator without Pro", () => {
+    expect(
+      evaluateTranscriptPlanGate({ effectivePlan: "CREATOR", lifetimeTranscriptCount: 0 }),
+    ).toBe("plan_upgrade_required");
   });
 });
