@@ -8,6 +8,7 @@ import { useRef, useCallback } from "react";
 import { ClipRenderActions } from "@/components/clips/clip-render-actions";
 import { SessionExportActions } from "@/components/clips/session-export-actions";
 import { TranscriptEditor } from "@/components/editor/transcript-editor";
+import { ExportBundlePicker } from "@/components/export/export-bundle-picker";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { SessionStatusRail } from "@/components/layout/session-status-rail";
@@ -746,6 +747,11 @@ export default function ExportSessionPage() {
               })}
             </div>
           )}
+        </div>
+
+        <div className="space-y-4">
+          <PanelTitle label="Distribution" title="Export bundle" />
+          <ExportBundlePicker sessionId={sessionId} />
         </div>
 
         {exports ? (
