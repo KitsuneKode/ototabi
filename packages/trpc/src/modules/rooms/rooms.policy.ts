@@ -53,4 +53,60 @@ export const roomsPolicy = {
       params.inviteUsable
     );
   },
+
+  hasStudioBypass(params: {
+    room: { creatorId: string };
+    userId: string;
+    member: { role: string } | null;
+    participant: { userId: string } | null;
+  }): boolean {
+    return params.room.creatorId === params.userId || !!params.member || !!params.participant;
+  },
+
+  canEnterLockedRoom(params: {
+    room: { creatorId: string; isLocked: boolean };
+    userId: string;
+    member: { role: string } | null;
+    participant: { userId: string } | null;
+    joinRequest: { status: string } | null;
+    inviteUsable: boolean;
+  }): { allowed: true } | { allowed: false; message: string; queuePending?: boolean } {
+    if (!params.room.isLocked) {
+      return { allowed: true };
+    }
+
+    if (roomsPolicy.hasStudioBypass(params)) {
+      return { allowed: true };
+    }
+
+    if (params.joinRequest?.status === "admitted") {
+      return { allowed: true };
+    }
+
+    if (params.joinRequest?.status === "denied") {
+      return { allowed: false, message: "Host denied your join request" };
+    }
+
+    if (params.inviteUsable) {
+      return {
+        allowed: false,
+        message: "Room is locked — waiting for host admission",
+        queuePending: true,
+      };
+    }
+
+    return { allowed: false, message: "Room is locked" };
+  },
+
+  canManageJoinRequests(
+    member: { role: string } | null,
+    room: { creatorId: string },
+    userId: string,
+  ): boolean {
+    return room.creatorId === userId || member?.role === "host";
+  },
+
+  canToggleRoomLock(room: { creatorId: string }, userId: string): boolean {
+    return room.creatorId === userId;
+  },
 };

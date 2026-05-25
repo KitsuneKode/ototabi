@@ -65,10 +65,19 @@ const guestAuthLimiter = rateLimit({
 app.use("/api/guest-auth", guestAuthLimiter, guestAuthRouter);
 app.use("/api/polar-webhook", polarWebhookRouter);
 
+const liveKitTokenLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: "Too many LiveKit token requests, try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use(timingMiddleWare);
 
 app.use("/api/trpc", expressMiddleWare);
 
+app.use("/api/token", liveKitTokenLimiter);
 app.use("/api/", liveKitAuthRouter);
 
 app.use(errorHandler);

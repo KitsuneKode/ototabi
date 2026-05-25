@@ -4,16 +4,16 @@ import { prisma } from "@ototabi/store";
 import { createCheckoutLink } from "billing/checkout";
 import { z } from "zod";
 
-import { protectedProcedure } from "../trpc";
+import { memberProcedure } from "../trpc";
 
 export const billingRouter = {
-  getSubscription: protectedProcedure.query(async ({ ctx }) => {
+  getSubscription: memberProcedure.query(async ({ ctx }) => {
     return prisma.subscription.findUnique({
       where: { userId: ctx.session.user.id },
     });
   }),
 
-  checkout: protectedProcedure
+  checkout: memberProcedure
     .input(z.object({ plan: z.enum(["creator", "pro", "studio"]), successUrl: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const url = await createCheckoutLink({

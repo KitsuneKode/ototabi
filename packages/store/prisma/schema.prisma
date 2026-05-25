@@ -15,12 +15,12 @@ datasource db {
 }
 
 model User {
-  id                 String            @id
+  id                 String              @id
   name               String
   email              String
   emailVerified      Boolean
   image              String?
-  role               String            @default("user")
+  role               String              @default("user")
   subscription       Subscription?
   createdAt          DateTime
   updatedAt          DateTime
@@ -32,6 +32,7 @@ model User {
   recordingEvents    RecordingEvent[]
   roomParticipations RoomParticipant[]
   roomMemberships    RoomMember[]
+  studioJoinRequests StudioJoinRequest[]
   chatMessages       ChatMessage[]
 
   @@unique([email])
@@ -84,21 +85,38 @@ model Verification {
 }
 
 model Room {
-  id           String             @id @default(cuid())
+  id           String              @id @default(cuid())
   name         String
-  code         String             @unique
+  code         String              @unique
   creatorId    String
-  creator      User               @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  isLocked     Boolean             @default(false)
+  creator      User                @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   sessions     RecordingSession[]
   participants RoomParticipant[]
   members      RoomMember[]
   invites      RoomInvite[]
+  joinRequests StudioJoinRequest[]
   chatMessages ChatMessage[]
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
 
   @@index([creatorId])
   @@map("room")
+}
+
+model StudioJoinRequest {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    String   @default("pending") // pending | admitted | denied
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([roomId, userId])
+  @@index([roomId, status])
+  @@map("studio_join_request")
 }
 
 model RoomInvite {

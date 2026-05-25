@@ -104,3 +104,14 @@ export const hostProcedure = protectedProcedure.use(({ ctx, next }) => {
   }
   return next({ ctx });
 });
+
+/** Authenticated users except guest sessions — studio guests use room-scoped procedures only. */
+export const memberProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.userRole === "guest") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Guest accounts cannot access this feature",
+    });
+  }
+  return next({ ctx });
+});

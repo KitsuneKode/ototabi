@@ -4,7 +4,7 @@ import { prisma } from "@ototabi/store";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { protectedProcedure } from "../trpc";
+import { memberProcedure, protectedProcedure } from "../trpc";
 
 export const userRouter = {
   getMe: protectedProcedure.query(async ({ ctx }) => {
@@ -23,7 +23,7 @@ export const userRouter = {
     return user;
   }),
 
-  updateProfile: protectedProcedure
+  updateProfile: memberProcedure
     .input(
       z.object({
         name: z.string().min(1).max(100).optional(),
@@ -38,7 +38,7 @@ export const userRouter = {
       });
     }),
 
-  deleteAccount: protectedProcedure.mutation(async ({ ctx }) => {
+  deleteAccount: memberProcedure.mutation(async ({ ctx }) => {
     await prisma.user.delete({ where: { id: ctx.session.user.id } });
     return { success: true };
   }),

@@ -1,16 +1,16 @@
 import { z } from "zod/v4";
 
-import { protectedProcedure } from "../../trpc";
+import { memberProcedure } from "../../trpc";
 import { clipsService } from "./clips.service";
 
 export const clipsRouter = {
-  listBySession: protectedProcedure
+  listBySession: memberProcedure
     .input(z.object({ sessionId: z.string() }))
     .query(({ input, ctx }) =>
       clipsService.listForSession({ actorId: ctx.session.user.id, sessionId: input.sessionId }),
     ),
 
-  queueVerticalRender: protectedProcedure
+  queueVerticalRender: memberProcedure
     .input(z.object({ sessionId: z.string(), clipId: z.string() }))
     .mutation(({ input, ctx }) =>
       clipsService.queueClipRender({
@@ -20,9 +20,9 @@ export const clipsRouter = {
       }),
     ),
 
-  listReelsPresets: protectedProcedure.query(() => clipsService.listReelsPresets()),
+  listReelsPresets: memberProcedure.query(() => clipsService.listReelsPresets()),
 
-  queueReelsRender: protectedProcedure
+  queueReelsRender: memberProcedure
     .input(
       z.object({
         sessionId: z.string(),
@@ -39,7 +39,7 @@ export const clipsRouter = {
       }),
     ),
 
-  regenerate: protectedProcedure
+  regenerate: memberProcedure
     .input(z.object({ sessionId: z.string() }))
     .mutation(({ input, ctx }) =>
       clipsService.regenerateClips({

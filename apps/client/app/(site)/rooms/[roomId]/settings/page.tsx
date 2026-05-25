@@ -232,6 +232,11 @@ export default function RoomSettingsPage() {
           <MembersPanel roomId={data.id} />
         </AnalogCard>
 
+        <StudioAccessPanel
+          roomId={data.id}
+          isLocked={"isLocked" in data ? Boolean((data as { isLocked?: boolean }).isLocked) : false}
+        />
+
         <AnalogCard className="space-y-4 p-6">
           <PanelTitle label="Secure Access" title="Invite Links" className="mb-4" />
           <InvitesPanel roomId={data.id} roomCode={data.code} />
@@ -374,6 +379,104 @@ export default function RoomSettingsPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+function StudioAccessPanel({ roomId, isLocked }: { roomId: string; isLocked: boolean }) {
+  const trpc = useTRPC();
+  const [locked, setLocked] = useState(isLocked);
+
+  const pending = useQuery(
+    trpc.rooms.listJoinRequests.queryOptions(
+      { roomId, status: "pending" },
+      { enabled: !!roomId, refetchInterval: 5000 },
+    ),
+  );
+
+  const lockMutation = useMutation(trpc.rooms.lockRoom.mutationOptions());
+  const unlockMutation = useMutation(trpc.rooms.unlockRoom.mutationOptions());
+  const admitMutation = useMutation(
+    trpc.rooms.admitJoinRequest.mutationOptions({
+      onSuccess: () => pending.refetch(),
+    }),
+  );
+  const denyMutation = useMutation(
+    trpc.rooms.denyJoinRequest.mutationOptions({
+      onSuccess: () => pending.refetch(),
+    }),
+  );
+
+  const toggleLock = useCallback(() => {
+    if (locked) {
+      unlockMutation.mutate({ roomId }, { onSuccess: () => setLocked(false) });
+    } else {
+      lockMutation.mutate({ roomId }, { onSuccess: () => setLocked(true) });
+    }
+  }, [locked, lockMutation, unlockMutation, roomId]);
+
+  return (
+    <AnalogCard className="space-y-4 p-6">
+      <PanelTitle label="Studio Gate" title="Lock & Admit" className="mb-4" />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-muted-foreground font-mono text-xs leading-relaxed">
+          When locked, guests with an invite must be admitted before they can join or receive a
+          LiveKit token.
+        </p>
+        <MechButton
+          onClick={toggleLock}
+          disabled={lockMutation.isPending || unlockMutation.isPending}
+          className="h-10 shrink-0 justify-center px-4 text-xs"
+        >
+          <ShieldAlert className="h-4 w-4" />
+          {locked ? "UNLOCK ROOM" : "LOCK ROOM"}
+        </MechButton>
+      </div>
+
+      {locked && (
+        <div className="space-y-2">
+          <MonoLabel className="text-[9px]">Pending join requests</MonoLabel>
+          {pending.isLoading ? (
+            <MonoLabel className="text-muted-foreground animate-pulse text-[9px]">
+              Loading...
+            </MonoLabel>
+          ) : !pending.data?.length ? (
+            <AnalogInset className="border-dashed py-6 text-center">
+              <MonoLabel className="text-muted-foreground">No guests waiting</MonoLabel>
+            </AnalogInset>
+          ) : (
+            <div className="space-y-2">
+              {pending.data.map((req) => (
+                <AnalogInset
+                  key={req.id}
+                  className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <MonoLabel className="text-foreground text-[10px] font-bold">
+                    {req.user.name}
+                  </MonoLabel>
+                  <div className="flex gap-2">
+                    <MechButton
+                      className="h-8 px-3 text-[10px]"
+                      onClick={() => admitMutation.mutate({ roomId, targetUserId: req.userId })}
+                      disabled={admitMutation.isPending}
+                    >
+                      Admit
+                    </MechButton>
+                    <MechButton
+                      variant="danger"
+                      className="h-8 px-3 text-[10px]"
+                      onClick={() => denyMutation.mutate({ roomId, targetUserId: req.userId })}
+                      disabled={denyMutation.isPending}
+                    >
+                      Deny
+                    </MechButton>
+                  </div>
+                </AnalogInset>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </AnalogCard>
   );
 }
 

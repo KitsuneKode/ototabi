@@ -114,6 +114,53 @@ export const roomsRouter = {
       }),
     ),
 
+  lockRoom: hostProcedure
+    .input(z.object({ roomId: z.string() }))
+    .mutation(({ input, ctx }) =>
+      roomsService.lockRoom({ actorId: ctx.session.user.id, roomId: input.roomId }),
+    ),
+
+  unlockRoom: hostProcedure
+    .input(z.object({ roomId: z.string() }))
+    .mutation(({ input, ctx }) =>
+      roomsService.unlockRoom({ actorId: ctx.session.user.id, roomId: input.roomId }),
+    ),
+
+  listJoinRequests: hostProcedure
+    .input(
+      z.object({
+        roomId: z.string(),
+        status: z.enum(["pending", "admitted", "denied"]).optional(),
+      }),
+    )
+    .query(({ input, ctx }) =>
+      roomsService.listJoinRequests({
+        actorId: ctx.session.user.id,
+        roomId: input.roomId,
+        status: input.status,
+      }),
+    ),
+
+  admitJoinRequest: hostProcedure
+    .input(z.object({ roomId: z.string(), targetUserId: z.string() }))
+    .mutation(({ input, ctx }) =>
+      roomsService.admitJoinRequest({
+        actorId: ctx.session.user.id,
+        roomId: input.roomId,
+        targetUserId: input.targetUserId,
+      }),
+    ),
+
+  denyJoinRequest: hostProcedure
+    .input(z.object({ roomId: z.string(), targetUserId: z.string() }))
+    .mutation(({ input, ctx }) =>
+      roomsService.denyJoinRequest({
+        actorId: ctx.session.user.id,
+        roomId: input.roomId,
+        targetUserId: input.targetUserId,
+      }),
+    ),
+
   leaveRoom: protectedProcedure
     .input(z.object({ roomId: z.string() }))
     .mutation(({ input, ctx }) =>

@@ -5,7 +5,8 @@
   "module": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./simp": "./src/simple.ts"
+    "./simp": "./src/simple.ts",
+    "./enter-studio": "./src/modules/rooms/enter-studio.ts"
   },
   "scripts": {
     "test": "bun test"

@@ -107,4 +107,92 @@ describe("roomsPolicy", () => {
       }),
     ).toBe(false);
   });
+
+  test("locked room bypasses lock for host, members, and participants", () => {
+    const room = { creatorId: "host-1", isLocked: true };
+
+    expect(
+      roomsPolicy.canEnterLockedRoom({
+        room,
+        userId: "host-1",
+        member: null,
+        participant: null,
+        joinRequest: null,
+        inviteUsable: false,
+      }),
+    ).toEqual({ allowed: true });
+
+    expect(
+      roomsPolicy.canEnterLockedRoom({
+        room,
+        userId: "user-1",
+        member: { role: "editor" },
+        participant: null,
+        joinRequest: null,
+        inviteUsable: false,
+      }),
+    ).toEqual({ allowed: true });
+
+    expect(
+      roomsPolicy.canEnterLockedRoom({
+        room,
+        userId: "user-1",
+        member: null,
+        participant: { userId: "user-1" },
+        joinRequest: null,
+        inviteUsable: false,
+      }),
+    ).toEqual({ allowed: true });
+  });
+
+  test("locked room queues invite holders until admitted", () => {
+    const room = { creatorId: "host-1", isLocked: true };
+
+    expect(
+      roomsPolicy.canEnterLockedRoom({
+        room,
+        userId: "guest-1",
+        member: null,
+        participant: null,
+        joinRequest: null,
+        inviteUsable: true,
+      }),
+    ).toEqual({
+      allowed: false,
+      message: "Room is locked — waiting for host admission",
+      queuePending: true,
+    });
+
+    expect(
+      roomsPolicy.canEnterLockedRoom({
+        room,
+        userId: "guest-1",
+        member: null,
+        participant: null,
+        joinRequest: { status: "admitted" },
+        inviteUsable: true,
+      }),
+    ).toEqual({ allowed: true });
+
+    expect(
+      roomsPolicy.canEnterLockedRoom({
+        room,
+        userId: "guest-1",
+        member: null,
+        participant: null,
+        joinRequest: { status: "denied" },
+        inviteUsable: true,
+      }),
+    ).toEqual({ allowed: false, message: "Host denied your join request" });
+  });
+
+  test("only host or room host member can manage join requests and lock", () => {
+    const room = { creatorId: "creator-1" };
+
+    expect(roomsPolicy.canToggleRoomLock(room, "creator-1")).toBe(true);
+    expect(roomsPolicy.canToggleRoomLock(room, "other-1")).toBe(false);
+    expect(roomsPolicy.canManageJoinRequests({ role: "host" }, room, "member-1")).toBe(true);
+    expect(roomsPolicy.canManageJoinRequests(null, room, "creator-1")).toBe(true);
+    expect(roomsPolicy.canManageJoinRequests({ role: "editor" }, room, "member-1")).toBe(false);
+  });
 });

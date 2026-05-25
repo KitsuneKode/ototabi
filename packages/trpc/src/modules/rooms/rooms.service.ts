@@ -4,15 +4,18 @@ import { TRPCError } from "@trpc/server";
 import crypto from "node:crypto";
 
 import { recordingEventsService } from "../recording-events/recording-events.service";
+import {
+  defaultLobbyInviteExpiresAt,
+  DEFAULT_LOBBY_MAX_USES,
+  enterStudio,
+  hashInviteToken,
+  StudioAccessError,
+} from "./enter-studio";
 import { roomsPolicy } from "./rooms.policy";
 import { roomsRepository } from "./rooms.repository";
 
 function createInviteToken(): string {
   return crypto.randomBytes(32).toString("base64url");
-}
-
-function hashInviteToken(token: string): string {
-  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 export const roomsService = {
@@ -30,8 +33,8 @@ export const roomsService = {
       tokenHash: hashInviteToken(lobbyToken),
       role: "participant",
       createdBy: params.userId,
-      maxUses: undefined,
-      expiresAt: undefined,
+      maxUses: DEFAULT_LOBBY_MAX_USES,
+      expiresAt: defaultLobbyInviteExpiresAt(),
       email: undefined,
     });
 
@@ -177,52 +180,91 @@ export const roomsService = {
   },
 
   async joinRoom(params: { userId: string; code: string; inviteToken?: string }) {
+    const hadInvite = !!params.inviteToken;
+    let roomId: string;
+    try {
+      ({ roomId } = await enterStudio({
+        userId: params.userId,
+        roomCode: params.code,
+        inviteToken: params.inviteToken,
+      }));
+    } catch (err) {
+      if (err instanceof StudioAccessError) {
+        throw new TRPCError({ code: err.code, message: err.message });
+      }
+      throw err;
+    }
+
     const room = await roomsRepository.findUniqueCode(params.code);
     if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
 
-    const { member, participant } = await roomsRepository.findAccessContext(room.id, params.userId);
-    if (room.creatorId === params.userId || member || participant) {
-      await roomsRepository.addParticipant(room.id, params.userId);
-      const activeSession = await roomsRepository.findActiveSessionByRoom(room.id);
-      if (activeSession) {
-        await recordingEventsService.createEvent({
-          actorId: params.userId,
-          sessionId: activeSession.id,
-          type: "JOIN",
-          message: "Participant joined studio",
-        });
-      }
-      return room;
+    const activeSession = await roomsRepository.findActiveSessionByRoom(roomId);
+    if (activeSession) {
+      await recordingEventsService.createEvent({
+        actorId: params.userId,
+        sessionId: activeSession.id,
+        type: "JOIN",
+        message: hadInvite ? "Participant joined studio with invite" : "Participant joined studio",
+      });
     }
 
-    const invite = params.inviteToken
-      ? await roomsRepository.findInviteByTokenHash(hashInviteToken(params.inviteToken))
-      : null;
-    const inviteUsable =
-      !!invite && invite.roomId === room.id && roomsPolicy.isInviteUsable(invite);
-
-    if (
-      !roomsPolicy.canJoinRoom({ room, userId: params.userId, member, participant, inviteUsable })
-    ) {
-      throw new TRPCError({ code: "FORBIDDEN", message: "A valid invite is required" });
-    }
-
-    if (invite) {
-      await roomsRepository.consumeInvite(invite.id, room.id, params.userId);
-      const activeSession = await roomsRepository.findActiveSessionByRoom(room.id);
-      if (activeSession) {
-        await recordingEventsService.createEvent({
-          actorId: params.userId,
-          sessionId: activeSession.id,
-          type: "JOIN",
-          message: "Participant joined studio with invite",
-        });
-      }
-      return room;
-    }
-
-    await roomsRepository.addParticipant(room.id, params.userId);
     return room;
+  },
+
+  async lockRoom(params: { actorId: string; roomId: string }) {
+    const room = await roomsRepository.findById(params.roomId);
+    if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
+    if (!roomsPolicy.canToggleRoomLock(room, params.actorId)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Only the host can lock this room" });
+    }
+    return roomsRepository.setRoomLocked(params.roomId, true);
+  },
+
+  async unlockRoom(params: { actorId: string; roomId: string }) {
+    const room = await roomsRepository.findById(params.roomId);
+    if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
+    if (!roomsPolicy.canToggleRoomLock(room, params.actorId)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Only the host can unlock this room" });
+    }
+    return roomsRepository.setRoomLocked(params.roomId, false);
+  },
+
+  async listJoinRequests(params: { actorId: string; roomId: string; status?: string }) {
+    const room = await roomsRepository.findById(params.roomId);
+    if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
+    const actorMember = await roomsRepository.findMember(params.roomId, params.actorId);
+    if (!roomsPolicy.canManageJoinRequests(actorMember, room, params.actorId)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to view join requests" });
+    }
+    return roomsRepository.listJoinRequests(params.roomId, params.status);
+  },
+
+  async admitJoinRequest(params: { actorId: string; roomId: string; targetUserId: string }) {
+    const room = await roomsRepository.findById(params.roomId);
+    if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
+    const actorMember = await roomsRepository.findMember(params.roomId, params.actorId);
+    if (!roomsPolicy.canManageJoinRequests(actorMember, room, params.actorId)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to admit guests" });
+    }
+    return roomsRepository.upsertJoinRequest({
+      roomId: params.roomId,
+      userId: params.targetUserId,
+      status: "admitted",
+    });
+  },
+
+  async denyJoinRequest(params: { actorId: string; roomId: string; targetUserId: string }) {
+    const room = await roomsRepository.findById(params.roomId);
+    if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" });
+    const actorMember = await roomsRepository.findMember(params.roomId, params.actorId);
+    if (!roomsPolicy.canManageJoinRequests(actorMember, room, params.actorId)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to deny guests" });
+    }
+    return roomsRepository.upsertJoinRequest({
+      roomId: params.roomId,
+      userId: params.targetUserId,
+      status: "denied",
+    });
   },
 
   async leaveRoom(params: { userId: string; roomId: string }) {

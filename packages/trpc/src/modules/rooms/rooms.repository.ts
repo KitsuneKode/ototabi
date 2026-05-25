@@ -14,6 +14,57 @@ export const roomsRepository = {
     return prisma.room.findUnique({ where: { code } });
   },
 
+  async findStudioAccessByRoomCode(roomId: string, userId: string, tokenHash: string | null) {
+    const [member, participant, joinRequest, invite] = await Promise.all([
+      prisma.roomMember.findUnique({ where: { roomId_userId: { roomId, userId } } }),
+      prisma.roomParticipant.findUnique({ where: { roomId_userId: { roomId, userId } } }),
+      prisma.studioJoinRequest.findUnique({ where: { roomId_userId: { roomId, userId } } }),
+      tokenHash
+        ? prisma.roomInvite.findUnique({
+            where: { tokenHash },
+            select: {
+              id: true,
+              roomId: true,
+              revokedAt: true,
+              expiresAt: true,
+              usedCount: true,
+              maxUses: true,
+            },
+          })
+        : Promise.resolve(null),
+    ]);
+    return { member, participant, joinRequest, invite };
+  },
+
+  async upsertJoinRequest(data: { roomId: string; userId: string; status: string }) {
+    return prisma.studioJoinRequest.upsert({
+      where: { roomId_userId: { roomId: data.roomId, userId: data.userId } },
+      update: { status: data.status },
+      create: { roomId: data.roomId, userId: data.userId, status: data.status },
+    });
+  },
+
+  async listJoinRequests(roomId: string, status?: string) {
+    return prisma.studioJoinRequest.findMany({
+      where: { roomId, ...(status ? { status } : {}) },
+      orderBy: { createdAt: "asc" },
+      include: {
+        user: { select: { id: true, name: true, image: true, email: true } },
+      },
+    });
+  },
+
+  async updateJoinRequestStatus(roomId: string, userId: string, status: string) {
+    return prisma.studioJoinRequest.update({
+      where: { roomId_userId: { roomId, userId } },
+      data: { status },
+    });
+  },
+
+  async setRoomLocked(roomId: string, isLocked: boolean) {
+    return prisma.room.update({ where: { id: roomId }, data: { isLocked } });
+  },
+
   async findById(id: string) {
     return prisma.room.findUnique({ where: { id } });
   },
