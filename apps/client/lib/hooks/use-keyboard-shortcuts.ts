@@ -19,13 +19,13 @@ export interface ShortcutDef {
 }
 
 export const SHORTCUTS: ShortcutDef[] = [
-  { keys: ["r"], action: "toggleRecording", label: "Start / Stop Recording" },
+  { keys: ["r"], action: "toggleRecording", label: "Start / Stop Recording (host)" },
   { keys: ["m"], action: "toggleMute", label: "Toggle Microphone Mute" },
   { keys: ["v"], action: "toggleVideo", label: "Toggle Video" },
   { keys: ["s"], action: "toggleScreenShare", label: "Toggle Screen Share" },
   { keys: ["Space"], action: "pttDown", label: "Push to Talk (hold)" },
-  { keys: ["?"], action: "toggleShortcuts", label: "Show Shortcuts" },
-  { keys: ["Esc"], action: "dismiss", label: "Close / Dismiss" },
+  { keys: ["?"], action: "toggleShortcuts", label: "Show / Hide Shortcuts Overlay" },
+  { keys: ["Esc"], action: "dismiss", label: "Close overlay or sidebar" },
 ];
 
 export function useKeyboardShortcuts(handlers: {

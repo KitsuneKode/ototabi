@@ -11,25 +11,12 @@ export type SessionUser = {
   name: string;
   email: string;
   image: string | null;
+  role?: string;
 };
 
 export type SessionPayload = {
   user: SessionUser;
 } | null;
-
-function mapAuthClientSession(
-  data: Awaited<ReturnType<typeof authClient.getSession>>["data"],
-): SessionPayload {
-  if (!data?.user) return null;
-  return {
-    user: {
-      id: data.user.id,
-      name: data.user.name,
-      email: data.user.email,
-      image: data.user.image ?? null,
-    },
-  };
-}
 
 /**
  * Shared session query — keeps the last known user while refetching so navigation
@@ -78,12 +65,10 @@ export function useRefreshAuthSession() {
   const trpc = useTRPC();
 
   return useCallback(async (): Promise<SessionPayload> => {
-    const { data } = await authClient.getSession();
-    const mapped = mapAuthClientSession(data);
+    await authClient.getSession();
     const queryKey = trpc.auth.getSession.queryOptions().queryKey;
-
-    queryClient.setQueryData(queryKey, mapped);
-
+    await queryClient.invalidateQueries({ queryKey });
+    const mapped = queryClient.getQueryData<SessionPayload>(queryKey) ?? null;
     return mapped;
   }, [queryClient, trpc]);
 }

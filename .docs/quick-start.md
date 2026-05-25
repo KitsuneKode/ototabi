@@ -79,6 +79,13 @@ Without S3 vars, uploads fall back to **mock URLs** — recording works locally 
 | `OPENAI_API_KEY` | Whisper transcript + LLM jobs                             |
 | `POLAR_*`        | Billing / subscriptions                                   |
 
+### Transcript pipeline (Plan 04)
+
+1. Set `OPENAI_API_KEY` and `REDIS_URL` in repo root `.env`.
+2. Run `bun dev` (starts API, client, and **worker**).
+3. Host stops a session after the microphone track upload completes.
+4. Worker queue `transcript` runs Whisper; segments appear on `/recordings/[sessionId]`.
+
 ### Express routes (API `:8080`)
 
 | Path              | Handler                                                     |
