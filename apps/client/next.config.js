@@ -2,8 +2,7 @@
 const apiOrigin = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 const nextConfig = {
-  /** Disabled until client Providers are PPR-safe (CI prerender useContext on null). */
-  // cacheComponents: true,
+  cacheComponents: true,
   transpilePackages: ["@ototabi/ui", "@ototabi/auth", "@ototabi/trpc", "@ototabi/store"],
   logging: {
     level: "verbose",

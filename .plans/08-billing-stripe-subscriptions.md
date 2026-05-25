@@ -1,7 +1,8 @@
-# Plan 08: Billing — Stripe Subscriptions
+# Plan 08: Billing — Dodo Payments Subscriptions
 
 **Status:** pending  
-**Priority:** P2
+**Priority:** P2  
+**Provider target:** [Dodo Payments](https://docs.dodopayments.com) (replace existing Polar scaffolding in `packages/billing`).
 
 ## Problem
 
@@ -9,7 +10,9 @@ The product has no revenue mechanism. AI features (Whisper, LLM) cost money to r
 
 ## Solution
 
-Stripe Checkout for subscription management. Plans: Trial (14 days, free) → Creator ($15/mo) → Pro ($29/mo) → Studio ($59/mo).
+Dodo Payments Checkout Sessions for subscription management. Plans: Trial (14 days, free) → Creator ($15/mo) → Pro ($29/mo) → Studio ($59/mo).
+
+**Migration note:** Repo currently wires Polar (`packages/billing`, `/api/polar-webhook`). Plan 08 implementation should swap to `DODO_PAYMENTS_API_KEY`, checkout session create, and Dodo webhooks for `Subscription` sync.
 
 ### Plan Gating
 
