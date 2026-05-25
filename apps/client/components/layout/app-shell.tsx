@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useState, type ReactNode } from "react";
 
+import { OtotabiLogoLockup, OtotabiLogoMark } from "@/components/brand/ototabi-logo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { NoiseBackground } from "@/components/ui/retro-primitives";
 import { usePendingUploadCount } from "@/lib/hooks/use-pending-upload-count";
@@ -110,15 +111,16 @@ export function AppShell({
         )}
       >
         <div className="border-border flex items-center justify-between gap-2 border-b px-3 py-4">
-          {collapsed ? null : (
-            <Link href="/dashboard" className="min-w-0">
-              <span className="font-display block text-lg font-bold tracking-tight uppercase">
-                Ototabi
-              </span>
-              <span className="text-subtle-foreground font-mono text-[9px] tracking-widest uppercase">
-                Studio Console
-              </span>
+          {collapsed ? (
+            <Link href="/dashboard" className="mx-auto" aria-label="Ototabi dashboard">
+              <OtotabiLogoMark className="h-9 w-9" />
             </Link>
+          ) : (
+            <OtotabiLogoLockup
+              href="/dashboard"
+              subtitle="Studio Console"
+              className="min-w-0 flex-1"
+            />
           )}
           <button
             type="button"

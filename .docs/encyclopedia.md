@@ -48,6 +48,10 @@
 | **Show Notes**  | LLM-generated summary, key topics, and SEO titles from a transcript.                                                                                      |
 | **Clip**        | A short video segment extracted from a recording. Can be vertical, horizontal, or square. With burned-in captions.                                        |
 
+## Brand
+
+Logo, palette, taglines, and asset paths: **[brand.md](brand.md)**.
+
 ## Design System
 
 | Term               | Definition                                                                                                                                               |

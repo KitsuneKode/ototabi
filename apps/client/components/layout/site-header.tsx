@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 
+import { OtotabiLogoLockup } from "@/components/brand/ototabi-logo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { MechButton } from "@/components/ui/retro-primitives";
 import { useSessionQuery } from "@/lib/hooks/use-session";
@@ -154,14 +155,13 @@ export function SiteHeader() {
   return (
     <header className="border-border mb-12 flex items-end justify-between gap-4 border-b pb-5">
       <div className="min-w-0 flex-1">
-        <Link href="/" className="group block">
-          <h1 className="font-display text-foreground m-0 text-3xl leading-none font-bold tracking-tight uppercase transition-opacity duration-150 group-hover:opacity-90 md:text-4xl">
-            Ototabi Studio
-          </h1>
-          <span className="text-subtle-foreground mt-1.5 block font-mono text-[10px] tracking-widest uppercase">
-            Model 16-A // Local-First Remote Recording
-          </span>
-        </Link>
+        <OtotabiLogoLockup
+          href="/"
+          title="Ototabi Studio"
+          subtitle="Model 16-A // Local-First Remote Recording"
+          markClassName="h-11 w-11 md:h-12 md:w-12"
+          className="group transition-opacity duration-150 group-hover:opacity-90"
+        />
       </div>
 
       <div className="flex items-end gap-4 md:gap-6">

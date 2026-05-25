@@ -23,11 +23,41 @@ const fontMono = Courier_Prime({
   weight: ["400", "700"],
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+const siteTitle = "Ototabi Studio — Professional Remote Recording";
+const siteDescription =
+  "Browser-based high-quality audio and video recording. Each participant records locally in pristine quality while staying synced in real-time.";
+const brandTagline = "LOCAL MASTERS. SYNCED.";
+
 export const metadata: Metadata = {
-  title: "OtoTabi Studio — Professional Remote Recording",
-  description:
-    "Browser-based high-quality audio and video recording. Each participant records locally in pristine quality while staying synced in real-time.",
-  icons: { icon: "/favicon.ico" },
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: siteTitle,
+    template: "%s · Ototabi Studio",
+  },
+  description: siteDescription,
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "Ototabi Studio",
+    title: `Ototabi Studio — ${brandTagline}`,
+    description: siteDescription,
+    images: [
+      {
+        url: "/brand/og.png",
+        width: 1200,
+        height: 630,
+        alt: `Ototabi Studio — ${brandTagline}`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `Ototabi Studio — ${brandTagline}`,
+    description: siteDescription,
+    images: ["/brand/twitter.png"],
+  },
 };
 
 export default function RootLayout({
