@@ -1,6 +1,7 @@
 {
   "extends": "@ototabi/typescript-config/nextjs.json",
   "compilerOptions": {
+    "lib": ["es2023", "DOM", "DOM.Iterable"],
     "baseUrl": ".",
     "ignoreDeprecations": "6.0",
     "paths": {
