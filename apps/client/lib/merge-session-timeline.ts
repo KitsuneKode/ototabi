@@ -49,3 +49,13 @@ export function getSyncMarkerOffsetMs(syncMarkers: SyncMarkerInput[] | undefined
   const sorted = [...syncMarkers].toSorted((a, b) => a.localTime - b.localTime);
   return sorted[0]?.localTime ?? 0;
 }
+
+/** Warn when multi-track export has no sync baseline. */
+export function getSyncConfidenceWarning(params: {
+  syncMarkerCount: number;
+  completedTrackCount: number;
+}): string | null {
+  if (params.completedTrackCount < 2) return null;
+  if (params.syncMarkerCount > 0) return null;
+  return "No sync markers recorded — multi-track merge/export may be out of phase. Use clock pulses in the studio before exporting.";
+}

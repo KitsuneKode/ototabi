@@ -19,6 +19,7 @@ import { TRPCError } from "@trpc/server";
 
 import { recordingEventsService } from "../recording-events/recording-events.service";
 import { roomsRepository } from "../rooms/rooms.repository";
+import { uploadsPolicy } from "./uploads.policy";
 import { uploadsRepository } from "./uploads.repository";
 
 async function scheduleTranscriptIfReady(sessionId: string) {
@@ -124,13 +125,13 @@ export const uploadsService = {
 
   async requireUploadOwner(params: { userId: string; key: string; uploadId: string }) {
     const upload = await uploadsRepository.findUploadForUser(params);
-    if (!upload) {
+    if (!uploadsPolicy.canActOnUploadSession(upload, params.userId)) {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: "Upload session not found or not owned by this user",
       });
     }
-    return upload;
+    return upload!;
   },
 
   async getSignedUrl(params: {

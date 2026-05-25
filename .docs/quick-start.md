@@ -99,11 +99,13 @@ Next.js **rewrites** (client `:3000`) proxy `/api/auth`, `/api/trpc`, `/api/gues
 
 ### Recording trust smoke (Plan 13)
 
+See [try-recovery-smoke.md](./try-recovery-smoke.md) for the full tab-kill → recovery → retry script.
+
 1. Host signs in → create room → open studio (`/chat/{code}`).
 2. Start/stop recording; confirm final chunk uploads (mic track `COMPLETED` in session review).
 3. Kill browser tab mid-upload → open **Recovery** → retry pending chunks.
 4. Guest join requires `?invite=` token (Room Settings → create invite).
-5. Export page applies sync marker offset when markers exist.
+5. Export page applies sync marker offset when markers exist; warns when multi-track export has no markers.
 
 ### Smoke test (backend)
 

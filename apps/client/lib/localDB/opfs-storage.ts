@@ -7,6 +7,13 @@
 
 const ROOT_DIR = "ototabi-chunks";
 
+const SESSION_ID_RE =
+  /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})_(.+)_chunk(\d+)\.webm$/i;
+
+type OpfsDir = {
+  entries?: () => AsyncIterable<[string, FileSystemHandle]>;
+};
+
 async function getRoot(): Promise<FileSystemDirectoryHandle> {
   const root = await navigator.storage.getDirectory();
   return root.getDirectoryHandle(ROOT_DIR, { create: true });
@@ -14,6 +21,22 @@ async function getRoot(): Promise<FileSystemDirectoryHandle> {
 
 function fileName(sessionId: string, chunkIndex: number, trackSid: string): string {
   return `${sessionId}_${trackSid}_chunk${chunkIndex}.webm`;
+}
+
+export type OpfsChunkRef = {
+  sessionId: string;
+  trackSid: string;
+  partNumber: number;
+};
+
+function parseChunkFileName(name: string): OpfsChunkRef | null {
+  const match = name.match(SESSION_ID_RE);
+  if (!match) return null;
+  return {
+    sessionId: match[1]!,
+    trackSid: match[2]!,
+    partNumber: Number.parseInt(match[3]!, 10),
+  };
 }
 
 export const opfsStorage = {
@@ -47,19 +70,28 @@ export const opfsStorage = {
     }
   },
 
+  async deleteTrackChunks(sessionId: string, trackSid: string): Promise<void> {
+    const prefix = `${sessionId}_${trackSid}_chunk`;
+    try {
+      const root = await getRoot();
+      const toDelete: string[] = [];
+      for await (const [name] of (root as OpfsDir).entries?.() ?? []) {
+        if (name.startsWith(prefix)) toDelete.push(name);
+      }
+      await Promise.all(toDelete.map((name) => root.removeEntry(name).catch(() => {})));
+    } catch {
+      // ignore cleanup errors
+    }
+  },
+
   async deleteSession(sessionId: string): Promise<void> {
     try {
       const root = await getRoot();
-      const entries: [string, FileSystemHandle][] = [];
-      for await (const entry of (root as any).entries?.() ?? []) {
-        entries.push(entry);
+      const toDelete: string[] = [];
+      for await (const [name] of (root as OpfsDir).entries?.() ?? []) {
+        if (name.startsWith(`${sessionId}_`)) toDelete.push(name);
       }
-      const toDelete = entries
-        .map(([name]) => name)
-        .filter((name) => name.startsWith(`${sessionId}_`));
-      for (const name of toDelete) {
-        await root.removeEntry(name).catch(() => {});
-      }
+      await Promise.all(toDelete.map((name) => root.removeEntry(name).catch(() => {})));
     } catch {
       // ignore cleanup errors
     }
@@ -69,10 +101,24 @@ export const opfsStorage = {
     try {
       const root = await getRoot();
       const names: string[] = [];
-      for await (const [name] of (root as any).entries?.() ?? []) {
+      for await (const [name] of (root as OpfsDir).entries?.() ?? []) {
         if (name.startsWith(`${sessionId}_`)) names.push(name);
       }
       return names;
+    } catch {
+      return [];
+    }
+  },
+
+  async listAllChunks(): Promise<OpfsChunkRef[]> {
+    try {
+      const root = await getRoot();
+      const refs: OpfsChunkRef[] = [];
+      for await (const [name] of (root as OpfsDir).entries?.() ?? []) {
+        const parsed = parseChunkFileName(name);
+        if (parsed) refs.push(parsed);
+      }
+      return refs;
     } catch {
       return [];
     }
@@ -83,7 +129,7 @@ export const opfsStorage = {
       const root = await getRoot();
       let files = 0;
       let bytes = 0;
-      for await (const [, handle] of (root as any).entries?.() ?? []) {
+      for await (const [, handle] of (root as OpfsDir).entries?.() ?? []) {
         if (handle.kind === "file") {
           files++;
           const file = await (handle as FileSystemFileHandle).getFile();
