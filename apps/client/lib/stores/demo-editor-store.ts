@@ -22,6 +22,7 @@ type DemoEditorState = {
   ) => void;
   setPreviewTimeMs: (ms: number) => void;
   addZoomRegion: (region: ZoomRegion) => void;
+  mergeSuggestedZoomRegions: (regions: ZoomRegion[]) => void;
   updateZoomRegion: (id: string, patch: Partial<ZoomRegion>) => void;
   removeZoomRegion: (id: string) => void;
   setTrimStartMs: (ms: number | null) => void;
@@ -57,6 +58,12 @@ export const useDemoEditorStore = create<DemoEditorState>((set) => ({
   addZoomRegion: (region) =>
     set((state) => ({
       zoomRegions: [...state.zoomRegions, region],
+      isDirty: true,
+    })),
+
+  mergeSuggestedZoomRegions: (regions) =>
+    set((state) => ({
+      zoomRegions: [...state.zoomRegions, ...regions],
       isDirty: true,
     })),
 

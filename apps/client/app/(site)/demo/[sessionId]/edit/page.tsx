@@ -14,6 +14,7 @@ import { MechButton, MonoLabel, PanelTitle } from "@/components/ui/retro-primiti
 import { DEMO_BACKGROUND_PRESETS } from "@/lib/demo/demo-background-presets";
 import { DEMO_EXPORT_LIMITS } from "@/lib/demo/demo-export-presets";
 import { DEMO_DISPLAY_TRACK_SID } from "@/lib/demo/demo-track-ids";
+import { suggestZoomRegionsFromCursor } from "@/lib/demo/suggest-zoom-from-cursor";
 import { useAuthGate } from "@/lib/hooks/use-session";
 import { Download } from "@/lib/icons";
 import { resolveTrackDownloadUrl } from "@/lib/resolve-track-download";
@@ -50,6 +51,7 @@ export default function DemoEditPage() {
     bindSession,
     setPreviewTimeMs,
     addZoomRegion,
+    mergeSuggestedZoomRegions,
     updateZoomRegion,
     removeZoomRegion,
     setTrimStartMs,
@@ -235,6 +237,23 @@ export default function DemoEditPage() {
               );
             })}
           </div>
+        </AnalogCard>
+
+        <AnalogCard className="space-y-4 p-6">
+          <PanelTitle label="Auto zoom" title="Cursor clusters (v1.1)" />
+          <MonoLabel className="text-muted-foreground block text-[10px] leading-relaxed">
+            Suggests zoom regions from pointer-down clusters. Review and edit before save.
+          </MonoLabel>
+          <MechButton
+            type="button"
+            onClick={() => {
+              const suggested = suggestZoomRegionsFromCursor(demoQuery.data.demo.cursorEvents);
+              if (suggested.length === 0) return;
+              mergeSuggestedZoomRegions(suggested);
+            }}
+          >
+            Suggest zoom from cursor
+          </MechButton>
         </AnalogCard>
 
         <DemoZoomRegionList

@@ -26,6 +26,8 @@ Each file is a scoped engineering initiative, implementable in one PR.
 | 20  | `20-creator-suite-execution.md` + batches  | done (batches 0–5; batch 6 future)      | P0       |
 | 24  | `24-demo-mode-browser.md`                  | done                                    | P2       |
 | 25  | `25-parallel-subagent-execution.md`        | in-progress                             | P0       |
+| 26  | `20-batch-6-reels.md`                      | pending                                 | P2       |
+| 25  | `25-parallel-subagent-execution.md`        | in-progress                             | P0       |
 
 ## Current focus (product-grade)
 

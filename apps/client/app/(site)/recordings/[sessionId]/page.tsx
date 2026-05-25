@@ -362,6 +362,12 @@ export default function RecordingSessionPage() {
               </AnalogCard>
             ) : null}
             <TranscriptEditor segments={transcriptSegments} />
+            <Link
+              href={`/export/${sessionId}`}
+              className="text-accent inline-block font-mono text-xs font-bold tracking-widest uppercase"
+            >
+              Open export console for text-based cuts →
+            </Link>
           </div>
         ) : null}
 

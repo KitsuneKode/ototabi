@@ -3,10 +3,6 @@ import type { Metadata } from "next";
 import { cn } from "@ototabi/ui/lib/utils";
 import { Courier_Prime, Oswald, Source_Sans_3 } from "next/font/google";
 import "@ototabi/ui/globals.css";
-import { Suspense } from "react";
-
-import { Providers } from "@/components/providers";
-
 /** Display — chassis labels, headings, mechanical buttons (uppercase) */
 const fontDisplay = Oswald({
   subsets: ["latin"],
@@ -45,11 +41,7 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn(fontDisplay.variable, fontSans.variable, fontMono.variable)}
     >
-      <body className="font-sans antialiased">
-        <Suspense fallback={null}>
-          <Providers>{children}</Providers>
-        </Suspense>
-      </body>
+      <body className="font-sans antialiased">{children}</body>
     </html>
   );
 }

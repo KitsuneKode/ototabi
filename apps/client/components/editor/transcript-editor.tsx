@@ -16,17 +16,36 @@ export type TranscriptSegmentRow = {
 export function TranscriptEditor({
   segments,
   onPreviewRange,
+  cutSegmentIds,
+  onToggleCutSegment,
+  previewRange,
 }: {
   segments: TranscriptSegmentRow[];
   onPreviewRange?: (startTime: number, endTime: number) => void;
+  /** When set, segment clicks toggle cut marks instead of single-select preview. */
+  cutSegmentIds?: string[];
+  onToggleCutSegment?: (segmentId: string) => void;
+  previewRange?: { startTime: number; endTime: number } | null;
 }) {
+  const cutMode = Boolean(onToggleCutSegment);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const selected = selectedIndex !== null ? segments[selectedIndex] : null;
 
-  const handleSelect = useCallback((index: number) => {
-    setSelectedIndex(index);
-  }, []);
+  const handleSelect = useCallback(
+    (index: number) => {
+      const seg = segments[index];
+      if (cutMode && seg?.id && onToggleCutSegment) {
+        onToggleCutSegment(seg.id);
+        return;
+      }
+      setSelectedIndex(index);
+      if (seg && onPreviewRange) {
+        onPreviewRange(seg.startTime, seg.endTime);
+      }
+    },
+    [cutMode, onToggleCutSegment, onPreviewRange, segments],
+  );
 
   const handlePreview = useCallback(() => {
     if (!selected || !onPreviewRange) return;
@@ -58,23 +77,34 @@ export function TranscriptEditor({
       </div>
 
       <div className="grid max-h-[320px] grid-cols-1 gap-2 overflow-y-auto md:grid-cols-2">
-        {segments.map((seg, index) => (
-          <button
-            key={seg.id ?? `${seg.startTime}-${index}`}
-            type="button"
-            onClick={() => handleSelect(index)}
-            className={`border-border rounded border p-3 text-left transition-colors ${
-              selectedIndex === index
-                ? "border-accent bg-accent/5"
-                : "bg-card hover:border-accent/30"
-            }`}
-          >
-            <MonoLabel className="text-[9px]">
-              {formatTimestamp(seg.startTime)} – {formatTimestamp(seg.endTime)}
-            </MonoLabel>
-            <p className="text-foreground mt-2 font-mono text-xs leading-relaxed">{seg.text}</p>
-          </button>
-        ))}
+        {segments.map((seg, index) => {
+          const isCut = seg.id ? (cutSegmentIds?.includes(seg.id) ?? false) : false;
+          const inPreview =
+            previewRange &&
+            seg.endTime >= previewRange.startTime &&
+            seg.startTime <= previewRange.endTime;
+          return (
+            <button
+              key={seg.id ?? `${seg.startTime}-${index}`}
+              type="button"
+              onClick={() => handleSelect(index)}
+              className={`border-border rounded border p-3 text-left transition-colors ${
+                isCut
+                  ? "border-led-on/30 bg-led-on/10 line-through opacity-60"
+                  : inPreview
+                    ? "border-accent bg-accent/10"
+                    : selectedIndex === index && !cutMode
+                      ? "border-accent bg-accent/5"
+                      : "bg-card hover:border-accent/30"
+              }`}
+            >
+              <MonoLabel className="text-[9px]">
+                {formatTimestamp(seg.startTime)} – {formatTimestamp(seg.endTime)}
+              </MonoLabel>
+              <p className="text-foreground mt-2 font-mono text-xs leading-relaxed">{seg.text}</p>
+            </button>
+          );
+        })}
       </div>
 
       {selected ? (

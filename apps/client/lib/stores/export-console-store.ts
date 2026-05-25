@@ -20,6 +20,7 @@ type ExportConsoleState = {
   progress: number;
   selectedTrackIds: string[];
   cutSegmentIds: string[];
+  previewCutRange: { startTime: number; endTime: number } | null;
   trimStart: string;
   trimEnd: string;
   trimTrackId: string | null;
@@ -39,6 +40,7 @@ type ExportConsoleState = {
   toggleTrack: (trackId: string) => void;
   toggleCutSegment: (segmentId: string) => void;
   clearCutSegments: () => void;
+  setPreviewCutRange: (range: { startTime: number; endTime: number } | null) => void;
 };
 
 const initialExportConsole = {
@@ -49,6 +51,7 @@ const initialExportConsole = {
   progress: 0,
   selectedTrackIds: [] as string[],
   cutSegmentIds: [] as string[],
+  previewCutRange: null as { startTime: number; endTime: number } | null,
   trimStart: "",
   trimEnd: "",
   trimTrackId: null as string | null,
@@ -102,5 +105,7 @@ export const useExportConsoleStore = create<ExportConsoleState>((set, get) => ({
       cutSegmentIds: toggleId(state.cutSegmentIds, segmentId),
     })),
 
-  clearCutSegments: () => set({ cutSegmentIds: [] }),
+  clearCutSegments: () => set({ cutSegmentIds: [], previewCutRange: null }),
+
+  setPreviewCutRange: (range) => set({ previewCutRange: range }),
 }));
