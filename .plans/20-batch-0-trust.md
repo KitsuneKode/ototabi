@@ -14,13 +14,13 @@
 
 ## Acceptance (Batch 0 complete when)
 
-- [ ] Final MediaRecorder chunk awaited before upload complete
-- [ ] Chunks dual-written OPFS + IndexedDB; upload reads OPFS first
-- [ ] Recovery console finds orphans in both stores
-- [ ] Guest cannot complete another user's upload
-- [ ] LiveKit token denied without room access
-- [ ] Session review shows sync markers; export applies offset
-- [ ] E2E smoke documented in `.docs/quick-start.md`
+- [x] Final MediaRecorder chunk awaited before upload complete
+- [x] Chunks dual-written OPFS + IndexedDB; upload reads OPFS first
+- [x] Recovery console finds orphans in both stores
+- [x] Guest cannot complete another user's upload
+- [x] LiveKit token denied without room access
+- [x] Session review shows sync markers; export applies offset
+- [x] E2E smoke documented in `.docs/quick-start.md`
 
 ---
 

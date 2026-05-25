@@ -57,7 +57,7 @@ export default function RoomSettingsPage() {
   // ── Auth Gate ──────────────────────────────────────────────────────────
   if (!authState.isLoading && !authState.data) {
     return (
-      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
+      <div className="bg-background flex min-h-[100dvh] flex-col items-center justify-center px-4 font-sans">
         <MechButton
           onClick={() => router.push("/auth/signin")}
           className="w-full max-w-xs justify-center"
@@ -117,7 +117,7 @@ export default function RoomSettingsPage() {
   // ── Loading ──────────────────────────────────────────────────────────────
   if (roomInfo.isLoading) {
     return (
-      <div className="bg-background flex min-h-screen items-center justify-center font-sans">
+      <div className="bg-background flex min-h-[100dvh] items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-3">
           <div className="border-border border-t-accent h-8 w-8 animate-spin rounded-full border-2" />
           <span className="animate-pulse font-mono text-xs font-bold tracking-widest uppercase">
@@ -130,7 +130,7 @@ export default function RoomSettingsPage() {
 
   if (!roomInfo.data) {
     return (
-      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
+      <div className="bg-background flex min-h-[100dvh] flex-col items-center justify-center px-4 font-sans">
         <AnalogCard className="w-full max-w-sm p-8 text-center">
           <AlertTriangle className="text-led-on mx-auto mb-4 h-10 w-10" />
           <p className="text-led-on mb-4 text-sm font-bold uppercase">Room Not Found</p>

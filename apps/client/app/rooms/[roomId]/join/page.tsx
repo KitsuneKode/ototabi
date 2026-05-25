@@ -201,7 +201,7 @@ export default function RoomJoinPage() {
   // ── Loading ──────────────────────────────────────────────────────────────
   if (roomInfo.isLoading) {
     return (
-      <div className="bg-background flex min-h-screen items-center justify-center font-sans">
+      <div className="bg-background flex min-h-[100dvh] items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-3">
           <RefreshCw className="text-accent h-8 w-8 animate-spin" />
           <span className="animate-pulse font-mono text-xs font-bold tracking-widest uppercase">
@@ -215,7 +215,7 @@ export default function RoomJoinPage() {
   // ── Error ────────────────────────────────────────────────────────────────
   if (roomInfo.error || !roomInfo.data || inviteInfo.error) {
     return (
-      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
+      <div className="bg-background flex min-h-[100dvh] flex-col items-center justify-center px-4 font-sans">
         <AnalogCard className="w-full max-w-md p-8 text-center">
           <AlertTriangle className="text-led-on mx-auto mb-4 h-12 w-12" />
           <p className="text-led-on mb-2 text-lg font-bold tracking-wider uppercase">

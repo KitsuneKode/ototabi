@@ -256,7 +256,7 @@ export default function StudioPage() {
   // ─── Auth Gate ──────────────────────────────────────────────────────────
   if (!authState.isLoading && !authState.data) {
     return (
-      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
+      <div className="bg-background flex min-h-[100dvh] flex-col items-center justify-center px-4 font-sans">
         <AnalogCard className="w-full max-w-sm p-8 text-center">
           <AlertTriangle className="text-led-on mx-auto mb-4 h-12 w-12" />
           <p className="text-led-on mb-2 text-sm font-bold tracking-wider uppercase">
@@ -276,7 +276,7 @@ export default function StudioPage() {
   // ─── Error State ────────────────────────────────────────────────────────────
   if (connection.phase === "error" || connection.error) {
     return (
-      <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4 font-sans">
+      <div className="bg-background flex min-h-[100dvh] flex-col items-center justify-center px-4 font-sans">
         <AnalogCard className="w-full max-w-sm p-8 text-center">
           <div className="bg-led-on/10 border-led-on/30 mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border">
             <AlertTriangle className="text-led-on h-6 w-6" />
@@ -298,7 +298,7 @@ export default function StudioPage() {
   // ─── Loading State ───────────────────────────────────────────────────────────
   if (connection.phase !== "connected" || !roomDetails || !sessionUser) {
     return (
-      <div className="bg-background text-foreground flex min-h-screen items-center justify-center font-sans">
+      <div className="bg-background text-foreground flex min-h-[100dvh] items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-4">
           <div className="border-border border-t-accent h-8 w-8 animate-spin rounded-full border-2" />
           <div className="space-y-1 text-center">

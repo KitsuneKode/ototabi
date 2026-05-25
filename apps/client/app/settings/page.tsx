@@ -98,7 +98,7 @@ export default function SettingsPage() {
   // ── Loading ──────────────────────────────────────────────────────────────
   if (me.isLoading) {
     return (
-      <div className="bg-background flex min-h-screen items-center justify-center font-sans">
+      <div className="bg-background flex min-h-[100dvh] items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-3">
           <div className="border-border border-t-accent h-8 w-8 animate-spin rounded-full border-2" />
           <span className="animate-pulse font-mono text-xs font-bold tracking-widest uppercase">

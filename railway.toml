@@ -1,0 +1,16 @@
+# Railway multi-service stub — configure services in the Railway dashboard or CLI.
+# Build context must be the monorepo root so workspace packages resolve.
+# See .docs/deploy-railway.md for env matrix, plugins, and smoke tests.
+
+[build]
+builder = "DOCKERFILE"
+
+[[services]]
+name = "ototabi-api"
+dockerfilePath = "apps/api/Dockerfile"
+watchPatterns = ["apps/api/**", "packages/**"]
+
+[[services]]
+name = "ototabi-worker"
+dockerfilePath = "apps/worker/Dockerfile"
+watchPatterns = ["apps/worker/**", "packages/**"]
