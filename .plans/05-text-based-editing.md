@@ -1,6 +1,6 @@
 # Plan 05: Text-Based Editing
 
-**Status:** in-progress — `TranscriptEditor` on recordings/export; full FFmpeg cut export TBD  
+**Status:** in-progress — cut export **shipped** in browser; preview polish + Pro UI gate TBD  
 **Priority:** P1
 
 ## Problem
@@ -13,13 +13,13 @@ Display the transcript on the export page. User selects a sentence or paragraph 
 
 This is the marquee demo feature — Descript charges $15/mo for this.
 
-## Implementation
+## Implementation (current)
 
-1. Load transcript segments for the session
-2. Render transcript as selectable text blocks with timestamps
-3. User selects text range → system marks as "cut"
-4. On apply: FFmpeg.wasm trims each track to remove marked segments
-5. Download edited video
+1. `TranscriptEditor` + `export-console-store` cut mode on export page — **done**
+2. `handleCuts` in `export/[sessionId]/page.tsx` — keep-ranges + FFmpeg concat per track — **done**
+3. Preview cut range in store — partial
+4. Pro plan UI disable (Plan 08) — **TBD**
+5. Smoke: select segments → remove → download — add to try-local-smoke
 
 ## Files to Change
 

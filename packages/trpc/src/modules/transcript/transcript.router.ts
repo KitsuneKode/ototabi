@@ -2,7 +2,7 @@ import type { TRPCRouterRecord } from "@trpc/server";
 
 import { z } from "zod";
 
-import { memberProcedure } from "../../trpc";
+import { memberProcedure, proProcedure } from "../../trpc";
 import { transcriptService } from "./transcript.service";
 
 export const transcriptRouter = {
@@ -10,11 +10,11 @@ export const transcriptRouter = {
     .input(z.object({ sessionId: z.string() }))
     .query(({ input }) => transcriptService.getSegments(input.sessionId)),
 
-  getChapters: memberProcedure
+  getChapters: proProcedure
     .input(z.object({ sessionId: z.string() }))
     .query(({ input }) => transcriptService.getChapters(input.sessionId)),
 
-  getShowNotes: memberProcedure
+  getShowNotes: proProcedure
     .input(z.object({ sessionId: z.string() }))
     .query(({ input }) => transcriptService.getShowNotes(input.sessionId)),
 } satisfies TRPCRouterRecord;

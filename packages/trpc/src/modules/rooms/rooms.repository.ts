@@ -251,6 +251,14 @@ export const roomsRepository = {
     return prisma.recordingSession.findUnique({ where: { id: sessionId } });
   },
 
+  async findSessionHostUserId(sessionId: string): Promise<string | null> {
+    const row = await prisma.recordingSession.findUnique({
+      where: { id: sessionId },
+      select: { room: { select: { creatorId: true } } },
+    });
+    return row?.room.creatorId ?? null;
+  },
+
   async findActiveSessionByRoom(roomId: string) {
     return prisma.recordingSession.findFirst({
       where: { roomId, status: "RECORDING" },

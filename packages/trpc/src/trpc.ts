@@ -14,7 +14,7 @@ export const createTRPCContext = async ({ req }: trpcExpress.CreateExpressContex
 
   let userRole: string | null = null;
   if (session?.user?.id) {
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: session.user.id },
       select: { role: true },
     });
@@ -59,21 +59,38 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
   return result;
 });
 
+import type { Plan } from "@ototabi/store";
+
+import {
+  planGateError,
+  resolveEffectivePlan,
+  satisfiesMinimumPlan,
+  shouldBypassPlanGates,
+} from "@ototabi/billing/plan-policy";
 import { prisma } from "@ototabi/store";
 
-const PLAN_ORDER: Record<string, number> = { TRIAL: 0, CREATOR: 1, PRO: 2, STUDIO: 3 };
-
-export function requirePlan(minimum: string) {
+export function requirePlan(minimum: Plan) {
   return t.middleware(async ({ ctx, next }) => {
     if (!ctx.session?.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+    if (shouldBypassPlanGates()) {
+      return next();
+    }
     const sub = await prisma.subscription.findUnique({
       where: { userId: ctx.session.user.id },
     });
-    const currentPlan = sub?.plan || "TRIAL";
-    if ((PLAN_ORDER[currentPlan] || 0) < (PLAN_ORDER[minimum] || 0)) {
+    const effective = resolveEffectivePlan(
+      sub
+        ? {
+            plan: sub.plan,
+            status: sub.status,
+            trialEndsAt: sub.trialEndsAt,
+          }
+        : null,
+    );
+    if (!satisfiesMinimumPlan(effective, minimum)) {
       throw new TRPCError({
         code: "FORBIDDEN",
-        message: `This feature requires the ${minimum} plan or higher`,
+        message: planGateError(minimum),
       });
     }
     return next();
@@ -115,3 +132,12 @@ export const memberProcedure = protectedProcedure.use(({ ctx, next }) => {
   }
   return next({ ctx });
 });
+
+/** Paid AI clips lane — Creator tier and above (Plan 08). */
+export const creatorProcedure = protectedProcedure.use(requirePlan("CREATOR"));
+
+/** Transcript + chapters + text-edit server actions — Pro tier and above (Plan 08). */
+export const proProcedure = protectedProcedure.use(requirePlan("PRO"));
+
+/** Host console + Pro-tier paid pipeline (Whisper retry, etc.). */
+export const hostProProcedure = hostProcedure.use(requirePlan("PRO"));

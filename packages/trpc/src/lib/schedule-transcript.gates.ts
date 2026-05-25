@@ -2,7 +2,8 @@ export type ScheduleTranscriptResult =
   | { status: "queued" }
   | { status: "already_ready" }
   | { status: "waiting_for_upload" }
-  | { status: "session_not_complete" };
+  | { status: "session_not_complete" }
+  | { status: "plan_upgrade_required" };
 
 export function evaluateScheduleTranscript(input: {
   sessionStatus: string | undefined;

@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-import { memberProcedure } from "../../trpc";
+import { creatorProcedure, memberProcedure } from "../../trpc";
 import { clipsService } from "./clips.service";
 
 export const clipsRouter = {
@@ -10,7 +10,7 @@ export const clipsRouter = {
       clipsService.listForSession({ actorId: ctx.session.user.id, sessionId: input.sessionId }),
     ),
 
-  queueVerticalRender: memberProcedure
+  queueVerticalRender: creatorProcedure
     .input(z.object({ sessionId: z.string(), clipId: z.string() }))
     .mutation(({ input, ctx }) =>
       clipsService.queueClipRender({
@@ -22,7 +22,7 @@ export const clipsRouter = {
 
   listReelsPresets: memberProcedure.query(() => clipsService.listReelsPresets()),
 
-  queueReelsRender: memberProcedure
+  queueReelsRender: creatorProcedure
     .input(
       z.object({
         sessionId: z.string(),
@@ -39,7 +39,7 @@ export const clipsRouter = {
       }),
     ),
 
-  regenerate: memberProcedure
+  regenerate: creatorProcedure
     .input(z.object({ sessionId: z.string() }))
     .mutation(({ input, ctx }) =>
       clipsService.regenerateClips({

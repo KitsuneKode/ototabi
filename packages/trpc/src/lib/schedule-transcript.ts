@@ -1,3 +1,8 @@
+import {
+  resolveEffectivePlan,
+  satisfiesMinimumPlan,
+  shouldBypassPlanGates,
+} from "@ototabi/billing/plan-policy";
 import { transcriptJobId } from "@ototabi/common/pipeline-status";
 import { getTranscriptQueue } from "@ototabi/jobs/queues";
 import { prisma } from "@ototabi/store";
@@ -37,6 +42,20 @@ export async function scheduleTranscriptForSession(
   });
   if (gate.status !== "queued") {
     return gate;
+  }
+
+  if (!shouldBypassPlanGates()) {
+    const hostUserId = await roomsRepository.findSessionHostUserId(sessionId);
+    if (hostUserId) {
+      const sub = await prisma.subscription.findUnique({
+        where: { userId: hostUserId },
+        select: { plan: true, status: true, trialEndsAt: true },
+      });
+      const effective = resolveEffectivePlan(sub);
+      if (!satisfiesMinimumPlan(effective, "PRO")) {
+        return { status: "plan_upgrade_required" };
+      }
+    }
   }
 
   if (!audioTrack?.s3Key) {

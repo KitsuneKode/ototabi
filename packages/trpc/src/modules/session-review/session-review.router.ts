@@ -2,7 +2,7 @@ import type { TRPCRouterRecord } from "@trpc/server";
 
 import { z } from "zod";
 
-import { hostProcedure } from "../../trpc";
+import { hostProcedure, hostProProcedure } from "../../trpc";
 import { getSessionReviewSchema, retryTranscriptSchema } from "./session-review.dto";
 import { sessionReviewService } from "./session-review.service";
 
@@ -19,7 +19,7 @@ export const sessionReviewRouter = {
     }),
   ),
 
-  retryTranscript: hostProcedure.input(retryTranscriptSchema).mutation(({ input, ctx }) =>
+  retryTranscript: hostProProcedure.input(retryTranscriptSchema).mutation(({ input, ctx }) =>
     sessionReviewService.retryTranscript({
       actorId: ctx.session.user.id,
       sessionId: input.sessionId,

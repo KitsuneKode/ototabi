@@ -1,6 +1,6 @@
 # Plan 08: Billing — Dodo Payments Subscriptions
 
-**Status:** done (May 2026) — Dodo checkout + `/api/dodo-webhook`; **`requirePlan` not yet applied** to AI/export routers  
+**Status:** in-progress — Dodo checkout + webhooks **done**; API plan gating **wired** (May 2026); usage caps + export UI TBD  
 **Priority:** P2  
 **Provider:** [Dodo Payments](https://docs.dodopayments.com) (`packages/billing`, `apps/api/src/routes/dodo-webhook.ts`).
 
@@ -12,7 +12,9 @@ The product has no revenue mechanism. AI features (Whisper, LLM) cost money to r
 
 Dodo Payments Checkout Sessions for subscription management. Plans: Trial (14 days, free) → Creator ($15/mo) → Pro ($29/mo) → Studio ($59/mo).
 
-**Follow-up:** Wire `requirePlan` from `packages/trpc/src/trpc.ts` on transcript/LLM/export procedures; enforce trial expiry and feature matrix below.
+**Shipped (API):** `billing/plan-policy`, `creatorProcedure` / `proProcedure` / `hostProProcedure`, clips + transcript + Whisper schedule gates when `DODO_PAYMENTS_API_KEY` is set.
+
+**Follow-up:** Trial session cap (3), Creator clip monthly limit (10), export page disables Pro-only actions, trial expiry banner in settings.
 
 ### Plan Gating
 
