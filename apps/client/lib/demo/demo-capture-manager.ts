@@ -3,6 +3,12 @@ import { DEMO_DISPLAY_TRACK_SID, DEMO_MIC_TRACK_SID } from "@/lib/demo/demo-trac
 import { db } from "@/lib/localDB";
 import { opfsStorage } from "@/lib/localDB/opfs-storage";
 import { S3Uploader } from "@/lib/uploader/s3-uploader";
+import {
+  countPendingChunks,
+  resetStuckUploadingChunks,
+  scheduleChunkUploads,
+} from "@/lib/uploader/upload-chunk-queue";
+import { UploadWorkerPool } from "@/lib/uploader/upload-worker-pool";
 
 type RecordingState = "idle" | "recording" | "stopped";
 
@@ -16,6 +22,7 @@ export class DemoCaptureManager {
   private trackPartCounters = new Map<string, number>();
   private chunkWritePromises = new Map<string, Set<Promise<void>>>();
   private queueIntervalId: number | null = null;
+  private readonly uploadPool = new UploadWorkerPool();
   private readonly chunkInterval = 4000;
   private readonly cursorLogger = new DemoCursorLogger();
   private displayStream: MediaStream | null = null;
@@ -40,7 +47,9 @@ export class DemoCaptureManager {
     }
 
     this.cursorLogger.start();
-    this.queueIntervalId = window.setInterval(() => this.processUploadQueue(), 1500);
+    this.queueIntervalId = window.setInterval(() => {
+      void this.pumpUploadQueue();
+    }, 500);
 
     await this.startTrackRecorder(
       DEMO_DISPLAY_TRACK_SID,
@@ -63,6 +72,8 @@ export class DemoCaptureManager {
     videoTrack?.addEventListener("ended", () => {
       void this.stopCapture();
     });
+
+    void this.pumpUploadQueue();
   }
 
   async stopCapture(): Promise<{ cursorEvents: ReturnType<DemoCursorLogger["stop"]> }> {
@@ -78,8 +89,10 @@ export class DemoCaptureManager {
 
     const trackSids = Array.from(this.recorders.keys());
     for (const trackSid of trackSids) {
-      await this.stopTrackRecorder(trackSid);
+      await this.stopTrackRecorder(trackSid, { finalize: false });
     }
+
+    await this.flushUploads();
 
     this.displayStream?.getTracks().forEach((t) => t.stop());
     this.micStream?.getTracks().forEach((t) => t.stop());
@@ -91,19 +104,10 @@ export class DemoCaptureManager {
   }
 
   async flushUploads(): Promise<void> {
-    for (let i = 0; i < 50; i++) {
-      const pending = await db.chunks.where("status").anyOf("pending", "failed").first();
-      if (!pending) break;
-      await this.processUploadQueue(pending.trackSid);
-      await new Promise((r) => setTimeout(r, 200));
-    }
-
-    for (const trackSid of Array.from(this.uploaders.keys())) {
-      const uploader = this.uploaders.get(trackSid);
-      if (uploader) {
-        await uploader.complete();
-        await db.uploadSessions.delete(trackSid);
-      }
+    await this.drainUploads();
+    const trackSids = Array.from(this.uploaders.keys());
+    for (const trackSid of trackSids) {
+      await this.finalizeTrackUpload(trackSid);
     }
     this.uploaders.clear();
   }
@@ -158,6 +162,7 @@ export class DemoCaptureManager {
       writes?.add(writePromise);
       try {
         await writePromise;
+        void this.pumpUploadQueue(trackSid);
       } finally {
         writes?.delete(writePromise);
       }
@@ -167,7 +172,10 @@ export class DemoCaptureManager {
     this.recorders.set(trackSid, recorder);
   }
 
-  private async stopTrackRecorder(trackSid: string) {
+  private async stopTrackRecorder(
+    trackSid: string,
+    options: { finalize: boolean } = { finalize: true },
+  ) {
     const recorder = this.recorders.get(trackSid);
     if (recorder && recorder.state !== "inactive") {
       const stopped = new Promise<void>((resolve) => {
@@ -179,36 +187,52 @@ export class DemoCaptureManager {
       if (writes?.size) await Promise.all(Array.from(writes));
     }
     this.recorders.delete(trackSid);
-    await this.processUploadQueue(trackSid);
+
+    await this.drainUploads(trackSid);
+
+    if (options.finalize) {
+      await this.finalizeTrackUpload(trackSid);
+    }
   }
 
-  private async processUploadQueue(specificTrackSid?: string) {
-    const query = specificTrackSid
-      ? db.chunks
-          .where("trackSid")
-          .equals(specificTrackSid)
-          .filter((c) => c.status === "pending" || c.status === "failed")
-      : db.chunks.where("status").anyOf("pending", "failed");
+  private async pumpUploadQueue(trackSid?: string): Promise<void> {
+    await scheduleChunkUploads({
+      pool: this.uploadPool,
+      getUploader: (sid) => this.uploaders.get(sid),
+      trackSid,
+      onChunkFailed: (sid, partNumber, error) => {
+        console.error(`Demo upload failed for ${sid}-${partNumber}:`, error);
+      },
+    });
+  }
 
-    const chunkToUpload = await query.first();
-    if (!chunkToUpload) return;
+  private async drainUploads(trackSid?: string): Promise<void> {
+    await resetStuckUploadingChunks(trackSid);
+    await this.uploadPool.drain(
+      () => this.pumpUploadQueue(trackSid),
+      async () => (await countPendingChunks(trackSid)) > 0,
+    );
+  }
 
-    const uploader = this.uploaders.get(chunkToUpload.trackSid);
+  private async finalizeTrackUpload(trackSid: string): Promise<void> {
+    const uploader = this.uploaders.get(trackSid);
     if (!uploader) return;
 
-    try {
-      await db.chunks.update(chunkToUpload.id, { status: "uploading" });
-      const chunkBlob =
-        (await opfsStorage.readChunk(
-          uploader.getSessionId(),
-          chunkToUpload.partNumber,
-          chunkToUpload.trackSid,
-        )) ?? chunkToUpload.data;
-      await uploader.uploadChunk(chunkBlob, chunkToUpload.partNumber);
-      await db.chunks.delete(chunkToUpload.id);
-    } catch (error) {
-      await db.chunks.update(chunkToUpload.id, { status: "failed" });
-      console.error(`Demo upload failed for ${chunkToUpload.id}:`, error);
+    const pending = await countPendingChunks(trackSid);
+    const expectedParts = this.trackPartCounters.get(trackSid) ?? 0;
+    if (pending > 0 || !uploader.hasAllParts(expectedParts)) {
+      console.warn(
+        `Demo skip complete for ${trackSid}: pending=${pending}, expected=${expectedParts}`,
+      );
+      return;
     }
+
+    await uploader.complete();
+    if (this.sessionId) {
+      await opfsStorage.deleteTrackChunks(this.sessionId, trackSid);
+    }
+    await db.uploadSessions.delete(trackSid);
+    this.uploaders.delete(trackSid);
+    this.chunkWritePromises.delete(trackSid);
   }
 }

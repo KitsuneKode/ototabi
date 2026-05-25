@@ -41,6 +41,16 @@ export class S3Uploader {
   getUploadId = (): string | null => this.uploadId;
   getS3Key = (): string | null => this.s3Key;
   getSessionId = (): string => this.sessionId;
+  getUploadedPartCount = (): number => this.parts.size;
+
+  /** True when parts 1..expectedPartCount are present on the multipart upload. */
+  hasAllParts(expectedPartCount: number): boolean {
+    if (expectedPartCount <= 0) return false;
+    for (let partNumber = 1; partNumber <= expectedPartCount; partNumber++) {
+      if (!this.parts.has(partNumber)) return false;
+    }
+    return true;
+  }
 
   /**
    * Calls the backend to start a new multipart upload, receiving an uploadId and a final S3 key.
@@ -132,7 +142,11 @@ export class S3Uploader {
           });
 
           if (!uploadResponse.ok) {
-            throw new Error(`S3 PUT failed with status ${uploadResponse.status}`);
+            const status = uploadResponse.status;
+            if (status === 503 || status === 429) {
+              throw new Error(`S3 PUT rate limited with status ${status}`);
+            }
+            throw new Error(`S3 PUT failed with status ${status}`);
           }
 
           const responseEtag = uploadResponse.headers.get("ETag");
@@ -162,7 +176,7 @@ export class S3Uploader {
   async complete(): Promise<void> {
     if (!this.uploadId || !this.s3Key || this.parts.size === 0) return;
     const sortedParts = Array.from(this.parts.entries())
-      .sort(([numA], [numB]) => numA - numB)
+      .toSorted(([numA], [numB]) => numA - numB)
       .map(([PartNumber, { ETag }]) => ({ ETag, PartNumber }));
 
     try {

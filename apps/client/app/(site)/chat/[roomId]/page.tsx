@@ -56,7 +56,16 @@ function StudioPageContent() {
   const [isPaused, setIsPaused] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [progressMap, setProgressMap] = useState<
-    Map<string, { name: string; progress: number; type: string }>
+    Map<
+      string,
+      {
+        name: string;
+        progress: number;
+        type: string;
+        uploadedParts?: number;
+        totalParts?: number;
+      }
+    >
   >(new Map());
   const [sidebarTab, setSidebarTab] = useState<"uploads" | "chat">("uploads");
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -152,11 +161,21 @@ function StudioPageContent() {
           setIsRecording(false);
           void recorderManagerRef.current?.current?.stopRecording();
         } else if (data.type === "upload_progress") {
+          const uploadedParts =
+            typeof data.uploadedParts === "number" ? data.uploadedParts : undefined;
+          const totalParts = typeof data.totalParts === "number" ? data.totalParts : undefined;
+          const progress =
+            totalParts && totalParts > 0 && uploadedParts !== undefined
+              ? Math.min(Math.round((uploadedParts / totalParts) * 100), data.progress ?? 99)
+              : (data.progress ?? 0);
+
           setProgressMap((prev) => {
             const next = new Map(prev);
             next.set(data.trackSid, {
               name: participant?.identity || "Guest",
-              progress: data.progress,
+              progress,
+              uploadedParts,
+              totalParts,
               type: data.trackSid.includes("video") ? "VIDEO" : "AUDIO",
             });
             return next;
@@ -580,7 +599,9 @@ function StudioPageContent() {
 
                             <div className="text-muted-foreground/60 mt-2 flex items-center justify-between font-mono text-[10px]">
                               <span className="max-w-[140px] truncate uppercase">
-                                SID: {trackSid.slice(-10)}
+                                {data.totalParts
+                                  ? `PART ${data.uploadedParts ?? 0}/${data.totalParts}`
+                                  : `SID: ${trackSid.slice(-10)}`}
                               </span>
                               {data.progress === 100 && (
                                 <span className="text-led-green flex items-center gap-0.5 font-bold">

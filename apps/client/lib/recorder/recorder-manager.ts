@@ -10,6 +10,12 @@ import {
 import { db } from "@/lib/localDB";
 import { opfsStorage } from "@/lib/localDB/opfs-storage";
 import { S3Uploader } from "@/lib/uploader/s3-uploader";
+import {
+  countPendingChunks,
+  resetStuckUploadingChunks,
+  scheduleChunkUploads,
+} from "@/lib/uploader/upload-chunk-queue";
+import { UploadWorkerPool } from "@/lib/uploader/upload-worker-pool";
 
 type RecordingState = "idle" | "recording" | "stopped";
 
@@ -22,12 +28,14 @@ export class RecorderManager {
   private state: RecordingState = "idle";
   private chunkInterval: number = 4000; // Slice video every 4 seconds
   private queueIntervalId: number | null = null;
+  private readonly uploadPool = new UploadWorkerPool();
 
   // Active session and byte tracking for progress calculation
   private sessionId: string | null = null;
   private trackTotalBytes: Map<string, number> = new Map();
   private trackUploadedPartsProgress: Map<string, Map<number, number>> = new Map();
   private trackPartSizes: Map<string, Map<number, number>> = new Map();
+  private trackCompletedParts: Map<string, Set<number>> = new Map();
   private chunkWritePromises: Map<string, Set<Promise<void>>> = new Map();
   private onLocalProgress?: (trackSid: string, progress: number) => void;
 
@@ -48,8 +56,10 @@ export class RecorderManager {
 
     // Recover incomplete uploads from previous sessions
     this.recoverOrphanedUploads().then(() => {
-      // Start the background queue processor
-      this.queueIntervalId = window.setInterval(() => this.processUploadQueue(), 1500);
+      this.queueIntervalId = window.setInterval(() => {
+        void this.pumpUploadQueue();
+      }, 500);
+      void this.pumpUploadQueue();
     });
   }
 
@@ -86,11 +96,12 @@ export class RecorderManager {
     this.localParticipant.off(RoomEvent.LocalTrackUnpublished, this.handleTrackUnpublished);
     this.room.off(RoomEvent.Disconnected, this.handleDisconnect);
 
-    // Stop all active recorders
     const trackSids = Array.from(this.recorders.keys());
     for (const trackSid of trackSids) {
-      await this.stopTrackRecorder(trackSid);
+      await this.stopTrackRecorder(trackSid, { finalize: false });
     }
+
+    await this.completeProcessing();
   }
 
   public pauseRecording() {
@@ -120,6 +131,7 @@ export class RecorderManager {
    */
   private async recoverOrphanedUploads() {
     try {
+      await resetStuckUploadingChunks();
       const orphanedSessions = await db.uploadSessions.toArray();
       for (const session of orphanedSessions) {
         try {
@@ -135,6 +147,7 @@ export class RecorderManager {
           console.error(`Failed to recover session for track ${session.trackSid}:`, error);
         }
       }
+      void this.pumpUploadQueue();
     } catch (dbErr) {
       console.error("Failed to read orphaned sessions from Dexie:", dbErr);
     }
@@ -188,6 +201,7 @@ export class RecorderManager {
       this.trackTotalBytes.set(trackSid, 0);
       this.trackPartSizes.set(trackSid, new Map());
       this.trackUploadedPartsProgress.set(trackSid, new Map());
+      this.trackCompletedParts.set(trackSid, new Set());
       this.chunkWritePromises.set(trackSid, new Set());
 
       // 4. Capture loop
@@ -219,6 +233,7 @@ export class RecorderManager {
         writes?.add(writePromise);
         try {
           await writePromise;
+          void this.pumpUploadQueue(trackSid);
         } finally {
           writes?.delete(writePromise);
         }
@@ -234,10 +249,12 @@ export class RecorderManager {
   }
 
   /**
-   * Stops the recorder for a single track and finalizes its upload.
-   * @param trackSid The SID of the track to stop.
+   * Stops the recorder for a single track and finalizes its upload when requested.
    */
-  private async stopTrackRecorder(trackSid: string) {
+  private async stopTrackRecorder(
+    trackSid: string,
+    options: { finalize: boolean } = { finalize: true },
+  ) {
     const recorder = this.recorders.get(trackSid);
     if (recorder) {
       if (recorder.state !== "inactive")
@@ -245,26 +262,11 @@ export class RecorderManager {
       this.recorders.delete(trackSid);
     }
 
-    // Force run queue to process remaining chunks for this track
-    await this.processUploadQueue(trackSid);
+    await this.drainTrackUploads(trackSid);
 
-    const uploader = this.uploaders.get(trackSid);
-    if (uploader) {
-      try {
-        await uploader.complete();
-        if (this.sessionId) {
-          await opfsStorage.deleteTrackChunks(this.sessionId, trackSid);
-        }
-        // Broadcast final 100% progress
-        this.broadcastUploadProgress(trackSid, 100);
-        // Clean up session in DB
-        await db.uploadSessions.delete(trackSid);
-      } catch (err) {
-        console.error(`Finalization failed for ${trackSid}:`, err);
-      }
-      this.uploaders.delete(trackSid);
+    if (options.finalize) {
+      await this.finalizeTrackUpload(trackSid);
     }
-    this.chunkWritePromises.delete(trackSid);
   }
 
   private async stopRecorderAndWaitForChunks(trackSid: string, recorder: MediaRecorder) {
@@ -280,45 +282,58 @@ export class RecorderManager {
     }
   }
 
-  /**
-   * Periodic queue processor. Picks up pending chunks and uploads them.
-   */
-  private async processUploadQueue(specificTrackSid?: string) {
-    const query = specificTrackSid
-      ? db.chunks
-          .where("trackSid")
-          .equals(specificTrackSid)
-          .filter((c) => c.status === "pending" || c.status === "failed")
-      : db.chunks.where("status").anyOf("pending", "failed");
+  private async pumpUploadQueue(trackSid?: string): Promise<void> {
+    await scheduleChunkUploads({
+      pool: this.uploadPool,
+      getUploader: (sid) => this.uploaders.get(sid),
+      trackSid,
+      onChunkProgress: (sid, partNumber, sentBytes) => {
+        this.handleChunkProgress(sid, partNumber, sentBytes);
+      },
+      onChunkUploaded: (sid, partNumber) => {
+        const completed = this.trackCompletedParts.get(sid);
+        completed?.add(partNumber);
+        this.broadcastPartProgress(sid);
+      },
+      onChunkFailed: (sid, partNumber, error) => {
+        console.error(`Failed to upload chunk ${sid}-${partNumber}:`, error);
+      },
+    });
+  }
 
-    const chunkToUpload = await query.first();
-    if (!chunkToUpload) return; // Nothing pending
+  private async drainTrackUploads(trackSid?: string): Promise<void> {
+    await resetStuckUploadingChunks(trackSid);
+    await this.uploadPool.drain(
+      () => this.pumpUploadQueue(trackSid),
+      async () => (await countPendingChunks(trackSid)) > 0,
+    );
+  }
 
-    const uploader = this.uploaders.get(chunkToUpload.trackSid);
+  private async finalizeTrackUpload(trackSid: string): Promise<void> {
+    const uploader = this.uploaders.get(trackSid);
     if (!uploader) return;
 
-    try {
-      // Mark as uploading to lock the row
-      await db.chunks.update(chunkToUpload.id, { status: "uploading" });
-
-      const chunkBlob =
-        (await opfsStorage.readChunk(
-          uploader.getSessionId(),
-          chunkToUpload.partNumber,
-          chunkToUpload.trackSid,
-        )) ?? chunkToUpload.data;
-
-      // Upload the chunk with progress callback
-      await uploader.uploadChunk(chunkBlob, chunkToUpload.partNumber, 3, (sentBytes) => {
-        this.handleChunkProgress(chunkToUpload.trackSid, chunkToUpload.partNumber, sentBytes);
-      });
-
-      // Delete completed chunk from IndexedDB to optimize disk space
-      await db.chunks.delete(chunkToUpload.id);
-    } catch (error) {
-      await db.chunks.update(chunkToUpload.id, { status: "failed" });
-      console.error(`Failed to upload chunk ${chunkToUpload.id}:`, error);
+    const pending = await countPendingChunks(trackSid);
+    const expectedParts = this.trackPartCounters.get(trackSid) ?? 0;
+    if (pending > 0 || !uploader.hasAllParts(expectedParts)) {
+      console.warn(
+        `Skipping complete for ${trackSid}: pending=${pending}, expectedParts=${expectedParts}, uploaded=${uploader.getUploadedPartCount()}`,
+      );
+      return;
     }
+
+    try {
+      await uploader.complete();
+      if (this.sessionId) {
+        await opfsStorage.deleteTrackChunks(this.sessionId, trackSid);
+      }
+      this.broadcastPartProgress(trackSid, true);
+      await db.uploadSessions.delete(trackSid);
+    } catch (err) {
+      console.error(`Finalization failed for ${trackSid}:`, err);
+    }
+    this.uploaders.delete(trackSid);
+    this.chunkWritePromises.delete(trackSid);
   }
 
   /**
@@ -332,27 +347,36 @@ export class RecorderManager {
     }
     uploadedParts.set(partNumber, sentBytes);
 
-    // Sum all uploaded bytes
-    let totalUploaded = 0;
-    uploadedParts.forEach((bytes) => {
-      totalUploaded += bytes;
-    });
-
-    const totalBytes = this.trackTotalBytes.get(trackSid) || 1;
-    const percentage = Math.min(Math.round((totalUploaded / totalBytes) * 100), 100);
-
-    this.broadcastUploadProgress(trackSid, percentage);
+    this.broadcastPartProgress(trackSid);
+    this.onLocalProgress?.(trackSid, this.getPartProgressPercent(trackSid));
   }
 
-  /**
-   * Broadcasts the progress over the LiveKit Room's reliable data channel.
-   */
-  private broadcastUploadProgress(trackSid: string, progress: number) {
+  private getPartProgressPercent(trackSid: string): number {
+    const totalParts = this.trackPartCounters.get(trackSid) ?? 0;
+    if (totalParts === 0) return 0;
+    const uploader = this.uploaders.get(trackSid);
+    const uploadedParts = uploader?.getUploadedPartCount() ?? 0;
+    return Math.min(Math.round((uploadedParts / totalParts) * 100), 99);
+  }
+
+  private broadcastPartProgress(trackSid: string, isComplete = false) {
+    const totalParts = this.trackPartCounters.get(trackSid) ?? 0;
+    const uploader = this.uploaders.get(trackSid);
+    const uploadedParts = isComplete ? totalParts : (uploader?.getUploadedPartCount() ?? 0);
+    const progress =
+      totalParts > 0
+        ? isComplete
+          ? 100
+          : Math.min(Math.round((uploadedParts / totalParts) * 100), 99)
+        : 0;
+
     try {
       const payload = JSON.stringify({
         type: "upload_progress",
         trackSid,
         progress,
+        uploadedParts,
+        totalParts,
       });
       const encoder = new TextEncoder();
       const data = encoder.encode(payload);
@@ -371,58 +395,30 @@ export class RecorderManager {
   };
 
   private handleTrackUnpublished = (pub: LocalTrackPublication) => {
-    this.stopTrackRecorder(pub.trackSid);
+    void this.stopTrackRecorder(pub.trackSid);
   };
 
   private handleDisconnect = () => {
-    if (this.state === "recording") this.stopRecording();
+    if (this.state === "recording") void this.stopRecording();
   };
 
   /**
-   * Cleans up all resources.
+   * Drains the upload pool and finalizes all active multipart uploads.
    */
   public async completeProcessing(
     onProgress?: (uploaded: number, total: number) => void,
   ): Promise<void> {
-    // Drain remaining chunks from DB and wait for all uploaders to finish
-    const remaining = await db.chunks
-      .where("status")
-      .anyOf("pending", "uploading", "failed")
-      .count();
-    const total = remaining + this.uploaders.size;
-
-    let done = 0;
-    if (onProgress) onProgress(done, total);
-
-    // Flush the upload queue repeatedly until all chunks are processed
-    for (let i = 0; i < 50; i++) {
-      const pending = await db.chunks.where("status").anyOf("pending", "failed").first();
-      if (!pending) break;
-      await this.processUploadQueue(pending.trackSid);
-      done++;
-      if (onProgress) onProgress(done, total);
-      // Small delay to let async operations settle
-      await new Promise((r) => setTimeout(r, 200));
-    }
-
-    // Finalise all uploaders
     const trackSids = Array.from(this.uploaders.keys());
+    const totalTracks = trackSids.length;
+    let done = 0;
+    onProgress?.(done, totalTracks);
+
+    await this.drainTrackUploads();
+
     for (const trackSid of trackSids) {
-      try {
-        const uploader = this.uploaders.get(trackSid);
-        if (uploader) {
-          await uploader.complete();
-          if (this.sessionId) {
-            await opfsStorage.deleteTrackChunks(this.sessionId, trackSid);
-          }
-          this.broadcastUploadProgress(trackSid, 100);
-          await db.uploadSessions.delete(trackSid);
-        }
-      } catch (err) {
-        console.error(`Finalisation failed for ${trackSid}:`, err);
-      }
+      await this.finalizeTrackUpload(trackSid);
       done++;
-      if (onProgress) onProgress(done, total);
+      onProgress?.(done, totalTracks);
     }
   }
 
@@ -446,6 +442,7 @@ export class RecorderManager {
     this.trackTotalBytes.clear();
     this.trackUploadedPartsProgress.clear();
     this.trackPartSizes.clear();
+    this.trackCompletedParts.clear();
     this.chunkWritePromises.clear();
     this.state = "idle";
     this.sessionId = null;
