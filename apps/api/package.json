@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@dodopayments/express": "^0.2.6",
     "@ototabi/auth": "*",
     "@ototabi/backend-common": "*",
     "@ototabi/common": "*",

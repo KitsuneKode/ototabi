@@ -1,13 +1,16 @@
-import { Polar } from "@polar-sh/sdk";
+import DodoPayments from "dodopayments";
 
-const POLAR_ACCESS_TOKEN = process.env.POLAR_ACCESS_TOKEN || "";
-const POLAR_SERVER = process.env.POLAR_SERVER || "sandbox";
+const DODO_PAYMENTS_API_KEY = process.env.DODO_PAYMENTS_API_KEY || "";
+const DODO_PAYMENTS_ENVIRONMENT = (process.env.DODO_PAYMENTS_ENVIRONMENT || "test_mode") as
+  | "test_mode"
+  | "live_mode";
 
-export const polar = new Polar({
-  accessToken: POLAR_ACCESS_TOKEN,
-  server: POLAR_SERVER as "sandbox" | "production",
+export const dodoPayments = new DodoPayments({
+  bearerToken: DODO_PAYMENTS_API_KEY,
+  environment: DODO_PAYMENTS_ENVIRONMENT,
+  webhookKey: process.env.DODO_WEBHOOK_SECRET,
 });
 
-export function isPolarConfigured(): boolean {
-  return !!POLAR_ACCESS_TOKEN;
+export function isDodoConfigured(): boolean {
+  return !!DODO_PAYMENTS_API_KEY;
 }

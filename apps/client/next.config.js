@@ -28,8 +28,8 @@ const nextConfig = {
         destination: `${apiOrigin}/api/token`,
       },
       {
-        source: "/api/polar-webhook/:path*",
-        destination: `${apiOrigin}/api/polar-webhook/:path*`,
+        source: "/api/dodo-webhook/:path*",
+        destination: `${apiOrigin}/api/dodo-webhook/:path*`,
       },
     ];
   },

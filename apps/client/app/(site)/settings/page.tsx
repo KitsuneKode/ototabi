@@ -77,6 +77,23 @@ export default function SettingsPage() {
     }),
   );
 
+  const subscription = useQuery(trpc.billing.getSubscription.queryOptions());
+  const checkout = useMutation(
+    trpc.billing.checkout.mutationOptions({
+      onSuccess: (data) => {
+        if (data.url) window.location.href = data.url;
+      },
+    }),
+  );
+
+  const startCheckout = useCallback(
+    (plan: "creator" | "pro" | "studio") => {
+      const successUrl = `${window.location.origin}/settings?billing=success`;
+      checkout.mutate({ plan, successUrl });
+    },
+    [checkout],
+  );
+
   const handleSaveProfile = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
@@ -226,6 +243,36 @@ export default function SettingsPage() {
               {updateProfile.isPending ? "SAVING..." : "SAVE PROFILE"}
             </MechButton>
           </form>
+        </AnalogCard>
+
+        {/* ── Billing ───────────────────────────────────────────────────── */}
+        <AnalogCard className="space-y-4 p-6">
+          <PanelTitle label="Subscription" title="Billing" />
+          <AnalogInset className="space-y-1 p-4">
+            <MonoLabel>Current plan</MonoLabel>
+            <p className="font-mono text-sm font-bold tracking-wide uppercase">
+              {subscription.data?.plan ?? "TRIAL"} · {subscription.data?.status ?? "TRIALING"}
+            </p>
+          </AnalogInset>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {(
+              [
+                { plan: "creator" as const, label: "Creator", price: "$15/mo" },
+                { plan: "pro" as const, label: "Pro", price: "$29/mo" },
+                { plan: "studio" as const, label: "Studio", price: "$59/mo" },
+              ] as const
+            ).map(({ plan, label, price }) => (
+              <MechButton
+                key={plan}
+                onClick={() => startCheckout(plan)}
+                disabled={checkout.isPending}
+                className="h-auto flex-col gap-1 py-3"
+              >
+                <span className="text-sm">{label}</span>
+                <MonoLabel>{price}</MonoLabel>
+              </MechButton>
+            ))}
+          </div>
         </AnalogCard>
 
         {/* ── Session ───────────────────────────────────────────────────── */}

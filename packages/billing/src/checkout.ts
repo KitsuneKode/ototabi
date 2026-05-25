@@ -1,6 +1,6 @@
 import { prisma } from "@ototabi/store";
 
-import { polar, isPolarConfigured } from "./index";
+import { dodoPayments, isDodoConfigured } from "./index";
 
 const TRIAL_DAYS = 14;
 
@@ -10,8 +10,7 @@ export async function createCheckoutLink(params: {
   plan: "creator" | "pro" | "studio";
   successUrl: string;
 }): Promise<string | null> {
-  if (!isPolarConfigured()) {
-    // Fallback: activate trial
+  if (!isDodoConfigured()) {
     await prisma.subscription.upsert({
       where: { userId: params.userId },
       create: {
@@ -26,20 +25,20 @@ export async function createCheckoutLink(params: {
   }
 
   const productId = PLAN_PRODUCT_IDS[params.plan];
-  if (!productId) throw new Error(`No Polar product for plan: ${params.plan}`);
+  if (!productId) throw new Error(`No Dodo product for plan: ${params.plan}`);
 
-  const result = await polar.checkouts.create({
-    products: [productId],
-    successUrl: params.successUrl,
-    customerEmail: params.userEmail,
+  const session = await dodoPayments.checkoutSessions.create({
+    product_cart: [{ product_id: productId, quantity: 1 }],
+    customer: { email: params.userEmail },
+    return_url: params.successUrl,
     metadata: { userId: params.userId, plan: params.plan },
-  } as any);
+  });
 
-  return result.url;
+  return session.checkout_url ?? null;
 }
 
 const PLAN_PRODUCT_IDS: Record<string, string> = {
-  creator: process.env.POLAR_PRODUCT_CREATOR || "",
-  pro: process.env.POLAR_PRODUCT_PRO || "",
-  studio: process.env.POLAR_PRODUCT_STUDIO || "",
+  creator: process.env.DODO_PRODUCT_CREATOR || "",
+  pro: process.env.DODO_PRODUCT_PRO || "",
+  studio: process.env.DODO_PRODUCT_STUDIO || "",
 };
