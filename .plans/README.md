@@ -25,12 +25,15 @@ Each file is a scoped engineering initiative, implementable in one PR.
 | 19  | `19-creator-suite-vision.md`               | done (strategy locked)                  | P0       |
 | 20  | `20-creator-suite-execution.md` + batches  | done (batches 0–5; batch 6 future)      | P0       |
 | 24  | `24-demo-mode-browser.md`                  | done                                    | P2       |
+| 25  | `25-parallel-subagent-execution.md`        | in-progress                             | P0       |
 
 ## Current focus (product-grade)
 
 **Creator Suite batches 0–5** done locally (May 2026). **Plan 24** browser demo MVP shipped (capture, editor, export presets).
 
 **Remaining:**
+
+**Parallel execution (Plan 25):** [`.plans/25-parallel-subagent-execution.md`](25-parallel-subagent-execution.md) — Wave 0 coordinator (push, CI, staging smoke) then Streams A–F.
 
 1. **Push + prod deploy** — Vercel client + Railway API/worker (scaffolding shipped; live deploy pending)
 2. **FFmpeg worker** — hybrid export hardening on Railway worker

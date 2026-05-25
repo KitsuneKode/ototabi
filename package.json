@@ -47,12 +47,15 @@
     "typescript": "6.0.3"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,json,md,css}": [
+    "*.{js,jsx,ts,tsx}": [
       "oxfmt",
       "oxlint --fix --report-unused-disable-directives"
     ],
+    "*.{json,md,css}": [
+      "oxfmt"
+    ],
     "*.prisma": [
-      "bash -c 'cd packages/store && bunx prisma format --schema prisma/schema.prisma'"
+      "prisma format"
     ]
   },
   "engines": {
