@@ -235,14 +235,14 @@ Text-based **cut export is implemented** in `export/[sessionId]/page.tsx` (`hand
 ## 7. Definition of done — milestone: Riverside parity v1
 
 - [ ] Smoke doc passes on clean machine + staging
-- [ ] Trial: 1 lifetime transcript, 3 session cap, clip cap when Dodo configured
+- [x] Trial: 1 lifetime transcript, 3 session cap, clip cap when Dodo configured
 - [ ] Pro host: record → upload → transcript → chapters → export bundle (browser + worker long path)
-- [ ] Studio: lock/admit + **co-host controls** + consent + preflight + health + mute/remove/indicator
-- [ ] Timeline MVP on export/review (lanes, scrub, trim)
-- [ ] Demo browser v1.1 bundle shipped; Capture companion spec approved (build may trail beta)
-- [ ] Sync markers visible; export warns on low confidence
-- [ ] No public media URLs in prod
-- [ ] Explicit cuts documented: no hosting, live stream, AI producer, workspace memory, mobile apps
+- [x] Studio: lock/admit + **co-host controls** + consent + preflight + health + mute/remove/indicator
+- [x] Timeline MVP on export/review (lanes, scrub, trim)
+- [x] Demo browser v1.1 bundle shipped; Capture companion spec approved (build may trail beta)
+- [x] Sync markers visible; export warns on low confidence
+- [x] No public media URLs in prod
+- [x] Explicit cuts documented: no hosting, live stream, AI producer, workspace memory, mobile apps
 
 ---
 

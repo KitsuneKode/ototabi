@@ -2,6 +2,16 @@
 
 Copy a section per parallel stream (Wave 1+). Coordinator (Wave 0) owns this file structure.
 
+## Integration complete on main
+
+**Date:** 2026-05-26 · **Commit:** `7b3bbad` (`main`)
+
+All parity streams **1–8** are integrated on `main`. Verified: usage module, studio preflight/consent/health, cut preview + sync warnings, demo v1.1, `export-routing`, timeline components, AI regen + Plan 29 spec, `e2e/` scaffold. `bun run db:migrate` applied 6 parity migrations; `bun run check` passes.
+
+**Remaining (manual):** smoke docs on clean machine + staging; full Pro host path dogfood; Capture desktop app (Plan 29 implementation).
+
+---
+
 ## Stream metadata
 
 | Field             | Value                                          |
