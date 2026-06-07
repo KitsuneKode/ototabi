@@ -28,11 +28,21 @@ export function ExportBundlePicker({ sessionId }: ExportBundlePickerProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [errorMessage, setErrorMessage] = useState("");
 
-  const assetsQuery = useQuery(
+  const {
+    data: assetsQueryData,
+    isLoading: assetsQueryIsLoading,
+    error: _assetsQueryError,
+    refetch: _assetsQueryRefetch,
+    isFetching: _assetsQueryIsFetching,
+    isPending: _assetsQueryIsPending,
+    isSuccess: _assetsQueryIsSuccess,
+    isError: _assetsQueryIsError,
+    status: _assetsQueryStatus,
+  } = useQuery(
     trpc.exports.listExportableAssets.queryOptions({ sessionId }, { staleTime: 30_000 }),
   );
 
-  const assetList = assetsQuery.data?.assets;
+  const assetList = assetsQueryData?.assets;
 
   const readyIds = useMemo(
     () => new Set((assetList ?? []).filter((a) => a.status === "ready").map((a) => a.id)),
@@ -100,7 +110,7 @@ export function ExportBundlePicker({ sessionId }: ExportBundlePickerProps) {
     createBundle.mutate({ sessionId, assetIds: selectedReady, asZip });
   };
 
-  if (assetsQuery.isLoading) {
+  if (assetsQueryIsLoading) {
     return (
       <MonoLabel className="text-muted-foreground text-[10px]">Loading export assets…</MonoLabel>
     );

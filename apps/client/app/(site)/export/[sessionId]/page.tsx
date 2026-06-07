@@ -1,24 +1,27 @@
 "use client";
 
 import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { toBlobURL, fetchFile } from "@ffmpeg/util";
+import { fetchFile } from "@ffmpeg/util";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useRef, useCallback, useEffect, useMemo } from "react";
 
 import type { BackgroundBlurPreset } from "@/lib/demo/demo-background-presets";
+import type { DemoAspectPreset } from "@/lib/demo/demo-export-presets";
 
 import { ClipRenderActions } from "@/components/clips/clip-render-actions";
 import { SessionExportActions } from "@/components/clips/session-export-actions";
 import { ExportTrackPreview } from "@/components/editor/export-track-preview";
 import { TimelineLite } from "@/components/editor/timeline-lite";
-import { TranscriptEditor } from "@/components/editor/transcript-editor";
+import { BrowserExportPanel } from "@/components/export/browser-export-panel";
 import { ExportBundlePicker } from "@/components/export/export-bundle-picker";
+import { ExportProcessingPanel } from "@/components/export/export-processing-panel";
+import { SyncAlignmentPanel } from "@/components/export/sync-alignment-panel";
+import { TextEditPanel } from "@/components/export/text-edit-panel";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
 import { SessionStatusRail } from "@/components/layout/session-status-rail";
 import { AnalogLoadingPanel, AnalogStatePanel } from "@/components/patterns/analog-state-panel";
-import { SessionTimeline } from "@/components/patterns/session-timeline";
 import { AiArtifactActions } from "@/components/session-review/ai-artifact-actions";
 import { AiPipelineStatus } from "@/components/session-review/ai-pipeline-status";
 import { ShowNotesEditor } from "@/components/session-review/show-notes-editor";
@@ -34,7 +37,13 @@ import {
   resolveDemoExportTracks,
   writeDemoInputsToFfmpeg,
 } from "@/lib/demo/demo-export-pipeline";
-import { DEMO_ASPECT_LABELS, type DemoAspectPreset } from "@/lib/demo/demo-export-presets";
+import {
+  writeTracksToFfmpeg,
+  buildMergeArgs,
+  buildExportArgs,
+  buildTrimArgs,
+} from "@/lib/export/browser-export-commands";
+import { loadFfmpegInstance, downloadFile, removeTrackInputs } from "@/lib/export/browser-ffmpeg";
 import { useExportConsole } from "@/lib/hooks/use-export-console";
 import { useExportTimeline } from "@/lib/hooks/use-export-timeline";
 import { useAuthGate } from "@/lib/hooks/use-session";
@@ -47,7 +56,6 @@ import {
   Monitor,
   AlertTriangle,
   RefreshCw,
-  Scissors,
   Combine,
 } from "@/lib/icons";
 import {
@@ -64,44 +72,6 @@ const TRACK_TYPE_ICON: Record<string, React.ComponentType<{ className?: string }
   CAMERA: Video,
   SCREENSHARE: Monitor,
 };
-
-async function downloadFile(ffmpeg: FFmpeg, filename: string, downloadName: string) {
-  const fileData = await ffmpeg.readFile(filename);
-  const blob = new Blob([fileData as unknown as BlobPart], { type: "video/mp4" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = downloadName;
-  a.click();
-  URL.revokeObjectURL(url);
-  await ffmpeg.deleteFile(filename);
-}
-
-type TrackWithMedia = { s3Url?: string | null; s3Key?: string | null };
-
-/** Download tracks in parallel, then write inputs for ffmpeg concat. */
-async function writeTracksToFfmpeg(ffmpeg: FFmpeg, tracks: TrackWithMedia[]): Promise<string> {
-  const prepared = await Promise.all(
-    tracks.map(async (track, i) => {
-      const name = `input_${i}.mp4`;
-      const mediaRef = track.s3Url ?? track.s3Key;
-      if (!mediaRef) throw new Error(`Track ${i + 1} has no media reference`);
-      const downloadUrl = await resolveTrackDownloadUrl(trpcClient, mediaRef);
-      if (!downloadUrl) throw new Error(`Could not resolve download URL for track ${i + 1}`);
-      const data = await fetchFile(downloadUrl);
-      return { name, data };
-    }),
-  );
-  await Promise.all(prepared.map(({ name, data }) => ffmpeg.writeFile(name, data)));
-  return prepared.map(({ name }) => `file '${name}'\n`).join("");
-}
-
-async function removeTrackInputs(ffmpeg: FFmpeg, trackCount: number): Promise<void> {
-  await Promise.all([
-    ...Array.from({ length: trackCount }, (_, i) => ffmpeg.deleteFile(`input_${i}.mp4`)),
-    ffmpeg.deleteFile("concat_list.txt"),
-  ]);
-}
 
 function TrackDownloadButton({ mediaRef }: { mediaRef: string }) {
   const handleDownload = async () => {
@@ -152,11 +122,11 @@ export default function ExportSessionPage() {
   const trpc = useTRPC();
   const { sessionReady } = useAuthGate();
 
-  const usage = useQuery({
+  const { data: usageData } = useQuery({
     ...trpc.usage.get.queryOptions(),
     enabled: sessionReady,
   });
-  const canTextEdit = usage.data?.features.textBasedEditing ?? false;
+  const canTextEdit = usageData?.features.textBasedEditing ?? false;
 
   const checkout = useMutation(
     trpc.billing.checkout.mutationOptions({
@@ -189,7 +159,7 @@ export default function ExportSessionPage() {
     isBootingAuth,
   } = useSessionReview(sessionId);
 
-  const demoSessionQuery = useQuery({
+  const { data: demoSessionQueryData } = useQuery({
     ...trpc.demo.getSession.queryOptions({ sessionId }),
     enabled: sessionReady && Boolean(sessionId) && session?.mode === "DEMO",
   });
@@ -260,19 +230,7 @@ export default function ExportSessionPage() {
     setProcessingStatus("loading-ffmpeg");
     setErrorMessage("");
     try {
-      const baseURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.10/dist/esm";
-      const ffmpeg = ffmpegRef.current;
-
-      ffmpeg.on("progress", ({ progress: p }: { progress: number }) => {
-        setProgress(Math.round(p * 100));
-      });
-
-      await ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-        workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, "text/javascript"),
-      });
-
+      await loadFfmpegInstance(ffmpegRef.current, setProgress);
       setFfmpegLoaded(true);
       setProcessingStatus("idle");
     } catch (err) {
@@ -300,19 +258,8 @@ export default function ExportSessionPage() {
       const audioFilters: string[] = [];
       if (noiseReduction) audioFilters.push("afftdn");
       if (syncOffsetMs > 0) audioFilters.push(`adelay=${syncOffsetMs}|${syncOffsetMs}`);
-      const mergeArgs = [
-        "-f",
-        "concat",
-        "-safe",
-        "0",
-        "-i",
-        "concat_list.txt",
-        ...(audioFilters.length > 0 ? ["-af", audioFilters.join(",")] : []),
-        "-c:v",
-        "copy",
-        ...(audioFilters.length > 0 ? ["-c:a", "aac"] : ["-c:a", "copy"]),
-        "output.mp4",
-      ];
+
+      const mergeArgs = buildMergeArgs(audioFilters);
       await ffmpeg.exec(mergeArgs);
 
       await downloadFile(ffmpeg, "output.mp4", `session-${sessionId.slice(-8)}-merged.mp4`);
@@ -351,35 +298,14 @@ export default function ExportSessionPage() {
         await loadFfmpeg();
         const ffmpeg = ffmpegRef.current;
 
-        const scale = resolution === "720p" ? "1280:720" : "1920:1080";
         const content = await writeTracksToFfmpeg(ffmpeg, tracks);
 
         await ffmpeg.writeFile("concat_list.txt", new TextEncoder().encode(content));
         const audioFilters: string[] = [];
         if (noiseReduction) audioFilters.push("afftdn");
         if (syncOffsetMs > 0) audioFilters.push(`adelay=${syncOffsetMs}|${syncOffsetMs}`);
-        const exportArgs = [
-          "-f",
-          "concat",
-          "-safe",
-          "0",
-          "-i",
-          "concat_list.txt",
-          ...(audioFilters.length > 0 ? ["-af", audioFilters.join(",")] : []),
-          "-vf",
-          `scale=${scale}`,
-          "-c:v",
-          "libx264",
-          "-preset",
-          "fast",
-          "-crf",
-          "23",
-          "-c:a",
-          "aac",
-          "-b:a",
-          "128k",
-          "output.mp4",
-        ];
+
+        const exportArgs = buildExportArgs(resolution, audioFilters);
         await ffmpeg.exec(exportArgs);
 
         await downloadFile(
@@ -415,7 +341,7 @@ export default function ExportSessionPage() {
       const resolved = resolveDemoExportTracks(session.tracks, selectedTrackIds);
       if (!resolved.display) return;
 
-      const demoEdit = demoSessionQuery.data?.demo;
+      const demoEdit = demoSessionQueryData?.demo;
       const blurLevel = demoEdit?.backgroundBlur ?? 0;
       const edit = {
         trimStartMs: demoEdit?.trimStartMs ?? null,
@@ -460,7 +386,7 @@ export default function ExportSessionPage() {
     [
       session,
       selectedTrackIds,
-      demoSessionQuery.data?.demo,
+      demoSessionQueryData?.demo,
       beginProcessing,
       loadFfmpeg,
       sessionId,
@@ -489,18 +415,7 @@ export default function ExportSessionPage() {
       const data = await fetchFile(downloadUrl);
       await ffmpeg.writeFile("input.mp4", data);
 
-      const args = ["-i", "input.mp4"];
-      if (trimStart) args.push("-ss", String(Number(trimStart)));
-      if (trimEnd) {
-        const duration = trimEnd;
-        args.push("-to", duration);
-      }
-      if (noiseReduction) {
-        args.push("-af", "afftdn", "-c:v", "copy", "-c:a", "aac");
-      } else {
-        args.push("-c", "copy");
-      }
-      args.push("output.mp4");
+      const args = buildTrimArgs(trimStart, trimEnd, noiseReduction);
 
       await ffmpeg.exec(args);
 
@@ -929,312 +844,65 @@ export default function ExportSessionPage() {
 
         {/* ── Text-Based Editing (Pro+) ─────────────────────────────────── */}
         {transcriptSegments && transcriptSegments.length > 0 && completedTracks.length > 0 ? (
-          <div className="space-y-4">
-            <PanelTitle label="Pro feature" title="Text-based editing" />
-            {!canTextEdit ? (
-              <AnalogInset className="space-y-3 p-4">
-                <p className="text-muted-foreground font-mono text-[11px] leading-relaxed">
-                  Cut and remove segments from the transcript requires a Pro plan or higher.
-                  {usage.data?.effectivePlan === "TRIAL"
-                    ? " Trial includes one lifetime transcript; unlimited editing is on Pro."
-                    : null}
-                </p>
-                <MechButton
-                  type="button"
-                  onClick={startProCheckout}
-                  disabled={checkout.isPending}
-                  className="w-full justify-center sm:w-auto"
-                >
-                  Upgrade to Pro
-                </MechButton>
-              </AnalogInset>
-            ) : null}
-            <div
-              className={
-                canTextEdit ? "space-y-4" : "pointer-events-none space-y-4 opacity-50 select-none"
-              }
-            >
-              <TranscriptEditor
-                segments={transcriptSegments}
-                cutSegmentIds={cutSegmentIds}
-                onToggleCutSegment={toggleCutSegment}
-                previewRange={previewCutRange}
-                cutPreviewSummary={cutPreviewSummary}
-                onPreviewSelectedCuts={() => {
-                  if (cutPreviewSummary?.previewEnvelope) {
-                    setPreviewCutRange(cutPreviewSummary.previewEnvelope);
-                  }
-                }}
-                onPreviewRange={(startTime, endTime) => setPreviewCutRange({ startTime, endTime })}
-              />
-              {cutPreviewSummary ? (
-                <AnalogInset className="space-y-2 p-3">
-                  <MonoLabel className="text-[9px]">
-                    Will remove {formatTimestamp(cutPreviewSummary.removedSeconds)} — keep{" "}
-                    {cutPreviewSummary.keepRanges.length} segment
-                    {cutPreviewSummary.keepRanges.length !== 1 ? "s" : ""} (
-                    {formatTimestamp(cutPreviewSummary.keptSeconds)})
-                  </MonoLabel>
-                  {previewCutRange ? (
-                    <MonoLabel className="text-muted-foreground text-[9px]">
-                      Highlight {formatTimestamp(previewCutRange.startTime)} –{" "}
-                      {formatTimestamp(previewCutRange.endTime)}
-                    </MonoLabel>
-                  ) : null}
-                </AnalogInset>
-              ) : null}
-              <MechButton
-                onClick={handleCuts}
-                disabled={
-                  !canTextEdit ||
-                  cutSegmentIds.length === 0 ||
-                  processingStatus === "processing" ||
-                  processingStatus === "loading-ffmpeg"
-                }
-                className="mt-2 w-full disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Scissors className="h-3.5 w-3.5" />
-                Remove {cutSegmentIds.length} Selected Segment
-                {cutSegmentIds.length !== 1 ? "s" : ""}
-                {selectedTrackIds.length > 0
-                  ? ` (${selectedTrackIds.length} track${selectedTrackIds.length !== 1 ? "s" : ""})`
-                  : " (all completed tracks)"}
-              </MechButton>
-            </div>
-
-            {errorMessage && processingMode === "cuts" ? (
-              <div className="border-led-on/30 bg-led-on/5 flex items-start gap-2 rounded border p-3">
-                <AlertTriangle className="text-led-on mt-0.5 h-4 w-4 shrink-0" />
-                <p className="text-led-on font-mono text-[10px] leading-relaxed">{errorMessage}</p>
-              </div>
-            ) : null}
-          </div>
+          <TextEditPanel
+            canTextEdit={canTextEdit}
+            usageData={usageData}
+            checkoutIsPending={checkout.isPending}
+            startProCheckout={startProCheckout}
+            transcriptSegments={transcriptSegments}
+            cutSegmentIds={cutSegmentIds}
+            toggleCutSegment={toggleCutSegment}
+            previewCutRange={previewCutRange}
+            cutPreviewSummary={cutPreviewSummary}
+            setPreviewCutRange={setPreviewCutRange}
+            handleCuts={handleCuts}
+            processingStatus={processingStatus}
+            processingMode={processingMode}
+            selectedTrackIds={selectedTrackIds}
+            errorMessage={errorMessage}
+          />
         ) : null}
 
-        <div className="space-y-4">
-          <PanelTitle label="Sync Tape" title="Session Timeline" />
-          {syncOffsetMs > 0 ? (
-            <MonoLabel className="text-accent block text-[10px]">
-              Sync baseline: {syncOffsetMs}ms — applied to merge/export audio when processing
-            </MonoLabel>
-          ) : null}
-          {syncAlignmentWarnings.map((warning) => (
-            <div
-              key={warning}
-              className="border-led-on/30 bg-led-on/5 flex items-start gap-2 rounded border p-3"
-            >
-              <AlertTriangle className="text-led-on mt-0.5 h-4 w-4 shrink-0" />
-              <p className="text-led-on font-mono text-[10px] leading-relaxed">{warning}</p>
-            </div>
-          ))}
-          <SessionTimeline events={timelineEvents} isLoading={query.isFetching && !query.data} />
-        </div>
+        <SyncAlignmentPanel
+          syncOffsetMs={syncOffsetMs}
+          syncAlignmentWarnings={syncAlignmentWarnings}
+          timelineEvents={timelineEvents}
+          isLoading={query.isFetching && !query.data}
+        />
 
         {/* ── Merge / Export Section ────────────────────────────────────── */}
         {completedTracks.length > 0 && (
-          <AnalogCard className="p-6">
-            <PanelTitle label="Mastering Suite" title="Merge & Export" className="mb-5" />
-
-            {syncAlignmentWarnings.map((warning) => (
-              <div
-                key={`merge-${warning}`}
-                className="border-led-on/30 bg-led-on/5 mb-4 flex items-start gap-2 rounded border p-3"
-              >
-                <AlertTriangle className="text-led-on mt-0.5 h-4 w-4 shrink-0" />
-                <p className="text-led-on font-mono text-[10px] leading-relaxed">{warning}</p>
-              </div>
-            ))}
-
-            {errorMessage && !processingMode && (
-              <div className="border-led-on/30 bg-led-on/5 mb-4 flex items-start gap-2 rounded border p-3">
-                <AlertTriangle className="text-led-on mt-0.5 h-4 w-4 shrink-0" />
-                <p className="text-led-on font-mono text-[10px] leading-relaxed">{errorMessage}</p>
-              </div>
-            )}
-
-            <div className="mb-4 flex flex-wrap items-center gap-4">
-              <label className="border-border bg-popover hover:border-accent/30 flex cursor-pointer items-center gap-3 rounded border px-4 py-2.5 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={noiseReduction}
-                  onChange={(e) => setNoiseReduction(e.target.checked)}
-                  className="accent-accent h-4 w-4"
-                />
-                <div>
-                  <MonoLabel className="text-foreground block">Noise Reduction</MonoLabel>
-                  <MonoLabel className="text-muted-foreground/60 text-[9px]">
-                    Apply afftdn filter for cleaner audio
-                  </MonoLabel>
-                </div>
-              </label>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <MechButton
-                onClick={handleMerge}
-                disabled={
-                  selectedTrackIds.length < 2 ||
-                  processingStatus === "processing" ||
-                  processingStatus === "loading-ffmpeg"
-                }
-                className="disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Combine className="h-3.5 w-3.5" />
-                Merge Selected Tracks
-              </MechButton>
-
-              <MechButton
-                onClick={() => handleExportRes("720p")}
-                disabled={
-                  selectedTrackIds.length === 0 ||
-                  processingStatus === "processing" ||
-                  processingStatus === "loading-ffmpeg"
-                }
-                className="disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Export 720p
-              </MechButton>
-
-              <MechButton
-                onClick={() => handleExportRes("1080p")}
-                disabled={
-                  selectedTrackIds.length === 0 ||
-                  processingStatus === "processing" ||
-                  processingStatus === "loading-ffmpeg"
-                }
-                className="disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Export 1080p
-              </MechButton>
-
-              {session.mode === "DEMO" ? (
-                <>
-                  <MechButton
-                    onClick={() => handleDemoAspectExport("16:9")}
-                    disabled={
-                      selectedTrackIds.length === 0 ||
-                      processingStatus === "processing" ||
-                      processingStatus === "loading-ffmpeg"
-                    }
-                    className="disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    {DEMO_ASPECT_LABELS["16:9"]}
-                  </MechButton>
-                  <MechButton
-                    onClick={() => handleDemoAspectExport("9:16")}
-                    disabled={
-                      selectedTrackIds.length === 0 ||
-                      processingStatus === "processing" ||
-                      processingStatus === "loading-ffmpeg"
-                    }
-                    className="disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    {DEMO_ASPECT_LABELS["9:16"]}
-                  </MechButton>
-                </>
-              ) : null}
-            </div>
-
-            {/* Progress bar */}
-            {(processingStatus === "processing" || processingStatus === "loading-ffmpeg") && (
-              <div className="mt-5">
-                <AnalogInset className="flex h-2 items-stretch p-0.5">
-                  <div
-                    className="rounded-sm transition-all duration-300"
-                    style={{
-                      width: `${processingStatus === "loading-ffmpeg" ? 30 : progress}%`,
-                      backgroundColor: "var(--accent)",
-                    }}
-                  />
-                </AnalogInset>
-              </div>
-            )}
-          </AnalogCard>
+          <ExportProcessingPanel
+            syncAlignmentWarnings={syncAlignmentWarnings}
+            errorMessage={errorMessage}
+            processingMode={processingMode}
+            processingStatus={processingStatus}
+            progress={progress}
+            noiseReduction={noiseReduction}
+            setNoiseReduction={setNoiseReduction}
+            selectedTrackIds={selectedTrackIds}
+            sessionMode={session?.mode}
+            handleMerge={handleMerge}
+            handleExportRes={handleExportRes}
+            handleDemoAspectExport={handleDemoAspectExport}
+          />
         )}
 
         {/* ── Trim Section ──────────────────────────────────────────────── */}
         {completedTracks.length > 0 && (
-          <AnalogCard className="p-6">
-            <PanelTitle label="Splicing Deck" title="Trim Clip" className="mb-5" />
-
-            <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-3">
-              <AnalogInset className="p-3">
-                <MonoLabel as="label" htmlFor="trim-track" className="mb-1.5 block">
-                  Select Track
-                </MonoLabel>
-                <select
-                  id="trim-track"
-                  value={trimTrackId ?? ""}
-                  onChange={(e) => setTrimTrackId(e.target.value || null)}
-                  className="bg-card border-border focus:border-accent w-full rounded border px-2 py-1.5 font-mono text-xs uppercase focus:outline-none"
-                >
-                  <option value="">— Select —</option>
-                  {completedTracks.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.type} — {t.user?.name ?? "Unknown"}
-                    </option>
-                  ))}
-                </select>
-              </AnalogInset>
-
-              <AnalogInset className="p-3">
-                <MonoLabel as="label" htmlFor="trim-start" className="mb-1.5 block">
-                  Skip Start (s)
-                </MonoLabel>
-                <input
-                  id="trim-start"
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={trimStart}
-                  onChange={(e) => setTrimStart(e.target.value)}
-                  placeholder="0"
-                  className="bg-card border-border focus:border-accent w-full rounded border px-2 py-1.5 font-mono text-xs tabular-nums focus:outline-none"
-                />
-              </AnalogInset>
-
-              <AnalogInset className="p-3">
-                <MonoLabel as="label" htmlFor="trim-end" className="mb-1.5 block">
-                  End Time (s)
-                </MonoLabel>
-                <input
-                  id="trim-end"
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={trimEnd}
-                  onChange={(e) => setTrimEnd(e.target.value)}
-                  placeholder="0"
-                  className="bg-card border-border focus:border-accent w-full rounded border px-2 py-1.5 font-mono text-xs tabular-nums focus:outline-none"
-                />
-              </AnalogInset>
-            </div>
-
-            <MechButton
-              onClick={handleTrim}
-              disabled={
-                !trimTrackId ||
-                (!trimStart && !trimEnd) ||
-                processingStatus === "processing" ||
-                processingStatus === "loading-ffmpeg"
-              }
-              className="mt-4 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Scissors className="h-3.5 w-3.5" />
-              Apply Trim
-            </MechButton>
-
-            {errorMessage && processingMode === "trim" && (
-              <div className="border-led-on/30 bg-led-on/5 mt-4 flex items-start gap-2 rounded border p-3">
-                <AlertTriangle className="text-led-on mt-0.5 h-4 w-4 shrink-0" />
-                <p className="text-led-on font-mono text-[10px] leading-relaxed">{errorMessage}</p>
-              </div>
-            )}
-          </AnalogCard>
+          <BrowserExportPanel
+            completedTracks={completedTracks}
+            trimTrackId={trimTrackId}
+            setTrimTrackId={setTrimTrackId}
+            trimStart={trimStart}
+            setTrimStart={setTrimStart}
+            trimEnd={trimEnd}
+            setTrimEnd={setTrimEnd}
+            handleTrim={handleTrim}
+            processingStatus={processingStatus}
+            processingMode={processingMode}
+            errorMessage={errorMessage}
+          />
         )}
 
         {/* ── Footer ────────────────────────────────────────────────────── */}
