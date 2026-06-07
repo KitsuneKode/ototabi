@@ -74,6 +74,22 @@ On `/export/{sessionId}` with at least one **COMPLETED** track:
 2. **Text cuts (Pro+)** — mark transcript segments, confirm preview stats/highlight, apply cuts (multi-track when multiple sources selected).
 3. **Sync warnings** — sparse or missing sync markers show alignment warnings before merge/export.
 
+## Smoke log checklist
+
+Use this for local and staging sign-off. Record date, env, host account, guest account, room/session ID, and any defects.
+
+- [ ] Host signs in.
+- [ ] Host creates room.
+- [ ] Guest joins by invite link.
+- [ ] Preflight runs.
+- [ ] Consent is acknowledged before recording.
+- [ ] Host starts recording.
+- [ ] Tracks upload.
+- [ ] Transcript queues or returns plan-upgrade state truthfully.
+- [ ] Clips render or return plan-upgrade state truthfully.
+- [ ] Export bundle downloads.
+- [ ] Recovery page shows no stranded chunks after success.
+
 ## Pass criteria
 
 - No console errors on happy path.

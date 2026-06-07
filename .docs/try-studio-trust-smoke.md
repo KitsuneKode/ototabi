@@ -45,7 +45,7 @@ Riverside parity **Wave 1 Stream 2** (Plan 13 Phase 2). Verifies preflight, cons
 3. **Remove** on guest → participant row removed server-side (`rooms.removeGuest`).
 4. **REC** indicator visible to all participants while session is recording (not host-only).
 
-## 6. Session health panel
+## 5. Session health panel
 
 1. Host and guest in studio (`preflight=done`).
 2. Open sidebar → **Health** tab (default).
@@ -59,10 +59,23 @@ Riverside parity **Wave 1 Stream 2** (Plan 13 Phase 2). Verifies preflight, cons
 
 **API check:** `rooms.getStudioHealth` returns `participants[]` with `hasRecordingConsent` per room participant.
 
-## 5. Automated tests
+## 6. Smoke log checklist
+
+Use this for local and staging studio-trust sign-off. Record date, env, host account, guest account, room/session ID, browser pair, and any defects. Full end-to-end record → upload → AI → export sign-off lives in [try-local-smoke.md](./try-local-smoke.md).
+
+- [ ] Host and guest join by invite link in separate browsers.
+- [ ] Preflight runs.
+- [ ] Consent is acknowledged before local capture.
+- [ ] Health panel shows participant link, upload, consent, recovery, and device state.
+- [ ] Locked room queues guest and host/co-host can admit or deny.
+- [ ] Mute request reaches guest.
+- [ ] Remove guest disconnects or removes the participant.
+- [ ] Recording indicator is visible to all participants while recording.
+
+## 7. Automated tests
 
 ```bash
-bun fmt && bun lint && bun typecheck && bun run test
+bun fmt && bun run db:format:check && bun lint && bun typecheck && bun run test
 ```
 
 | Package | Tests                                                                  |
