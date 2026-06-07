@@ -21,12 +21,20 @@ export function StudioChatPanel({ roomDbId, sessionUserName }: StudioChatPanelPr
   const { chatMessages, send } = useChat();
   const persistMessage = useMutation(trpc.chat.sendMessage.mutationOptions());
 
-  const persistedMessagesQuery = useQuery(
-    trpc.chat.getMessages.queryOptions({ roomId: roomDbId }, { enabled: !!roomDbId }),
-  );
+  const {
+    data: persistedMessagesQueryData,
+    isLoading: _persistedMessagesQueryIsLoading,
+    error: _persistedMessagesQueryError,
+    refetch: _persistedMessagesQueryRefetch,
+    isFetching: _persistedMessagesQueryIsFetching,
+    isPending: _persistedMessagesQueryIsPending,
+    isSuccess: _persistedMessagesQueryIsSuccess,
+    isError: _persistedMessagesQueryIsError,
+    status: _persistedMessagesQueryStatus,
+  } = useQuery(trpc.chat.getMessages.queryOptions({ roomId: roomDbId }, { enabled: !!roomDbId }));
 
   const allMessages = useMemo(() => {
-    const persisted = (persistedMessagesQuery.data ?? []).map((m) => ({
+    const persisted = (persistedMessagesQueryData ?? []).map((m) => ({
       id: m.id,
       timestamp: new Date(m.createdAt).getTime(),
       message: m.message,
@@ -44,7 +52,7 @@ export function StudioChatPanel({ roomDbId, sessionUserName }: StudioChatPanelPr
     );
 
     return [...dedupedPersisted, ...chatMessages].toSorted((a, b) => a.timestamp - b.timestamp);
-  }, [persistedMessagesQuery.data, chatMessages]);
+  }, [persistedMessagesQueryData, chatMessages]);
 
   const handleSend = async () => {
     if (!chatInput.trim()) return;

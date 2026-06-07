@@ -40,7 +40,17 @@ export default function RoomSettingsPage() {
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const roomInfo = useQuery(
+  const {
+    data: roomInfoData,
+    isLoading: roomInfoIsLoading,
+    error: _roomInfoError,
+    refetch: roomInfoRefetch,
+    isFetching: _roomInfoIsFetching,
+    isPending: _roomInfoIsPending,
+    isSuccess: _roomInfoIsSuccess,
+    isError: _roomInfoIsError,
+    status: _roomInfoStatus,
+  } = useQuery(
     trpc.rooms.getRoom.queryOptions({ code: roomId }, {
       enabled: !!roomId,
       onSuccess: (data: { name: string }) => {
@@ -52,10 +62,54 @@ export default function RoomSettingsPage() {
     } as any),
   );
 
-  const authState = useQuery(trpc.auth.getSession.queryOptions());
+  const {
+    data: authStateData,
+    isLoading: authStateIsLoading,
+    error: _authStateError,
+    refetch: _authStateRefetch,
+    isFetching: _authStateIsFetching,
+    isPending: _authStateIsPending,
+    isSuccess: _authStateIsSuccess,
+    isError: _authStateIsError,
+    status: _authStateStatus,
+  } = useQuery(trpc.auth.getSession.queryOptions());
+
+  const {
+    data: sessionsData,
+    isLoading: sessionsIsLoading,
+    error: _sessionsError,
+    refetch: _sessionsRefetch,
+    isFetching: _sessionsIsFetching,
+    isPending: _sessionsIsPending,
+    isSuccess: _sessionsIsSuccess,
+    isError: _sessionsIsError,
+    status: _sessionsStatus,
+  } = useQuery(
+    trpc.rooms.getRecordingSessions.queryOptions(
+      { roomId: roomInfoData?.id ?? "" },
+      { enabled: !!roomInfoData?.id },
+    ),
+  );
+
+  const updateMutation = useMutation(
+    trpc.rooms.updateRoom.mutationOptions({
+      onSuccess: () => {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 2500);
+        roomInfoRefetch();
+      },
+      onError: (err: any) => setSaveError(err.message ?? "Failed to update room"),
+    }),
+  );
+
+  const deleteMutation = useMutation(
+    trpc.rooms.deleteRoom.mutationOptions({
+      onSuccess: () => router.push("/dashboard"),
+    }),
+  );
 
   // ── Auth Gate ──────────────────────────────────────────────────────────
-  if (!authState.isLoading && !authState.data) {
+  if (!authStateIsLoading && !authStateData) {
     return (
       <div className="bg-background flex min-h-[100dvh] flex-col items-center justify-center px-4 font-sans">
         <MechButton
@@ -68,54 +122,30 @@ export default function RoomSettingsPage() {
     );
   }
 
-  const sessions = useQuery(
-    trpc.rooms.getRecordingSessions.queryOptions(
-      { roomId: roomInfo.data?.id ?? "" },
-      { enabled: !!roomInfo.data?.id },
-    ),
-  );
-
-  const updateMutation = useMutation(
-    trpc.rooms.updateRoom.mutationOptions({
-      onSuccess: () => {
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 2500);
-        roomInfo.refetch();
-      },
-      onError: (err: any) => setSaveError(err.message ?? "Failed to update room"),
-    }),
-  );
-
-  const deleteMutation = useMutation(
-    trpc.rooms.deleteRoom.mutationOptions({
-      onSuccess: () => router.push("/dashboard"),
-    }),
-  );
-
   const handleSave = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
       setSaveError("");
-      if (!roomInfo.data?.id) return;
-      updateMutation.mutate({ id: roomInfo.data.id, name: roomName });
+      if (!roomInfoData?.id) return;
+      updateMutation.mutate({ id: roomInfoData.id, name: roomName });
     },
-    [roomName, roomInfo.data?.id, updateMutation],
+    [roomName, roomInfoData?.id, updateMutation],
   );
 
   const handleCopyLink = useCallback(() => {
-    if (!roomInfo.data?.code) return;
-    navigator.clipboard.writeText(roomInfo.data.code);
+    if (!roomInfoData?.code) return;
+    navigator.clipboard.writeText(roomInfoData.code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }, [roomInfo.data?.code]);
+  }, [roomInfoData?.code]);
 
   const handleDelete = useCallback(() => {
-    if (!roomInfo.data?.id) return;
-    deleteMutation.mutate({ id: roomInfo.data.id });
-  }, [roomInfo.data?.id, deleteMutation]);
+    if (!roomInfoData?.id) return;
+    deleteMutation.mutate({ id: roomInfoData.id });
+  }, [roomInfoData?.id, deleteMutation]);
 
   // ── Loading ──────────────────────────────────────────────────────────────
-  if (roomInfo.isLoading) {
+  if (roomInfoIsLoading) {
     return (
       <div className="bg-background flex min-h-[100dvh] items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-3">
@@ -128,7 +158,7 @@ export default function RoomSettingsPage() {
     );
   }
 
-  if (!roomInfo.data) {
+  if (!roomInfoData) {
     return (
       <div className="bg-background flex min-h-[100dvh] flex-col items-center justify-center px-4 font-sans">
         <AnalogCard className="w-full max-w-sm p-8 text-center">
@@ -142,7 +172,7 @@ export default function RoomSettingsPage() {
     );
   }
 
-  const data = roomInfo.data;
+  const data = roomInfoData;
   const confirmMatch = deleteConfirm === data.code;
 
   return (
@@ -246,18 +276,18 @@ export default function RoomSettingsPage() {
         <AnalogCard className="p-6">
           <PanelTitle label="Reel Index" title="Recent Sessions" className="mb-4" />
 
-          {sessions.isLoading ? (
+          {sessionsIsLoading ? (
             <div className="text-muted-foreground animate-pulse py-8 text-center font-mono text-xs tracking-widest uppercase">
               Loading session logs...
             </div>
-          ) : !sessions.data?.length ? (
+          ) : !sessionsData?.length ? (
             <AnalogInset className="flex flex-col items-center justify-center border-dashed py-12 text-center">
               <Film className="text-muted-foreground/30 mb-3 h-8 w-8" />
               <MonoLabel>No sessions recorded yet</MonoLabel>
             </AnalogInset>
           ) : (
             <div className="space-y-3">
-              {sessions.data.slice(0, 5).map((session) => (
+              {sessionsData.slice(0, 5).map((session) => (
                 <AnalogInset
                   key={session.id}
                   className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
@@ -386,7 +416,17 @@ function StudioAccessPanel({ roomId, isLocked }: { roomId: string; isLocked: boo
   const trpc = useTRPC();
   const [locked, setLocked] = useState(isLocked);
 
-  const pending = useQuery(
+  const {
+    data: pendingData,
+    isLoading: pendingIsLoading,
+    error: _pendingError,
+    refetch: pendingRefetch,
+    isFetching: _pendingIsFetching,
+    isPending: _pendingIsPending,
+    isSuccess: _pendingIsSuccess,
+    isError: _pendingIsError,
+    status: _pendingStatus,
+  } = useQuery(
     trpc.rooms.listJoinRequests.queryOptions(
       { roomId, status: "pending" },
       { enabled: !!roomId, refetchInterval: 5000 },
@@ -397,12 +437,12 @@ function StudioAccessPanel({ roomId, isLocked }: { roomId: string; isLocked: boo
   const unlockMutation = useMutation(trpc.rooms.unlockRoom.mutationOptions());
   const admitMutation = useMutation(
     trpc.rooms.admitJoinRequest.mutationOptions({
-      onSuccess: () => pending.refetch(),
+      onSuccess: () => pendingRefetch(),
     }),
   );
   const denyMutation = useMutation(
     trpc.rooms.denyJoinRequest.mutationOptions({
-      onSuccess: () => pending.refetch(),
+      onSuccess: () => pendingRefetch(),
     }),
   );
 
@@ -435,17 +475,17 @@ function StudioAccessPanel({ roomId, isLocked }: { roomId: string; isLocked: boo
       {locked && (
         <div className="space-y-2">
           <MonoLabel className="text-[9px]">Pending join requests</MonoLabel>
-          {pending.isLoading ? (
+          {pendingIsLoading ? (
             <MonoLabel className="text-muted-foreground animate-pulse text-[9px]">
               Loading...
             </MonoLabel>
-          ) : !pending.data?.length ? (
+          ) : !pendingData?.length ? (
             <AnalogInset className="border-dashed py-6 text-center">
               <MonoLabel className="text-muted-foreground">No guests waiting</MonoLabel>
             </AnalogInset>
           ) : (
             <div className="space-y-2">
-              {pending.data.map((req) => (
+              {pendingData.map((req) => (
                 <AnalogInset
                   key={req.id}
                   className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between"
@@ -485,16 +525,24 @@ function MembersPanel({ roomId }: { roomId: string }) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteError, setInviteError] = useState("");
 
-  const members = useQuery(
-    trpc.rooms.getRoomMembers.queryOptions({ roomId }, { enabled: !!roomId }),
-  );
+  const {
+    data: membersData,
+    isLoading: _membersIsLoading,
+    error: _membersError,
+    refetch: membersRefetch,
+    isFetching: _membersIsFetching,
+    isPending: _membersIsPending,
+    isSuccess: _membersIsSuccess,
+    isError: _membersIsError,
+    status: _membersStatus,
+  } = useQuery(trpc.rooms.getRoomMembers.queryOptions({ roomId }, { enabled: !!roomId }));
 
   const inviteMutation = useMutation(
     trpc.rooms.inviteMember.mutationOptions({
       onSuccess: () => {
         setInviteEmail("");
         setInviteError("");
-        members.refetch();
+        membersRefetch();
       },
       onError: (err) => setInviteError(err.message),
     }),
@@ -502,7 +550,7 @@ function MembersPanel({ roomId }: { roomId: string }) {
 
   const removeMutation = useMutation(
     trpc.rooms.removeMember.mutationOptions({
-      onSuccess: () => members.refetch(),
+      onSuccess: () => membersRefetch(),
     }),
   );
 
@@ -528,9 +576,9 @@ function MembersPanel({ roomId }: { roomId: string }) {
       </form>
       {inviteError && <MonoLabel className="text-led-on">{inviteError}</MonoLabel>}
 
-      {members.data?.length ? (
+      {membersData?.length ? (
         <div className="space-y-1.5">
-          {members.data.map((m) => (
+          {membersData.map((m) => (
             <div
               key={m.id}
               className="border-border bg-popover flex items-center justify-between rounded border px-3 py-2"
@@ -565,7 +613,17 @@ function InvitesPanel({ roomId, roomCode }: { roomId: string; roomCode: string }
   const [inviteError, setInviteError] = useState("");
   const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
 
-  const invites = useQuery(trpc.rooms.listInvites.queryOptions({ roomId }, { enabled: !!roomId }));
+  const {
+    data: invitesData,
+    isLoading: _invitesIsLoading,
+    error: _invitesError,
+    refetch: invitesRefetch,
+    isFetching: _invitesIsFetching,
+    isPending: _invitesIsPending,
+    isSuccess: _invitesIsSuccess,
+    isError: _invitesIsError,
+    status: _invitesStatus,
+  } = useQuery(trpc.rooms.listInvites.queryOptions({ roomId }, { enabled: !!roomId }));
 
   const createInvite = useMutation(
     trpc.rooms.createInvite.mutationOptions({
@@ -573,7 +631,7 @@ function InvitesPanel({ roomId, roomCode }: { roomId: string; roomCode: string }
         const link = `${window.location.origin}/rooms/${roomCode}/join?invite=${invite.token}`;
         setInviteLink(link);
         setInviteError("");
-        invites.refetch();
+        invitesRefetch();
       },
       onError: (err) => setInviteError(err.message),
     }),
@@ -581,7 +639,7 @@ function InvitesPanel({ roomId, roomCode }: { roomId: string; roomCode: string }
 
   const revokeInvite = useMutation(
     trpc.rooms.revokeInvite.mutationOptions({
-      onSuccess: () => invites.refetch(),
+      onSuccess: () => invitesRefetch(),
     }),
   );
 
@@ -635,9 +693,9 @@ function InvitesPanel({ roomId, roomCode }: { roomId: string; roomCode: string }
 
       {inviteError && <MonoLabel className="text-led-on">{inviteError}</MonoLabel>}
 
-      {invites.data?.length ? (
+      {invitesData?.length ? (
         <div className="space-y-1.5">
-          {invites.data.map((invite) => {
+          {invitesData.map((invite) => {
             const revoked = !!invite.revokedAt;
             const expired = !!invite.expiresAt && invite.expiresAt <= new Date();
             return (

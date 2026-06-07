@@ -355,7 +355,7 @@
   }
 
   .btn-mechanical:active {
-    transform: translateY(2px) scale(0.97);
+    transform: translateY(2px) scale(0.96);
     box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.15),
       inset 0 1px 4px rgba(0, 0, 0, 0.2);

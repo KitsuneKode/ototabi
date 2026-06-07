@@ -14,7 +14,17 @@ export function useSessionReview(sessionId: string) {
   const trpc = useTRPC();
   const { sessionReady, isBooting } = useAuthGate();
 
-  const query = useQuery({
+  const {
+    data: queryData,
+    isLoading: queryIsLoading,
+    error: queryError,
+    refetch: queryRefetch,
+    isFetching: queryIsFetching,
+    isPending: queryIsPending,
+    isSuccess: queryIsSuccess,
+    isError: queryIsError,
+    status: queryStatus,
+  } = useQuery({
     ...trpc.sessionReview.get.queryOptions(
       { sessionId },
       {
@@ -52,12 +62,24 @@ export function useSessionReview(sessionId: string) {
     ),
   });
 
-  const data = query.data;
+  const data = queryData;
 
   const { timelineEvents, allUploaded, aggregateUploadStatus } = useMemo(
     () => deriveSessionReviewView(data),
     [data],
   );
+
+  const query = {
+    data: queryData,
+    isLoading: queryIsLoading,
+    error: queryError,
+    refetch: queryRefetch,
+    isFetching: queryIsFetching,
+    isPending: queryIsPending,
+    isSuccess: queryIsSuccess,
+    isError: queryIsError,
+    status: queryStatus,
+  };
 
   return {
     query,
@@ -76,6 +98,6 @@ export function useSessionReview(sessionId: string) {
     allUploaded,
     aggregateUploadStatus,
     isBootingAuth: isBooting,
-    isReady: sessionReady && query.isSuccess && !!data,
+    isReady: sessionReady && queryIsSuccess && !!data,
   };
 }

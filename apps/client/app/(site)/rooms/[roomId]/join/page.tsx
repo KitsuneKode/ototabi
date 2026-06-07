@@ -40,14 +40,42 @@ function RoomJoinPageContent() {
   const [quality, setQuality] = useState<"720p" | "1080p" | "4k">("720p");
 
   const refreshAuthSession = useRefreshAuthSession();
-  const authState = useQuery(trpc.auth.getSession.queryOptions());
-  const isSignedIn = !!authState.data?.user;
+  const {
+    data: authStateData,
+    isLoading: _authStateIsLoading,
+    error: _authStateError,
+    refetch: _authStateRefetch,
+    isFetching: _authStateIsFetching,
+    isPending: _authStateIsPending,
+    isSuccess: _authStateIsSuccess,
+    isError: _authStateIsError,
+    status: _authStateStatus,
+  } = useQuery(trpc.auth.getSession.queryOptions());
+  const isSignedIn = !!authStateData?.user;
   const guestNeedsInvite = !isSignedIn && !inviteToken;
 
-  const roomInfo = useQuery(
-    trpc.rooms.getRoomByCode.queryOptions({ code: roomId }, { enabled: !!roomId }),
-  );
-  const inviteInfo = useQuery(
+  const {
+    data: roomInfoData,
+    isLoading: roomInfoIsLoading,
+    error: roomInfoError,
+    refetch: _roomInfoRefetch,
+    isFetching: _roomInfoIsFetching,
+    isPending: _roomInfoIsPending,
+    isSuccess: _roomInfoIsSuccess,
+    isError: _roomInfoIsError,
+    status: _roomInfoStatus,
+  } = useQuery(trpc.rooms.getRoomByCode.queryOptions({ code: roomId }, { enabled: !!roomId }));
+  const {
+    data: inviteInfoData,
+    isLoading: _inviteInfoIsLoading,
+    error: inviteInfoError,
+    refetch: _inviteInfoRefetch,
+    isFetching: _inviteInfoIsFetching,
+    isPending: _inviteInfoIsPending,
+    isSuccess: _inviteInfoIsSuccess,
+    isError: _inviteInfoIsError,
+    status: _inviteInfoStatus,
+  } = useQuery(
     trpc.rooms.validateInvite.queryOptions(
       { code: roomId, token: inviteToken ?? "" },
       { enabled: !!roomId && !!inviteToken, retry: false },
@@ -199,7 +227,7 @@ function RoomJoinPageContent() {
   ]);
 
   // ── Loading ──────────────────────────────────────────────────────────────
-  if (roomInfo.isLoading) {
+  if (roomInfoIsLoading) {
     return (
       <div className="bg-background flex min-h-[100dvh] items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-3">
@@ -213,7 +241,7 @@ function RoomJoinPageContent() {
   }
 
   // ── Error ────────────────────────────────────────────────────────────────
-  if (roomInfo.error || !roomInfo.data || inviteInfo.error) {
+  if (roomInfoError || !roomInfoData || inviteInfoError) {
     return (
       <div className="bg-background flex min-h-[100dvh] flex-col items-center justify-center px-4 font-sans">
         <AnalogCard className="w-full max-w-md p-8 text-center">
@@ -235,7 +263,7 @@ function RoomJoinPageContent() {
   return (
     <JoinShell
       title="Studio Join"
-      subtitle={`Room: ${roomInfo.data.name} // Pre-flight calibration`}
+      subtitle={`Room: ${roomInfoData.name} // Pre-flight calibration`}
     >
       <AnalogCard className="flex flex-col gap-8 overflow-hidden p-6 md:grid md:grid-cols-12 md:p-8">
         {/* ── Left: CRT Live Preview Panel ────────────────────────────── */}
@@ -248,7 +276,7 @@ function RoomJoinPageContent() {
                 <MonoLabel>CH 1 : CALIBRATION</MonoLabel>
               </div>
               <MonoLabel className="bg-card/60 border-border rounded border px-2 py-0.5">
-                Room: {roomInfo.data.name}
+                Room: {roomInfoData.name}
               </MonoLabel>
             </div>
 
@@ -262,13 +290,13 @@ function RoomJoinPageContent() {
               </AnalogInset>
             ) : null}
 
-            {inviteInfo.data ? (
+            {inviteInfoData ? (
               <AnalogInset className="p-3">
                 <MonoLabel className="text-accent block">SECURE INVITE VERIFIED</MonoLabel>
                 <MonoLabel className="mt-1 block text-[9px]">
-                  ROLE: {inviteInfo.data.role.toUpperCase()}
-                  {inviteInfo.data.expiresAt
-                    ? ` // EXPIRES: ${formatDateTime(inviteInfo.data.expiresAt)}`
+                  ROLE: {inviteInfoData.role.toUpperCase()}
+                  {inviteInfoData.expiresAt
+                    ? ` // EXPIRES: ${formatDateTime(inviteInfoData.expiresAt)}`
                     : " // NO EXPIRY"}
                 </MonoLabel>
               </AnalogInset>

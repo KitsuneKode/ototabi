@@ -81,9 +81,19 @@ function StudioPageContent() {
 
   const recordingSeconds = useTimer(isRecording);
 
-  const authState = useQuery(trpc.auth.getSession.queryOptions());
-  const sessionUser = authState.data?.user;
-  const sessionRole = authState.data?.user?.role;
+  const {
+    data: authStateData,
+    isLoading: authStateIsLoading,
+    error: _authStateError,
+    refetch: _authStateRefetch,
+    isFetching: _authStateIsFetching,
+    isPending: _authStateIsPending,
+    isSuccess: _authStateIsSuccess,
+    isError: _authStateIsError,
+    status: _authStateStatus,
+  } = useQuery(trpc.auth.getSession.queryOptions());
+  const sessionUser = authStateData?.user;
+  const sessionRole = authStateData?.user?.role;
   const operatorLabel = sessionUser
     ? formatParticipantLabel({
         name: sessionUser.name,
@@ -92,23 +102,41 @@ function StudioPageContent() {
       })
     : "";
 
-  const roomInfo = useQuery(
-    trpc.rooms.getRoom.queryOptions({ code: roomId }, { enabled: !!roomId }),
-  );
-  const roomDetails = roomInfo.data;
+  const {
+    data: roomInfoData,
+    isLoading: _roomInfoIsLoading,
+    error: _roomInfoError,
+    refetch: _roomInfoRefetch,
+    isFetching: _roomInfoIsFetching,
+    isPending: _roomInfoIsPending,
+    isSuccess: _roomInfoIsSuccess,
+    isError: _roomInfoIsError,
+    status: _roomInfoStatus,
+  } = useQuery(trpc.rooms.getRoom.queryOptions({ code: roomId }, { enabled: !!roomId }));
+  const roomDetails = roomInfoData;
 
-  const studioContext = useQuery(
+  const {
+    data: studioContextData,
+    isLoading: _studioContextIsLoading,
+    error: _studioContextError,
+    refetch: studioContextRefetch,
+    isFetching: _studioContextIsFetching,
+    isPending: _studioContextIsPending,
+    isSuccess: _studioContextIsSuccess,
+    isError: _studioContextIsError,
+    status: _studioContextStatus,
+  } = useQuery(
     trpc.rooms.getStudioContext.queryOptions(
       { roomId: roomDetails?.id ?? "" },
       { enabled: !!roomDetails?.id },
     ),
   );
-  const hasRecordingConsent = studioContext.data?.hasRecordingConsent ?? false;
-  const canControlStudio = studioContext.data?.canControlStudio ?? false;
+  const hasRecordingConsent = studioContextData?.hasRecordingConsent ?? false;
+  const canControlStudio = studioContextData?.canControlStudio ?? false;
 
   const consentMutation = useMutation(
     trpc.rooms.acknowledgeRecordingConsent.mutationOptions({
-      onSuccess: () => studioContext.refetch(),
+      onSuccess: () => studioContextRefetch(),
     }),
   );
 
@@ -367,7 +395,7 @@ function StudioPageContent() {
   });
 
   // ─── Auth Gate ──────────────────────────────────────────────────────────
-  if (!authState.isLoading && !authState.data) {
+  if (!authStateIsLoading && !authStateData) {
     return (
       <div className="bg-background flex min-h-[100dvh] flex-col items-center justify-center px-4 font-sans">
         <AnalogCard className="w-full max-w-sm p-8 text-center">

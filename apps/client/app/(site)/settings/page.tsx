@@ -46,7 +46,17 @@ export default function SettingsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
 
-  const me = useQuery(
+  const {
+    data: meData,
+    isLoading: meIsLoading,
+    error: _meError,
+    refetch: meRefetch,
+    isFetching: _meIsFetching,
+    isPending: _meIsPending,
+    isSuccess: _meIsSuccess,
+    isError: _meIsError,
+    status: _meStatus,
+  } = useQuery(
     trpc.user.getMe.queryOptions({
       onSuccess: (data: { name: string }) => {
         if (!nameInitialized && data.name) {
@@ -62,7 +72,7 @@ export default function SettingsPage() {
       onSuccess: () => {
         setProfileSuccess(true);
         setTimeout(() => setProfileSuccess(false), 2500);
-        me.refetch();
+        meRefetch();
       },
       onError: (err: any) => setProfileError(err.message ?? "Failed to update profile"),
     }),
@@ -77,7 +87,17 @@ export default function SettingsPage() {
     }),
   );
 
-  const subscription = useQuery(trpc.billing.getSubscription.queryOptions());
+  const {
+    data: subscriptionData,
+    isLoading: _subscriptionIsLoading,
+    error: _subscriptionError,
+    refetch: _subscriptionRefetch,
+    isFetching: _subscriptionIsFetching,
+    isPending: _subscriptionIsPending,
+    isSuccess: _subscriptionIsSuccess,
+    isError: _subscriptionIsError,
+    status: _subscriptionStatus,
+  } = useQuery(trpc.billing.getSubscription.queryOptions());
   const checkout = useMutation(
     trpc.billing.checkout.mutationOptions({
       onSuccess: (data) => {
@@ -113,7 +133,7 @@ export default function SettingsPage() {
   }, [deleteAccount]);
 
   // ── Loading ──────────────────────────────────────────────────────────────
-  if (me.isLoading) {
+  if (meIsLoading) {
     return (
       <div className="bg-background flex min-h-[100dvh] items-center justify-center font-sans">
         <div className="flex flex-col items-center gap-3">
@@ -126,7 +146,7 @@ export default function SettingsPage() {
     );
   }
 
-  const user = me.data;
+  const user = meData;
   const confirmMatch = deleteConfirm.toLowerCase() === "delete my account";
 
   return (
@@ -251,7 +271,7 @@ export default function SettingsPage() {
           <AnalogInset className="space-y-1 p-4">
             <MonoLabel>Current plan</MonoLabel>
             <p className="font-mono text-sm font-bold tracking-wide uppercase">
-              {subscription.data?.plan ?? "TRIAL"} · {subscription.data?.status ?? "TRIALING"}
+              {subscriptionData?.plan ?? "TRIAL"} · {subscriptionData?.status ?? "TRIALING"}
             </p>
           </AnalogInset>
           <div className="grid gap-3 sm:grid-cols-3">

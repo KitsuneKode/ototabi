@@ -32,24 +32,17 @@ export default function RecoveryPage() {
   const [progressByTrack, setProgressByTrack] = useState<Record<string, string>>({});
   const [opfsUsage, setOpfsUsage] = useState<{ files: number; bytes: number } | null>(null);
 
-  const authState = useQuery(trpc.auth.getSession.queryOptions());
-
-  // ── Auth Gate ──────────────────────────────────────────────────────────
-  if (!authState.isLoading && !authState.data) {
-    return (
-      <div className="bg-background flex min-h-[100dvh] flex-col items-center justify-center px-4 font-sans">
-        <AnalogCard className="w-full max-w-sm p-8 text-center">
-          <AlertTriangle className="text-led-on mx-auto mb-4 h-12 w-12" />
-          <p className="text-led-on mb-2 text-sm font-bold tracking-wider uppercase">
-            Authentication Required
-          </p>
-          <MechButton onClick={() => router.push("/auth/signin")} className="w-full justify-center">
-            Sign In
-          </MechButton>
-        </AnalogCard>
-      </div>
-    );
-  }
+  const {
+    data: _authStateData,
+    isLoading: _authStateIsLoading,
+    error: _authStateError,
+    refetch: _authStateRefetch,
+    isFetching: _authStateIsFetching,
+    isPending: _authStateIsPending,
+    isSuccess: _authStateIsSuccess,
+    isError: _authStateIsError,
+    status: _authStateStatus,
+  } = useQuery(trpc.auth.getSession.queryOptions());
 
   useEffect(() => {
     async function loadLocalTracks() {

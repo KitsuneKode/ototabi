@@ -103,7 +103,6 @@ export function TrackLane({
             onSelect();
           }
         }}
-        role="button"
         tabIndex={0}
         aria-label={`${track.label} timeline lane`}
       >

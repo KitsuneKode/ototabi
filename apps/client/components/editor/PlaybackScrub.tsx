@@ -55,7 +55,6 @@ export function PlaybackScrub({
       </div>
       <div
         ref={railRef}
-        role="slider"
         aria-label="Playback position"
         aria-valuemin={0}
         aria-valuemax={durationSec}

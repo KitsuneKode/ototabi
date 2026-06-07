@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Room, RoomEvent } from "livekit-client";
 import { useEffect, useRef, useState } from "react";
 
@@ -26,9 +27,10 @@ type ConnectionParams = {
 };
 
 export function useStudioConnection(params: ConnectionParams) {
-  const [phase, setPhase] = useState<StudioConnectionPhase>("idle");
-  const [error, setError] = useState("");
-  const [token, setToken] = useState<string | null>(null);
+  const [connectionPhase, setConnectionPhase] = useState<
+    "idle" | "connecting" | "connected" | "error"
+  >("idle");
+  const [connectionError, setConnectionError] = useState("");
   const [connectionHealth, setConnectionHealth] = useState<
     "connected" | "reconnecting" | "disconnected"
   >("disconnected");
@@ -43,45 +45,34 @@ export function useStudioConnection(params: ConnectionParams) {
   onReconnectedRef.current = params.onReconnected;
   onLeaveRoomRef.current = params.onLeaveRoom;
 
+  const {
+    data: tokenData,
+    isLoading: tokenIsLoading,
+    error: tokenError,
+    isError: tokenIsError,
+  } = useQuery({
+    queryKey: ["studio-token", params.roomCode, params.username, params.inviteToken],
+    queryFn: async () => {
+      const tokenParams = new URLSearchParams({
+        room: params.roomCode,
+        username: params.username,
+      });
+      if (params.inviteToken) tokenParams.set("invite", params.inviteToken);
+      const resp = await fetch(`${apiUrl("/api/token")}?${tokenParams}`);
+      if (!resp.ok) throw new Error(`Token request failed: ${resp.status}`);
+      const data = (await resp.json()) as { token?: string };
+      if (!data.token) throw new Error("No token returned from server");
+      return data.token;
+    },
+    enabled: params.enabled && !!params.roomDbId && !!params.username,
+  });
+
+  const token = tokenData;
+
   useEffect(() => {
-    if (!params.enabled || !params.roomDbId || !params.username) {
-      setToken(null);
-      setPhase("idle");
+    if (!token || !params.enabled) {
       return;
     }
-
-    let cancelled = false;
-    setPhase("loading");
-    setError("");
-
-    (async () => {
-      try {
-        const tokenParams = new URLSearchParams({
-          room: params.roomCode,
-          username: params.username,
-        });
-        if (params.inviteToken) tokenParams.set("invite", params.inviteToken);
-
-        const resp = await fetch(`${apiUrl("/api/token")}?${tokenParams}`);
-        if (!resp.ok) throw new Error(`Token request failed: ${resp.status}`);
-        const data = (await resp.json()) as { token?: string };
-        if (cancelled) return;
-        if (!data.token) throw new Error("No token returned from server");
-        setToken(data.token);
-      } catch (err: unknown) {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to fetch studio token");
-        setPhase("error");
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [params.enabled, params.roomDbId, params.roomCode, params.username, params.inviteToken]);
-
-  useEffect(() => {
-    if (!token || !params.enabled) return;
 
     const { room } = params;
     let cancelled = false;
@@ -108,6 +99,8 @@ export function useStudioConnection(params: ConnectionParams) {
 
     (async () => {
       try {
+        setConnectionPhase("connecting");
+        setConnectionError("");
         room.on(RoomEvent.DataReceived, handleData);
         room.on(RoomEvent.Disconnected, onDisconnected);
         room.on(RoomEvent.Reconnecting, onReconnecting);
@@ -117,7 +110,7 @@ export function useStudioConnection(params: ConnectionParams) {
         if (cancelled) return;
 
         setConnectionHealth("connected");
-        setPhase("connected");
+        setConnectionPhase("connected");
 
         if (params.videoEnabled) await room.localParticipant.setCameraEnabled(true);
         if (params.audioEnabled) await room.localParticipant.setMicrophoneEnabled(true);
@@ -129,8 +122,8 @@ export function useStudioConnection(params: ConnectionParams) {
         });
       } catch (err: unknown) {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to connect to studio");
-        setPhase("error");
+        setConnectionError(err instanceof Error ? err.message : "Failed to connect to studio");
+        setConnectionPhase("error");
       }
     })();
 
@@ -160,6 +153,18 @@ export function useStudioConnection(params: ConnectionParams) {
       if (roomDbId) onLeaveRoomRef.current(roomDbId);
     };
   }, [roomDbId]);
+
+  const phase: StudioConnectionPhase = !params.enabled
+    ? "idle"
+    : tokenIsLoading || connectionPhase === "connecting"
+      ? "loading"
+      : tokenIsError || connectionPhase === "error"
+        ? "error"
+        : connectionPhase === "connected"
+          ? "connected"
+          : "idle";
+
+  const error = tokenError ? tokenError.message : connectionError;
 
   return {
     phase,

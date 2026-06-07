@@ -135,10 +135,11 @@ export function DashboardRoomList({
       ) : (
         <div className="max-h-[400px] flex-1 space-y-3 overflow-y-auto pr-1 md:max-h-[500px]">
           {filteredRooms.map((room) => (
-            <div
+            <button
               key={room.id}
+              type="button"
               onClick={() => onSelectRoom(room.id)}
-              className={`hover:border-accent/40 cursor-pointer rounded border p-4 transition-[border-color] select-none ${
+              className={`hover:border-accent/40 w-full cursor-pointer rounded border p-4 text-left transition-[border-color] select-none ${
                 selectedRoomId === room.id
                   ? "border-accent bg-accent/5 shadow-sm"
                   : "border-border bg-card shadow-sm"
@@ -192,7 +193,7 @@ export function DashboardRoomList({
                   </Link>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}

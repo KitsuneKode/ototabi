@@ -27,10 +27,28 @@ function PreflightPageContent() {
   const [findings, setFindings] = useState<ReadinessFinding[]>([]);
   const [checking, setChecking] = useState(true);
 
-  const authState = useQuery(trpc.auth.getSession.queryOptions());
-  const roomInfo = useQuery(
-    trpc.rooms.getRoomByCode.queryOptions({ code: roomId }, { enabled: !!roomId }),
-  );
+  const {
+    data: authStateData,
+    isLoading: authStateIsLoading,
+    error: _authStateError,
+    refetch: _authStateRefetch,
+    isFetching: _authStateIsFetching,
+    isPending: _authStateIsPending,
+    isSuccess: _authStateIsSuccess,
+    isError: _authStateIsError,
+    status: _authStateStatus,
+  } = useQuery(trpc.auth.getSession.queryOptions());
+  const {
+    data: roomInfoData,
+    isLoading: roomInfoIsLoading,
+    error: roomInfoError,
+    refetch: _roomInfoRefetch,
+    isFetching: _roomInfoIsFetching,
+    isPending: _roomInfoIsPending,
+    isSuccess: _roomInfoIsSuccess,
+    isError: _roomInfoIsError,
+    status: _roomInfoStatus,
+  } = useQuery(trpc.rooms.getRoomByCode.queryOptions({ code: roomId }, { enabled: !!roomId }));
 
   const audioEnabled = searchParams.get("audioEnabled") === "true";
   const videoEnabled = searchParams.get("videoEnabled") === "true";
@@ -135,12 +153,12 @@ function PreflightPageContent() {
     router.push(`/chat/${roomId}?${params.toString()}`);
   };
 
-  if (!authState.isLoading && !authState.data) {
+  if (!authStateIsLoading && !authStateData) {
     router.push("/auth/signin");
     return null;
   }
 
-  if (roomInfo.isLoading || checking) {
+  if (roomInfoIsLoading || checking) {
     return (
       <div className="bg-background flex min-h-[100dvh] items-center justify-center font-sans">
         <RefreshCw className="text-accent h-8 w-8 animate-spin" />
@@ -148,7 +166,7 @@ function PreflightPageContent() {
     );
   }
 
-  if (roomInfo.error || !roomInfo.data) {
+  if (roomInfoError || !roomInfoData) {
     return (
       <div className="bg-background flex min-h-[100dvh] items-center justify-center px-4">
         <AnalogCard className="max-w-sm p-8 text-center">
@@ -160,10 +178,7 @@ function PreflightPageContent() {
   }
 
   return (
-    <JoinShell
-      title="Studio preflight"
-      subtitle={`Room: ${roomInfo.data.name} // readiness checks`}
-    >
+    <JoinShell title="Studio preflight" subtitle={`Room: ${roomInfoData.name} // readiness checks`}>
       <AnalogCard className="space-y-6 p-6 md:p-8">
         <PanelTitle label="Trust" title="Readiness check" className="mb-2" />
         <p className="text-muted-foreground font-mono text-xs leading-relaxed">

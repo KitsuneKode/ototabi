@@ -92,7 +92,17 @@ export function StudioHealthPanel({
   const [micLabel, setMicLabel] = useState("");
   const [camLabel, setCamLabel] = useState("");
 
-  const healthQuery = useQuery(
+  const {
+    data: healthQueryData,
+    isLoading: _healthQueryIsLoading,
+    error: _healthQueryError,
+    refetch: _healthQueryRefetch,
+    isFetching: _healthQueryIsFetching,
+    isPending: _healthQueryIsPending,
+    isSuccess: _healthQueryIsSuccess,
+    isError: healthQueryIsError,
+    status: _healthQueryStatus,
+  } = useQuery(
     trpc.rooms.getStudioHealth.queryOptions(
       { roomId: roomDbId },
       { enabled: !!roomDbId, refetchInterval: isRecording ? 8_000 : 20_000 },
@@ -139,8 +149,8 @@ export function StudioHealthPanel({
   }, [micDeviceId, camDeviceId]);
 
   const serverParticipants = useMemo(
-    () => healthQuery.data?.participants ?? [],
-    [healthQuery.data?.participants],
+    () => healthQueryData?.participants ?? [],
+    [healthQueryData?.participants],
   );
 
   const progressByIdentity = useMemo(
@@ -274,7 +284,7 @@ export function StudioHealthPanel({
         className="border-border mb-4 border-b pb-3"
       />
 
-      {healthQuery.isError ? (
+      {healthQueryIsError ? (
         <AnalogInset className="p-3">
           <MonoLabel className="text-[9px] text-yellow-600 dark:text-yellow-400">
             Health snapshot unavailable

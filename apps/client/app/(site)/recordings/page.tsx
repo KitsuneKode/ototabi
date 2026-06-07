@@ -18,7 +18,17 @@ export default function RecordingsIndexPage() {
   const trpc = useTRPC();
   const { showGate, sessionReady } = useAuthGate();
 
-  const summary = useQuery({
+  const {
+    data: summaryData,
+    isLoading: summaryIsLoading,
+    error: _summaryError,
+    refetch: _summaryRefetch,
+    isFetching: _summaryIsFetching,
+    isPending: _summaryIsPending,
+    isSuccess: _summaryIsSuccess,
+    isError: _summaryIsError,
+    status: _summaryStatus,
+  } = useQuery({
     ...trpc.dashboard.getSummary.queryOptions(),
     enabled: sessionReady,
   });
@@ -36,7 +46,7 @@ export default function RecordingsIndexPage() {
     );
   }
 
-  const sessions = summary.data?.recentSessions ?? [];
+  const sessions = summaryData?.recentSessions ?? [];
 
   return (
     <AppShell maxWidth="max-w-5xl">
@@ -47,7 +57,7 @@ export default function RecordingsIndexPage() {
           description="Recent sessions across your studios — open review, export, or clips."
         />
 
-        {summary.isLoading ? (
+        {summaryIsLoading ? (
           <AnalogCard className="p-12 text-center font-mono text-xs tracking-widest uppercase">
             Loading sessions...
           </AnalogCard>

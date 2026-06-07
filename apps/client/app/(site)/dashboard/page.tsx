@@ -31,7 +31,17 @@ export default function DashboardPage() {
   const sessionSettled = authState.isFetched && !authState.isFetching;
   const canLoadDashboardData = sessionReady && sessionSettled;
 
-  const summary = useQuery({
+  const {
+    data: summaryData,
+    isLoading: summaryIsLoading,
+    error: summaryError,
+    refetch: summaryRefetch,
+    isFetching: _summaryIsFetching,
+    isPending: _summaryIsPending,
+    isSuccess: _summaryIsSuccess,
+    isError: _summaryIsError,
+    status: _summaryStatus,
+  } = useQuery({
     ...trpc.dashboard.getSummary.queryOptions(),
     enabled: canLoadDashboardData,
     retry: (failureCount, error) =>
@@ -42,7 +52,7 @@ export default function DashboardPage() {
     trpc.rooms.createRoom.mutationOptions({
       onSuccess: (room) => {
         setNewRoomName("");
-        summary.refetch();
+        summaryRefetch();
         if (room.lobbyInviteToken) {
           const inviteLink = `${window.location.origin}/rooms/${room.code}/join?invite=${room.lobbyInviteToken}`;
           void navigator.clipboard.writeText(inviteLink);
@@ -55,19 +65,19 @@ export default function DashboardPage() {
 
   const createInviteMutation = useMutation(trpc.rooms.createInvite.mutationOptions());
 
-  const recentSessions = summary.data?.recentSessions ?? [];
+  const recentSessions = summaryData?.recentSessions ?? [];
 
   const allRooms = useMemo(() => {
-    const owned = summary.data?.ownedRooms ?? [];
-    const shared = summary.data?.sharedRooms ?? [];
+    const owned = summaryData?.ownedRooms ?? [];
+    const shared = summaryData?.sharedRooms ?? [];
     return [
       ...owned.map((r) => ({ ...r, isShared: false as const })),
       ...shared.map((r) => ({ ...r, isShared: true as const })),
     ];
-  }, [summary.data?.ownedRooms, summary.data?.sharedRooms]);
+  }, [summaryData?.ownedRooms, summaryData?.sharedRooms]);
 
-  const ownedRooms = summary.data?.ownedRooms ?? [];
-  const sharedRooms = summary.data?.sharedRooms ?? [];
+  const ownedRooms = summaryData?.ownedRooms ?? [];
+  const sharedRooms = summaryData?.sharedRooms ?? [];
 
   useEffect(() => {
     if (selectedRoomId || allRooms.length === 0) return;
@@ -83,7 +93,17 @@ export default function DashboardPage() {
     setSelectedRoomId(sorted[0]!.id);
   }, [allRooms, selectedRoomId]);
 
-  const recordingSessions = useQuery({
+  const {
+    data: recordingSessionsData,
+    isLoading: recordingSessionsIsLoading,
+    error: _recordingSessionsError,
+    refetch: _recordingSessionsRefetch,
+    isFetching: _recordingSessionsIsFetching,
+    isPending: _recordingSessionsIsPending,
+    isSuccess: _recordingSessionsIsSuccess,
+    isError: _recordingSessionsIsError,
+    status: _recordingSessionsStatus,
+  } = useQuery({
     ...trpc.rooms.getRecordingSessions.queryOptions(
       { roomId: selectedRoomId || "" },
       { enabled: !!selectedRoomId },
@@ -171,7 +191,7 @@ export default function DashboardPage() {
     );
   }
 
-  const dataError = summary.error;
+  const dataError = summaryError;
   const suppressDataError =
     dataError &&
     isTrpcUnauthorized(dataError) &&
@@ -202,7 +222,7 @@ export default function DashboardPage() {
           </AnalogCard>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
+        <div className="grid grid-flow-dense grid-cols-1 gap-8 md:grid-cols-12">
           <div className="flex flex-col gap-6 md:col-span-5">
             <AnalogCard className="p-4 md:p-6">
               <h2 className="mb-4 text-xl font-bold tracking-tight uppercase">Initialize Room</h2>
@@ -238,7 +258,7 @@ export default function DashboardPage() {
               onSearchChange={setSearchQuery}
               onCopyInvite={handleCopyInvite}
               onOpenStudio={handleOpenStudio}
-              isLoading={summary.isLoading}
+              isLoading={summaryIsLoading}
               copiedRoomCode={copiedRoomCode}
             />
           </div>
@@ -246,10 +266,10 @@ export default function DashboardPage() {
           <div className="md:col-span-7">
             <DashboardSessionsPanel
               selectedRoom={selectedRoom}
-              roomSessions={recordingSessions.data ?? []}
+              roomSessions={recordingSessionsData ?? []}
               recentSessions={recentSessions}
-              isLoadingRoomSessions={recordingSessions.isLoading}
-              isLoadingRecent={summary.isLoading}
+              isLoadingRoomSessions={recordingSessionsIsLoading}
+              isLoadingRecent={summaryIsLoading}
               onOpenSettings={() => {
                 if (selectedRoom) router.push(`/rooms/${selectedRoom.code}/settings`);
               }}

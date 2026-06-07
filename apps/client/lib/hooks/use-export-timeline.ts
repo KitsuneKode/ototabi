@@ -74,7 +74,17 @@ export function useExportTimeline(
 
   const previewMediaRef = previewTrack?.s3Url ?? previewTrack?.s3Key ?? null;
 
-  const previewUrlQuery = useQuery({
+  const {
+    data: previewUrlQueryData,
+    isLoading: _previewUrlQueryIsLoading,
+    error: _previewUrlQueryError,
+    refetch: _previewUrlQueryRefetch,
+    isFetching: _previewUrlQueryIsFetching,
+    isPending: _previewUrlQueryIsPending,
+    isSuccess: _previewUrlQueryIsSuccess,
+    isError: _previewUrlQueryIsError,
+    status: _previewUrlQueryStatus,
+  } = useQuery({
     queryKey: ["export-preview-url", previewMediaRef],
     queryFn: async () => {
       if (!previewMediaRef) return null;
@@ -145,7 +155,7 @@ export function useExportTimeline(
     onActiveTrackChange,
     onTrimChange,
     markers,
-    previewVideoUrl: previewUrlQuery.data ?? null,
+    previewVideoUrl: previewUrlQueryData ?? null,
     hasTimeline: completedTracks.length > 0,
   };
 }
