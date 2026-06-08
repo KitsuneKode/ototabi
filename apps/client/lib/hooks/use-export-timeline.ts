@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 import type { TimelineLiteTrack } from "@/components/editor/timeline-lite";
 
@@ -94,11 +94,12 @@ export function useExportTimeline(
     staleTime: 60_000,
   });
 
-  useEffect(() => {
-    if (!trimTrackId && completedTracks[0]?.id) {
-      setTrimTrackId(completedTracks[0].id);
+  const syncDefaultTrimTrack = useCallback(() => {
+    const defaultTrackId = completedTracks[0]?.id;
+    if (!trimTrackId && defaultTrackId) {
+      setTrimTrackId(defaultTrackId);
     }
-  }, [trimTrackId, completedTracks, setTrimTrackId]);
+  }, [completedTracks, trimTrackId, setTrimTrackId]);
 
   const timelineTracks: TimelineLiteTrack[] = useMemo(
     () =>
@@ -138,21 +139,38 @@ export function useExportTimeline(
 
   const onTrimChange = useCallback(
     (trackId: string, range: TrimRangeSec) => {
+      syncDefaultTrimTrack();
       setTrimTrackId(trackId);
       setTrimStart(range.trimInSec > 0 ? String(range.trimInSec) : "");
       setTrimEnd(range.trimOutSec < durationSec ? String(range.trimOutSec) : "");
     },
-    [setTrimTrackId, setTrimStart, setTrimEnd, durationSec],
+    [syncDefaultTrimTrack, setTrimTrackId, setTrimStart, setTrimEnd, durationSec],
+  );
+
+  const handlePlayheadChange = useCallback(
+    (sec: number) => {
+      syncDefaultTrimTrack();
+      setPlayheadSec(sec);
+    },
+    [syncDefaultTrimTrack, setPlayheadSec],
+  );
+
+  const handleActiveTrackChange = useCallback(
+    (trackId: string) => {
+      syncDefaultTrimTrack();
+      onActiveTrackChange(trackId);
+    },
+    [syncDefaultTrimTrack, onActiveTrackChange],
   );
 
   return {
     durationSec,
     playheadSec,
-    setPlayheadSec,
+    setPlayheadSec: handlePlayheadChange,
     timelineTracks,
     trimByTrackId,
     activeTrackId,
-    onActiveTrackChange,
+    onActiveTrackChange: handleActiveTrackChange,
     onTrimChange,
     markers,
     previewVideoUrl: previewUrlQueryData ?? null,

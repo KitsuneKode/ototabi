@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 
 import { AnalogInset } from "@/components/ui/analog-card";
 import { MonoLabel } from "@/components/ui/retro-primitives";
@@ -21,6 +21,7 @@ export function ExportTrackPreview({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const scrubbingRef = useRef(false);
+  const onPlayheadChangeEvent = useEffectEvent(onPlayheadChange);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -28,12 +29,12 @@ export function ExportTrackPreview({
 
     const onTimeUpdate = () => {
       if (scrubbingRef.current) return;
-      onPlayheadChange(clampPlayhead(video.currentTime, durationSec));
+      onPlayheadChangeEvent(clampPlayhead(video.currentTime, durationSec));
     };
 
     video.addEventListener("timeupdate", onTimeUpdate);
     return () => video.removeEventListener("timeupdate", onTimeUpdate);
-  }, [videoUrl, durationSec, onPlayheadChange]);
+  }, [videoUrl, durationSec]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -57,9 +58,12 @@ export function ExportTrackPreview({
             ref={videoRef}
             src={videoUrl}
             controls
+            aria-label="Export track preview"
             className="h-full w-full object-contain"
             playsInline
-          />
+          >
+            <track kind="captions" />
+          </video>
         ) : (
           <div className="text-muted-foreground flex h-full min-h-[200px] items-center justify-center px-4 text-center font-mono text-xs">
             Select a completed track to preview
