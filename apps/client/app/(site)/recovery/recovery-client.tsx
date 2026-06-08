@@ -1,0 +1,348 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useCallback, useReducer } from "react";
+
+import { AppShell } from "@/components/layout/app-shell";
+import { PageHeader } from "@/components/layout/page-header";
+import { UploadStatusBadge } from "@/components/patterns/upload-status-badge";
+import { AnalogCard } from "@/components/ui/analog-card";
+import { Led, LedInline } from "@/components/ui/led";
+import { MonoLabel, PanelTitle, MechButton } from "@/components/ui/retro-primitives";
+import { RefreshCw, CheckCircle, AlertTriangle, HardDrive, ArrowLeft, Upload } from "@/lib/icons";
+import { db, type UploadSession } from "@/lib/localDB";
+import { opfsStorage } from "@/lib/localDB/opfs-storage";
+import { recoverPendingUpload } from "@/lib/uploader/upload-recovery";
+import { useTRPC } from "@/trpc/client";
+
+interface PendingTrack extends UploadSession {
+  pendingChunks: number;
+}
+
+type RecoveryLocalData = {
+  pendingTracks: PendingTrack[];
+  opfsUsage: { files: number; bytes: number } | null;
+};
+
+type RecoveryUiState = {
+  retryingTracks: Set<string>;
+  completedTracks: Set<string>;
+  progressByTrack: Record<string, string>;
+  localError: string | null;
+};
+
+type RecoveryUiAction =
+  | { type: "retry-start"; trackSid: string }
+  | { type: "retry-end"; trackSid: string }
+  | { type: "retry-progress"; trackSid: string; progress: string }
+  | { type: "retry-success"; trackSid: string }
+  | { type: "retry-failure"; trackSid: string };
+
+const initialRecoveryUi: RecoveryUiState = {
+  retryingTracks: new Set(),
+  completedTracks: new Set(),
+  progressByTrack: {},
+  localError: null,
+};
+
+function recoveryUiReducer(state: RecoveryUiState, action: RecoveryUiAction): RecoveryUiState {
+  switch (action.type) {
+    case "retry-start": {
+      const retryingTracks = new Set(state.retryingTracks);
+      retryingTracks.add(action.trackSid);
+      return { ...state, retryingTracks, localError: null };
+    }
+    case "retry-end": {
+      const retryingTracks = new Set(state.retryingTracks);
+      retryingTracks.delete(action.trackSid);
+      return { ...state, retryingTracks };
+    }
+    case "retry-progress":
+      return {
+        ...state,
+        progressByTrack: { ...state.progressByTrack, [action.trackSid]: action.progress },
+      };
+    case "retry-success": {
+      const completedTracks = new Set(state.completedTracks);
+      completedTracks.add(action.trackSid);
+      return { ...state, completedTracks };
+    }
+    case "retry-failure":
+      return {
+        ...state,
+        localError: "Failed to recover upload. Check your connection and try again.",
+      };
+    default:
+      return state;
+  }
+}
+
+async function loadRecoveryLocalData(): Promise<RecoveryLocalData> {
+  const [sessions, pendingChunks] = await Promise.all([
+    db.uploadSessions.toArray(),
+    db.chunks.where("status").anyOf("pending", "failed").toArray(),
+  ]);
+  const chunkCountByTrack = new Map<string, number>();
+  for (const chunk of pendingChunks) {
+    chunkCountByTrack.set(chunk.trackSid, (chunkCountByTrack.get(chunk.trackSid) ?? 0) + 1);
+  }
+
+  const opfsChunkCountByTrack = new Map<string, number>();
+  for (const ref of await opfsStorage.listAllChunks()) {
+    const key = `${ref.sessionId}:${ref.trackSid}`;
+    opfsChunkCountByTrack.set(key, (opfsChunkCountByTrack.get(key) ?? 0) + 1);
+  }
+
+  const tracksBySid = new Map<string, PendingTrack>();
+  for (const s of sessions) {
+    const opfsKey = `${s.sessionId}:${s.trackSid}`;
+    const idbPending = chunkCountByTrack.get(s.trackSid) ?? 0;
+    const opfsPending = opfsChunkCountByTrack.get(opfsKey) ?? 0;
+    tracksBySid.set(s.trackSid, {
+      trackSid: s.trackSid,
+      sessionId: s.sessionId,
+      s3Key: s.s3Key,
+      type: s.type,
+      uploadId: s.uploadId,
+      pendingChunks: Math.max(idbPending, opfsPending),
+    });
+    opfsChunkCountByTrack.delete(opfsKey);
+  }
+
+  for (const [key, opfsPending] of opfsChunkCountByTrack) {
+    if (opfsPending === 0) continue;
+    const [sessionId, trackSid] = key.split(":");
+    if (!sessionId || !trackSid) continue;
+    tracksBySid.set(trackSid, {
+      trackSid,
+      sessionId,
+      s3Key: "",
+      type: "MICROPHONE",
+      uploadId: "",
+      pendingChunks: opfsPending,
+    });
+  }
+
+  let opfsUsage: RecoveryLocalData["opfsUsage"] = null;
+  try {
+    opfsUsage = await opfsStorage.getUsage();
+  } catch {
+    // OPFS may not be available
+  }
+
+  return {
+    pendingTracks: Array.from(tracksBySid.values()),
+    opfsUsage,
+  };
+}
+
+export default function RecoveryClientPage() {
+  const router = useRouter();
+  const trpc = useTRPC();
+  const [ui, dispatch] = useReducer(recoveryUiReducer, initialRecoveryUi);
+
+  const {
+    data: localData,
+    isLoading: isLoadingLocal,
+    error: localQueryError,
+    refetch: refetchLocal,
+  } = useQuery({
+    queryKey: ["recovery-local-tracks"],
+    queryFn: loadRecoveryLocalData,
+    staleTime: 0,
+  });
+
+  useQuery(trpc.auth.getSession.queryOptions());
+
+  const pendingTracks = localData?.pendingTracks ?? [];
+  const opfsUsage = localData?.opfsUsage ?? null;
+  const localError =
+    ui.localError ?? (localQueryError ? "Failed to read local IndexedDB storage." : null);
+
+  const handleRetry = useCallback(
+    async (track: PendingTrack) => {
+      dispatch({ type: "retry-start", trackSid: track.trackSid });
+      try {
+        await recoverPendingUpload(track, ({ uploaded, total }) => {
+          dispatch({
+            type: "retry-progress",
+            trackSid: track.trackSid,
+            progress: `${uploaded}/${total}`,
+          });
+        });
+        dispatch({ type: "retry-success", trackSid: track.trackSid });
+        await refetchLocal();
+      } catch {
+        dispatch({ type: "retry-failure", trackSid: track.trackSid });
+      } finally {
+        dispatch({ type: "retry-end", trackSid: track.trackSid });
+      }
+    },
+    [refetchLocal],
+  );
+
+  if (isLoadingLocal) {
+    return (
+      <div className="bg-background flex min-h-[100dvh] items-center justify-center font-sans">
+        <div className="flex flex-col items-center gap-3">
+          <div className="border-border border-t-accent h-8 w-8 animate-spin rounded-full border-2" />
+          <span className="animate-pulse font-mono text-xs font-bold tracking-widest uppercase">
+            Scanning Local Storage...
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (localError) {
+    return (
+      <div className="bg-background flex min-h-[100dvh] flex-col items-center justify-center px-4 font-sans">
+        <AnalogCard className="w-full max-w-sm p-8 text-center">
+          <AlertTriangle className="text-led-on mx-auto mb-4 h-12 w-12" />
+          <p className="text-led-on mb-2 text-sm font-bold tracking-wider uppercase">
+            Storage Read Failure
+          </p>
+          <p className="text-muted-foreground mb-6 font-mono text-xs leading-normal">
+            {localError}
+          </p>
+          <MechButton onClick={() => router.push("/dashboard")} className="w-full justify-center">
+            Return to Dashboard
+          </MechButton>
+        </AnalogCard>
+      </div>
+    );
+  }
+
+  return (
+    <AppShell maxWidth="max-w-3xl">
+      <div className="space-y-8">
+        <PageHeader
+          label="IndexedDB + OPFS recovery"
+          title="Recovery Console"
+          actions={
+            <>
+              <MechButton onClick={() => router.push("/dashboard")} className="h-9 px-2.5 py-2">
+                <ArrowLeft className="h-4 w-4" />
+              </MechButton>
+              {pendingTracks.length > 0 ? (
+                <UploadStatusBadge status="recoverable" />
+              ) : (
+                <UploadStatusBadge status="complete" />
+              )}
+            </>
+          }
+        />
+
+        {pendingTracks.length === 0 ? (
+          <AnalogCard className="p-12 text-center">
+            <HardDrive className="text-muted-foreground/20 mx-auto mb-4 h-12 w-12" />
+            <PanelTitle label="Storage Status" title="No Pending Recordings" />
+            <p className="text-muted-foreground/60 mx-auto mt-4 max-w-sm font-mono text-xs leading-normal">
+              No pending recordings were found in your browser&apos;s local IndexedDB storage. All
+              local tracks have been uploaded.
+            </p>
+            {opfsUsage ? (
+              <div className="border-border mt-6 inline-flex items-center gap-3 rounded border px-4 py-2">
+                <Led color="green" size="sm" />
+                <MonoLabel>
+                  OPFS: {opfsUsage.files} files, {(opfsUsage.bytes / 1024 / 1024).toFixed(1)} MB
+                </MonoLabel>
+              </div>
+            ) : null}
+            <MechButton onClick={() => router.push("/dashboard")} className="mx-auto mt-6">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to Dashboard
+            </MechButton>
+          </AnalogCard>
+        ) : (
+          <div className="space-y-4">
+            <PanelTitle
+              label="Pending Tracks"
+              title={`${pendingTracks.length} Track${pendingTracks.length !== 1 ? "s" : ""} Awaiting Upload`}
+            />
+
+            {pendingTracks.map((track) => {
+              const isRetrying = ui.retryingTracks.has(track.trackSid);
+              const isCompleted = ui.completedTracks.has(track.trackSid);
+              const canRetry = track.uploadId.length > 0 && track.s3Key.length > 0;
+
+              return (
+                <AnalogCard key={track.trackSid} className="p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-popover border-border flex h-10 w-10 shrink-0 items-center justify-center rounded border">
+                        <HardDrive className="text-muted-foreground h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold tracking-tight uppercase">{track.type}</p>
+                        <MonoLabel className="text-[9px]">
+                          SID: {track.trackSid.slice(-12)}
+                        </MonoLabel>
+                        <MonoLabel className="text-[9px]">
+                          Chunks: {track.pendingChunks}
+                          {" | "}Session: {track.sessionId.slice(-8).toUpperCase()}
+                        </MonoLabel>
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-3">
+                      {isCompleted ? (
+                        <span className="border-led-green/30 bg-led-green/10 text-led-green inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[9px] font-bold tracking-wider uppercase">
+                          <CheckCircle className="h-3 w-3" />
+                          RETRY INITIATED
+                        </span>
+                      ) : (
+                        <>
+                          <span className="border-border bg-popover text-led-on inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[9px] font-bold tracking-wider uppercase">
+                            <LedInline color="red" size="sm" />
+                            {track.pendingChunks} PENDING
+                          </span>
+                          {!canRetry ? (
+                            <MonoLabel className="text-led-on text-[9px]">
+                              OPFS ONLY — RE-RECORD
+                            </MonoLabel>
+                          ) : null}
+                          <MechButton
+                            onClick={() => handleRetry(track)}
+                            disabled={isRetrying || !canRetry}
+                            className="h-8 px-3 py-1.5 text-[10px]"
+                          >
+                            {isRetrying ? (
+                              <>
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                                {ui.progressByTrack[track.trackSid] ?? "RETRYING"}
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="h-3 w-3" />
+                                RETRY UPLOAD
+                              </>
+                            )}
+                          </MechButton>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </AnalogCard>
+              );
+            })}
+
+            <AnalogCard className="flex items-start gap-3 p-5">
+              <Led color="amber" size="sm" pulse className="mt-0.5 shrink-0" />
+              <div>
+                <MonoLabel className="mb-1 block">System Note</MonoLabel>
+                <p className="text-muted-foreground font-mono text-[10px] leading-relaxed">
+                  Tracks stored in IndexedDB and/or OPFS with pending chunks can be retried from
+                  this console. Upload reads OPFS first, then IndexedDB. After retry, the upload
+                  process will resume from where it left off. If the track was already completed on
+                  the server, no further action is needed.
+                </p>
+              </div>
+            </AnalogCard>
+          </div>
+        )}
+      </div>
+    </AppShell>
+  );
+}
