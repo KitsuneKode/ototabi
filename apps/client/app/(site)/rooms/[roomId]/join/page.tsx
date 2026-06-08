@@ -76,12 +76,12 @@ function RoomJoinPageContent() {
     isError: _inviteInfoIsError,
     status: _inviteInfoStatus,
   } = useQuery(
-    trpc.rooms.validateInvite.queryOptions(
+    trpc.studioAccess.validateInvite.queryOptions(
       { code: roomId, token: inviteToken ?? "" },
       { enabled: !!roomId && !!inviteToken, retry: false },
     ),
   );
-  const joinRoomMutation = useMutation(trpc.rooms.joinRoom.mutationOptions());
+  const joinRoomMutation = useMutation(trpc.studioAccess.joinRoom.mutationOptions());
 
   const enumerateDevices = useCallback(async () => {
     try {

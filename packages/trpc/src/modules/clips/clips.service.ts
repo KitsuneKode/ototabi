@@ -3,12 +3,15 @@ import { getClipsQueue, getExportQueue } from "@ototabi/jobs/queues";
 import { prisma } from "@ototabi/store";
 import { TRPCError } from "@trpc/server";
 
-import { roomsRepository } from "../rooms/rooms.repository";
+import { recordingsRepository } from "../recordings/recordings.repository";
 import { usageService } from "../usage/usage.service";
 
 export const clipsService = {
   async listForSession(params: { actorId: string; sessionId: string }) {
-    const canAccess = await roomsRepository.canUserAccessSession(params.sessionId, params.actorId);
+    const canAccess = await recordingsRepository.canUserAccessSession(
+      params.sessionId,
+      params.actorId,
+    );
     if (!canAccess) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to view clips" });
     }
@@ -19,7 +22,10 @@ export const clipsService = {
   },
 
   async queueClipRender(params: { actorId: string; sessionId: string; clipId: string }) {
-    const canAccess = await roomsRepository.canUserAccessSession(params.sessionId, params.actorId);
+    const canAccess = await recordingsRepository.canUserAccessSession(
+      params.sessionId,
+      params.actorId,
+    );
     if (!canAccess) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" });
     }
@@ -61,7 +67,10 @@ export const clipsService = {
       throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown reels preset" });
     }
 
-    const canAccess = await roomsRepository.canUserAccessSession(params.sessionId, params.actorId);
+    const canAccess = await recordingsRepository.canUserAccessSession(
+      params.sessionId,
+      params.actorId,
+    );
     if (!canAccess) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" });
     }
@@ -90,7 +99,10 @@ export const clipsService = {
   },
 
   async regenerateClips(params: { actorId: string; sessionId: string }) {
-    const canAccess = await roomsRepository.canUserAccessSession(params.sessionId, params.actorId);
+    const canAccess = await recordingsRepository.canUserAccessSession(
+      params.sessionId,
+      params.actorId,
+    );
     if (!canAccess) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" });
     }

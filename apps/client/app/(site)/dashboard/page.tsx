@@ -63,7 +63,7 @@ export default function DashboardPage() {
     }),
   );
 
-  const createInviteMutation = useMutation(trpc.rooms.createInvite.mutationOptions());
+  const createInviteMutation = useMutation(trpc.studioAccess.createInvite.mutationOptions());
 
   const recentSessions = summaryData?.recentSessions ?? [];
 
@@ -104,7 +104,7 @@ export default function DashboardPage() {
     isError: _recordingSessionsIsError,
     status: _recordingSessionsStatus,
   } = useQuery({
-    ...trpc.rooms.getRecordingSessions.queryOptions(
+    ...trpc.recordings.getRecordingSessions.queryOptions(
       { roomId: selectedRoomId || "" },
       { enabled: !!selectedRoomId },
     ),

@@ -1,5 +1,8 @@
 import crypto from "node:crypto";
 
+import { studioAccessPolicy } from "./studio-access.policy";
+import { studioAccessRepository } from "./studio-access.repository";
+
 export class StudioAccessError extends Error {
   constructor(
     readonly code: "NOT_FOUND" | "FORBIDDEN",
@@ -13,9 +16,6 @@ export class StudioAccessError extends Error {
 function toAccessError(code: "NOT_FOUND" | "FORBIDDEN", message: string): StudioAccessError {
   return new StudioAccessError(code, message);
 }
-
-import { roomsPolicy } from "./rooms.policy";
-import { roomsRepository } from "./rooms.repository";
 
 export const DEFAULT_LOBBY_INVITE_DAYS = 7;
 export const DEFAULT_LOBBY_MAX_USES = 50;
@@ -54,15 +54,15 @@ export async function loadStudioAccessSnapshot(params: {
   userId: string;
   inviteToken?: string;
 }): Promise<StudioAccessSnapshot | null> {
-  const room = await roomsRepository.findUniqueCode(params.roomCode);
+  const room = await studioAccessRepository.findUniqueCode(params.roomCode);
   if (!room) return null;
 
   const tokenHash = params.inviteToken ? hashInviteToken(params.inviteToken) : null;
   const { member, participant, joinRequest, invite } =
-    await roomsRepository.findStudioAccessByRoomCode(room.id, params.userId, tokenHash);
+    await studioAccessRepository.findStudioAccessByRoomCode(room.id, params.userId, tokenHash);
 
   const inviteForRoom = invite && invite.roomId === room.id ? invite : null;
-  const inviteUsable = inviteForRoom ? roomsPolicy.isInviteUsable(inviteForRoom) : false;
+  const inviteUsable = inviteForRoom ? studioAccessPolicy.isInviteUsable(inviteForRoom) : false;
 
   return {
     room: {
@@ -96,7 +96,7 @@ export function canEnterStudio(
   snapshot: StudioAccessSnapshot,
   userId: string,
 ): CanEnterStudioResult {
-  const lockDecision = roomsPolicy.canEnterLockedRoom({
+  const lockDecision = studioAccessPolicy.canEnterLockedRoom({
     room: snapshot.room,
     userId,
     member: snapshot.member,
@@ -122,7 +122,7 @@ export function canEnterStudio(
   }
 
   if (
-    roomsPolicy.canJoinRoom({
+    studioAccessPolicy.canJoinRoom({
       room: snapshot.room,
       userId,
       member: snapshot.member,
@@ -145,11 +145,11 @@ export async function consumeInviteIfNeeded(params: {
   roomId: string;
   userId: string;
 }): Promise<void> {
-  await roomsRepository.consumeInvite(params.inviteId, params.roomId, params.userId);
+  await studioAccessRepository.consumeInvite(params.inviteId, params.roomId, params.userId);
 }
 
 export async function ensurePendingJoinRequest(roomId: string, userId: string): Promise<void> {
-  await roomsRepository.upsertJoinRequest({ roomId, userId, status: "pending" });
+  await studioAccessRepository.upsertJoinRequest({ roomId, userId, status: "pending" });
 }
 
 export async function enterStudio(params: {
@@ -182,7 +182,7 @@ export async function enterStudio(params: {
       userId: params.userId,
     });
   } else if (!snapshot.participant) {
-    await roomsRepository.addParticipant(snapshot.room.id, params.userId);
+    await studioAccessRepository.addParticipant(snapshot.room.id, params.userId);
   }
 
   return { roomId: snapshot.room.id, roomCode: snapshot.room.code };

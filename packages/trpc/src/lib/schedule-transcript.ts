@@ -2,7 +2,7 @@ import { transcriptJobId } from "@ototabi/common/pipeline-status";
 import { getTranscriptQueue } from "@ototabi/jobs/queues";
 import { prisma } from "@ototabi/store";
 
-import { roomsRepository } from "../modules/rooms/rooms.repository";
+import { recordingsRepository } from "../modules/recordings/recordings.repository";
 import { usageService } from "../modules/usage/usage.service";
 import { resetAiPipelineForRetry } from "./ai-pipeline-reset";
 import {
@@ -27,7 +27,7 @@ export async function scheduleTranscriptForSession(
     select: { id: true },
   }));
 
-  const audioTrack = await roomsRepository.findFirstAudioTrack(sessionId);
+  const audioTrack = await recordingsRepository.findFirstAudioTrack(sessionId);
 
   const gate = evaluateScheduleTranscript({
     sessionStatus: session?.status,
@@ -40,7 +40,7 @@ export async function scheduleTranscriptForSession(
     return gate;
   }
 
-  const hostUserId = await roomsRepository.findSessionHostUserId(sessionId);
+  const hostUserId = await recordingsRepository.findSessionHostUserId(sessionId);
   if (hostUserId) {
     const planGate = await usageService.evaluateTranscriptScheduleForHost(hostUserId);
     if (planGate === "plan_upgrade_required") {

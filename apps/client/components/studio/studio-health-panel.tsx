@@ -103,7 +103,7 @@ export function StudioHealthPanel({
     isError: healthQueryIsError,
     status: _healthQueryStatus,
   } = useQuery(
-    trpc.rooms.getStudioHealth.queryOptions(
+    trpc.studioAccess.getStudioHealth.queryOptions(
       { roomId: roomDbId },
       { enabled: !!roomDbId, refetchInterval: isRecording ? 8_000 : 20_000 },
     ),
