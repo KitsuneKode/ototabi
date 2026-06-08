@@ -4,7 +4,7 @@ import { Label } from "@ototabi/ui/components/label";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 
 import { DashboardRoomList, type DashboardRoom } from "@/components/dashboard/dashboard-room-list";
 import { DashboardSessionsPanel } from "@/components/dashboard/dashboard-sessions-panel";
@@ -79,19 +79,18 @@ export default function DashboardPage() {
   const ownedRooms = summaryData?.ownedRooms ?? [];
   const sharedRooms = summaryData?.sharedRooms ?? [];
 
-  useEffect(() => {
-    if (selectedRoomId || allRooms.length === 0) return;
-    if (allRooms.length === 1) {
-      setSelectedRoomId(allRooms[0]!.id);
-      return;
-    }
+  const defaultRoomId = useMemo(() => {
+    if (allRooms.length === 0) return null;
+    if (allRooms.length === 1) return allRooms[0]!.id;
     const sorted = [...allRooms].toSorted((a, b) => {
       const aTime = a.updatedAt?.getTime() ?? a.createdAt.getTime();
       const bTime = b.updatedAt?.getTime() ?? b.createdAt.getTime();
       return bTime - aTime;
     });
-    setSelectedRoomId(sorted[0]!.id);
-  }, [allRooms, selectedRoomId]);
+    return sorted[0]!.id;
+  }, [allRooms]);
+
+  const activeRoomId = selectedRoomId ?? defaultRoomId;
 
   const {
     data: recordingSessionsData,
@@ -105,12 +104,12 @@ export default function DashboardPage() {
     status: _recordingSessionsStatus,
   } = useQuery({
     ...trpc.recordings.getRecordingSessions.queryOptions(
-      { roomId: selectedRoomId || "" },
-      { enabled: !!selectedRoomId },
+      { roomId: activeRoomId || "" },
+      { enabled: !!activeRoomId },
     ),
   });
 
-  const selectedRoom = allRooms.find((r) => r.id === selectedRoomId) ?? null;
+  const selectedRoom = allRooms.find((r) => r.id === activeRoomId) ?? null;
 
   const handleCreateRoom = useCallback(
     (e: React.FormEvent) => {
@@ -252,7 +251,7 @@ export default function DashboardPage() {
             <DashboardRoomList
               ownedRooms={ownedRooms}
               sharedRooms={sharedRooms}
-              selectedRoomId={selectedRoomId}
+              selectedRoomId={activeRoomId}
               onSelectRoom={setSelectedRoomId}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}

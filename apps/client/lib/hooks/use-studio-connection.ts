@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Room, RoomEvent } from "livekit-client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef } from "react";
 
 import { apiUrl } from "@/lib/api-base";
 import { RecorderManager } from "@/lib/recorder/recorder-manager";
@@ -26,24 +26,61 @@ type ConnectionParams = {
   assertRecordingConsent?: () => Promise<boolean>;
 };
 
+type ConnectionPhase = "idle" | "connecting" | "connected" | "error";
+type ConnectionHealth = "connected" | "reconnecting" | "disconnected";
+
+type ConnectionState = {
+  phase: ConnectionPhase;
+  error: string;
+  health: ConnectionHealth;
+  message: string;
+};
+
+type ConnectionAction =
+  | { type: "connecting" }
+  | { type: "connected" }
+  | { type: "error"; error: string }
+  | { type: "health"; health: ConnectionHealth; message?: string };
+
+const initialConnectionState: ConnectionState = {
+  phase: "idle",
+  error: "",
+  health: "disconnected",
+  message: "",
+};
+
+function connectionReducer(state: ConnectionState, action: ConnectionAction): ConnectionState {
+  switch (action.type) {
+    case "connecting":
+      return { ...state, phase: "connecting", error: "" };
+    case "connected":
+      return { ...state, phase: "connected", health: "connected", message: "" };
+    case "error":
+      return { ...state, phase: "error", error: action.error };
+    case "health":
+      return {
+        ...state,
+        health: action.health,
+        message: action.message ?? state.message,
+      };
+    default:
+      return state;
+  }
+}
+
 export function useStudioConnection(params: ConnectionParams) {
-  const [connectionPhase, setConnectionPhase] = useState<
-    "idle" | "connecting" | "connected" | "error"
-  >("idle");
-  const [connectionError, setConnectionError] = useState("");
-  const [connectionHealth, setConnectionHealth] = useState<
-    "connected" | "reconnecting" | "disconnected"
-  >("disconnected");
-  const [connectionMessage, setConnectionMessage] = useState("");
+  const [connection, dispatch] = useReducer(connectionReducer, initialConnectionState);
 
   const recorderManager = useRef<RecorderManager | null>(null);
   const onDataReceivedRef = useRef(params.onDataReceived);
   const onReconnectedRef = useRef(params.onReconnected);
   const onLeaveRoomRef = useRef(params.onLeaveRoom);
+  const assertRecordingConsentRef = useRef(params.assertRecordingConsent);
 
   onDataReceivedRef.current = params.onDataReceived;
   onReconnectedRef.current = params.onReconnected;
   onLeaveRoomRef.current = params.onLeaveRoom;
+  assertRecordingConsentRef.current = params.assertRecordingConsent;
 
   const {
     data: tokenData,
@@ -82,25 +119,21 @@ export function useStudioConnection(params: ConnectionParams) {
     };
 
     const onDisconnected = () => {
-      setConnectionHealth("disconnected");
-      setConnectionMessage("Disconnected from studio");
+      dispatch({ type: "health", health: "disconnected", message: "Disconnected from studio" });
     };
 
     const onReconnecting = () => {
-      setConnectionHealth("reconnecting");
-      setConnectionMessage("Reconnecting...");
+      dispatch({ type: "health", health: "reconnecting", message: "Reconnecting..." });
     };
 
     const onReconnected = () => {
-      setConnectionMessage("");
-      setConnectionHealth("connected");
+      dispatch({ type: "health", health: "connected", message: "" });
       onReconnectedRef.current();
     };
 
     (async () => {
       try {
-        setConnectionPhase("connecting");
-        setConnectionError("");
+        dispatch({ type: "connecting" });
         room.on(RoomEvent.DataReceived, handleData);
         room.on(RoomEvent.Disconnected, onDisconnected);
         room.on(RoomEvent.Reconnecting, onReconnecting);
@@ -109,8 +142,7 @@ export function useStudioConnection(params: ConnectionParams) {
         await room.connect(config.getConfig("liveKitUrl"), token);
         if (cancelled) return;
 
-        setConnectionHealth("connected");
-        setConnectionPhase("connected");
+        dispatch({ type: "connected" });
 
         if (params.videoEnabled) await room.localParticipant.setCameraEnabled(true);
         if (params.audioEnabled) await room.localParticipant.setMicrophoneEnabled(true);
@@ -118,12 +150,15 @@ export function useStudioConnection(params: ConnectionParams) {
 
         recorderManager.current = new RecorderManager({
           room,
-          assertRecordingConsent: params.assertRecordingConsent,
+          assertRecordingConsent: () =>
+            assertRecordingConsentRef.current?.() ?? Promise.resolve(true),
         });
       } catch (err: unknown) {
         if (cancelled) return;
-        setConnectionError(err instanceof Error ? err.message : "Failed to connect to studio");
-        setConnectionPhase("error");
+        dispatch({
+          type: "error",
+          error: err instanceof Error ? err.message : "Failed to connect to studio",
+        });
       }
     })();
 
@@ -133,8 +168,9 @@ export function useStudioConnection(params: ConnectionParams) {
       room.off(RoomEvent.Disconnected, onDisconnected);
       room.off(RoomEvent.Reconnecting, onReconnecting);
       room.off(RoomEvent.Reconnected, onReconnected);
-      recorderManager.current?.cleanup();
+      const activeRecorder = recorderManager.current;
       recorderManager.current = null;
+      activeRecorder?.cleanup();
       void room.disconnect();
     };
   }, [
@@ -144,33 +180,37 @@ export function useStudioConnection(params: ConnectionParams) {
     params.videoEnabled,
     params.screenShareEnabled,
     params.room,
-    params.assertRecordingConsent,
   ]);
 
   const roomDbId = params.roomDbId;
   useEffect(() => {
+    const leaveRoom = onLeaveRoomRef.current;
     return () => {
-      if (roomDbId) onLeaveRoomRef.current(roomDbId);
+      if (roomDbId) leaveRoom(roomDbId);
     };
   }, [roomDbId]);
 
   const phase: StudioConnectionPhase = !params.enabled
     ? "idle"
-    : tokenIsLoading || connectionPhase === "connecting"
+    : tokenIsLoading || connection.phase === "connecting"
       ? "loading"
-      : tokenIsError || connectionPhase === "error"
+      : tokenIsError || connection.phase === "error"
         ? "error"
-        : connectionPhase === "connected"
+        : connection.phase === "connected"
           ? "connected"
           : "idle";
 
-  const error = tokenError ? tokenError.message : connectionError;
+  const error = tokenError ? tokenError.message : connection.error;
+
+  const setConnectionMessage = (message: string) => {
+    dispatch({ type: "health", health: connection.health, message });
+  };
 
   return {
     phase,
     error,
-    connectionHealth,
-    connectionMessage,
+    connectionHealth: connection.health,
+    connectionMessage: connection.message,
     setConnectionMessage,
     recorderManager,
   };
