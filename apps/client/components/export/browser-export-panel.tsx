@@ -1,9 +1,12 @@
+import type { SessionReviewTrack } from "@/lib/trpc/router-types";
+
+import { TrackPicker } from "@/components/export/track-picker";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { MonoLabel, PanelTitle, MechButton } from "@/components/ui/retro-primitives";
 import { AlertTriangle, Scissors } from "@/lib/icons";
 
 type BrowserExportPanelProps = {
-  completedTracks: any[];
+  completedTracks: SessionReviewTrack[];
   trimTrackId: string | null;
   setTrimTrackId: (id: string | null) => void;
   trimStart: string;
@@ -35,22 +38,13 @@ export function BrowserExportPanel({
 
       <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-3">
         <AnalogInset className="p-3">
-          <MonoLabel as="label" htmlFor="trim-track" className="mb-1.5 block">
-            Select Track
-          </MonoLabel>
-          <select
+          <TrackPicker
             id="trim-track"
-            value={trimTrackId ?? ""}
-            onChange={(e) => setTrimTrackId(e.target.value || null)}
-            className="bg-card border-border focus:border-accent w-full rounded border px-2 py-1.5 font-mono text-xs uppercase focus:outline-none"
-          >
-            <option value="">— Select —</option>
-            {completedTracks.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.type} — {t.user?.name ?? "Unknown"}
-              </option>
-            ))}
-          </select>
+            label="Select Track"
+            tracks={completedTracks}
+            value={trimTrackId}
+            onChange={setTrimTrackId}
+          />
         </AnalogInset>
 
         <AnalogInset className="p-3">
@@ -65,7 +59,7 @@ export function BrowserExportPanel({
             value={trimStart}
             onChange={(e) => setTrimStart(e.target.value)}
             placeholder="0"
-            className="bg-card border-border focus:border-accent w-full rounded border px-2 py-1.5 font-mono text-xs tabular-nums focus:outline-none"
+            className="bg-card border-border focus-visible:border-accent focus-visible:ring-accent/40 w-full rounded border px-2 py-1.5 font-mono text-xs tabular-nums focus-visible:ring-2 focus-visible:outline-none"
           />
         </AnalogInset>
 
@@ -81,7 +75,7 @@ export function BrowserExportPanel({
             value={trimEnd}
             onChange={(e) => setTrimEnd(e.target.value)}
             placeholder="0"
-            className="bg-card border-border focus:border-accent w-full rounded border px-2 py-1.5 font-mono text-xs tabular-nums focus:outline-none"
+            className="bg-card border-border focus-visible:border-accent focus-visible:ring-accent/40 w-full rounded border px-2 py-1.5 font-mono text-xs tabular-nums focus-visible:ring-2 focus-visible:outline-none"
           />
         </AnalogInset>
       </div>

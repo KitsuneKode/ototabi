@@ -1,3 +1,6 @@
+import type { CutPreviewSummary } from "@/lib/cut-preview";
+import type { TranscriptSegment, UsageGet } from "@/lib/trpc/router-types";
+
 import { TranscriptEditor } from "@/components/editor/transcript-editor";
 import { AnalogInset } from "@/components/ui/analog-card";
 import { MonoLabel, PanelTitle, MechButton } from "@/components/ui/retro-primitives";
@@ -6,14 +9,14 @@ import { AlertTriangle, Scissors } from "@/lib/icons";
 
 type TextEditPanelProps = {
   canTextEdit: boolean;
-  usageData: any;
+  usageData: UsageGet | undefined;
   checkoutIsPending: boolean;
   startProCheckout: () => void;
-  transcriptSegments: any[];
+  transcriptSegments: TranscriptSegment[];
   cutSegmentIds: string[];
   toggleCutSegment: (id: string) => void;
   previewCutRange: { startTime: number; endTime: number } | null;
-  cutPreviewSummary: any;
+  cutPreviewSummary: CutPreviewSummary | null;
   setPreviewCutRange: (range: { startTime: number; endTime: number } | null) => void;
   handleCuts: () => void;
   processingStatus: string;
