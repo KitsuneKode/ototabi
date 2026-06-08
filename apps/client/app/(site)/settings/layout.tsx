@@ -1,7 +1,15 @@
-"use client";
+import type { Metadata } from "next";
 
-import { RequireHost } from "@/components/auth/require-host";
+import { requireHostSession } from "@/lib/auth/server-session";
 
-export default function SettingsLayout({ children }: { children: React.ReactNode }) {
-  return <RequireHost>{children}</RequireHost>;
+import SettingsLayoutClient from "./settings-layout-client";
+
+export const metadata: Metadata = {
+  title: "Settings",
+  description: "Manage your operator profile, appearance, billing, and account.",
+};
+
+export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
+  await requireHostSession();
+  return <SettingsLayoutClient>{children}</SettingsLayoutClient>;
 }

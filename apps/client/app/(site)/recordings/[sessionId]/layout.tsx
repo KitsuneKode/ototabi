@@ -1,12 +1,15 @@
-"use client";
+import type { Metadata } from "next";
 
-import { RequireAuth } from "@/components/auth/require-auth";
-import { RequireHost } from "@/components/auth/require-host";
+import { requireHostSession } from "@/lib/auth/server-session";
 
-export default function RecordingSessionLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <RequireAuth>
-      <RequireHost>{children}</RequireHost>
-    </RequireAuth>
-  );
+import RecordingSessionLayoutClient from "./recording-session-layout-client";
+
+export const metadata: Metadata = {
+  title: "Session Review",
+  description: "Review multi-track recordings, transcripts, chapters, and export options.",
+};
+
+export default async function RecordingSessionLayout({ children }: { children: React.ReactNode }) {
+  await requireHostSession();
+  return <RecordingSessionLayoutClient>{children}</RecordingSessionLayoutClient>;
 }

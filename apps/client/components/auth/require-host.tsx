@@ -1,8 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-
 import { AnalogStatePanel } from "@/components/patterns/analog-state-panel";
 import { useAuthGate, useSessionQuery } from "@/lib/hooks/use-session";
 
@@ -11,26 +8,16 @@ type RequireHostProps = {
 };
 
 /**
- * Redirects guest sessions away from host-only routes (dashboard, settings, recovery).
+ * Client loading gate for host-only routes. Server layouts call requireHostSession()
+ * for redirect(); this component avoids flashing protected content while the tRPC
+ * session hydrates after navigation.
  */
 export function RequireHost({ children }: RequireHostProps) {
-  const router = useRouter();
   const { isBooting, showGate, sessionReady } = useAuthGate();
   const authState = useSessionQuery();
 
   const role = authState.data?.user?.role;
   const isGuest = role === "guest";
-
-  useEffect(() => {
-    if (!authState.isFetched || authState.isFetching) return;
-    if (showGate) {
-      router.replace("/auth/signin");
-      return;
-    }
-    if (isGuest) {
-      router.replace("/");
-    }
-  }, [authState.isFetched, authState.isFetching, showGate, isGuest, router]);
 
   if (isBooting || !sessionReady || isGuest || showGate) {
     return (

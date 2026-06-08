@@ -1,7 +1,15 @@
-"use client";
+import type { Metadata } from "next";
 
-import { RequireHost } from "@/components/auth/require-host";
+import { requireHostSession } from "@/lib/auth/server-session";
 
-export default function RecoveryLayout({ children }: { children: React.ReactNode }) {
-  return <RequireHost>{children}</RequireHost>;
+import RecoveryLayoutClient from "./recovery-layout-client";
+
+export const metadata: Metadata = {
+  title: "Recovery Console",
+  description: "Retry pending local uploads from IndexedDB and OPFS storage.",
+};
+
+export default async function RecoveryLayout({ children }: { children: React.ReactNode }) {
+  await requireHostSession();
+  return <RecoveryLayoutClient>{children}</RecoveryLayoutClient>;
 }
