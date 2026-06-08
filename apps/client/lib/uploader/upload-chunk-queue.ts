@@ -29,7 +29,7 @@ export async function countPendingChunks(trackSid?: string): Promise<number> {
   return db.chunks.where("status").anyOf("pending", "failed").count();
 }
 
-export async function listSchedulableChunks(trackSid?: string, limit = 32): Promise<StoredChunk[]> {
+async function listSchedulableChunks(trackSid?: string, limit = 32): Promise<StoredChunk[]> {
   const query = trackSid
     ? db.chunks
         .where("trackSid")
@@ -40,7 +40,7 @@ export async function listSchedulableChunks(trackSid?: string, limit = 32): Prom
   return query.limit(limit).toArray();
 }
 
-export async function loadChunkBlob(sessionId: string, chunk: StoredChunk): Promise<Blob> {
+async function loadChunkBlob(sessionId: string, chunk: StoredChunk): Promise<Blob> {
   return (await opfsStorage.readChunk(sessionId, chunk.partNumber, chunk.trackSid)) ?? chunk.data;
 }
 

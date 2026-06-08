@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 export type ShortcutAction =
   | "toggleRecording"
@@ -34,56 +34,56 @@ export function useKeyboardShortcuts(handlers: {
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-    const pressed = e.key.toLowerCase();
-    const h = handlersRef.current;
-
-    if (pressed === "r" && !e.ctrlKey && !e.metaKey) {
-      e.preventDefault();
-      h.toggleRecording?.();
-    }
-    if (pressed === "m" && !e.ctrlKey && !e.metaKey) {
-      e.preventDefault();
-      h.toggleMute?.();
-    }
-    if (pressed === "v" && !e.ctrlKey && !e.metaKey) {
-      e.preventDefault();
-      h.toggleVideo?.();
-    }
-    if (pressed === "s" && !e.ctrlKey && !e.metaKey) {
-      e.preventDefault();
-      h.toggleScreenShare?.();
-    }
-    if (e.code === "Space" && !e.ctrlKey && !e.metaKey) {
-      if (e.repeat) return;
-      e.preventDefault();
-      h.pttDown?.();
-    }
-    if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
-      e.preventDefault();
-      h.toggleShortcuts?.();
-    }
-    if (e.key === "Escape") {
-      h.dismiss?.();
-    }
-  }, []);
-
-  const handleKeyUp = useCallback((e: KeyboardEvent) => {
-    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-    if (e.code === "Space") {
-      e.preventDefault();
-      handlersRef.current.pttUp?.();
-    }
-  }, []);
-
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      const pressed = e.key.toLowerCase();
+      const h = handlersRef.current;
+
+      if (pressed === "r" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        h.toggleRecording?.();
+      }
+      if (pressed === "m" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        h.toggleMute?.();
+      }
+      if (pressed === "v" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        h.toggleVideo?.();
+      }
+      if (pressed === "s" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        h.toggleScreenShare?.();
+      }
+      if (e.code === "Space" && !e.ctrlKey && !e.metaKey) {
+        if (e.repeat) return;
+        e.preventDefault();
+        h.pttDown?.();
+      }
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        h.toggleShortcuts?.();
+      }
+      if (e.key === "Escape") {
+        h.dismiss?.();
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.code === "Space") {
+        e.preventDefault();
+        handlersRef.current.pttUp?.();
+      }
+    };
+
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [handleKeyDown, handleKeyUp]);
+  }, []);
 }

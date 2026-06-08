@@ -1,4 +1,4 @@
-export const DEFAULT_UPLOAD_POOL_LIMITS = {
+const DEFAULT_UPLOAD_POOL_LIMITS = {
   maxGlobalInFlight: 4,
   maxPerTrackInFlight: 3,
 } as const;
