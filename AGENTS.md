@@ -2,8 +2,16 @@
 
 ## Task Completion Requirements
 
-- All of `bun fmt`, `bun run db:format:check`, `bun lint`, and `bun typecheck` must pass before considering tasks completed.
+- All of `bun fmt`, `bun run db:format:check`, `bun lint`, `bun typecheck`, and `bun run doctor:ci` (in `apps/client`) must pass before considering tasks completed.
 - NEVER run `bun test`. Always use `bun run test` (Bun test via turbo).
+
+### React Doctor (`apps/client`)
+
+- **CI gate:** score ≥ **85/100** via `bun run doctor:ci` (see `.github/workflows/ci.yml`).
+- **Local scan:** `cd apps/client && bun run doctor` (verbose diagnostics).
+- **Config:** `apps/client/doctor.config.ts` — narrow `ignore.overrides` only for intentional sequential async (FFmpeg export, multipart upload, recorder teardown). Do not blanket-ignore metadata or a11y rules.
+- **Metadata:** `'use client'` pages need a thin server `page.tsx` shell with inline `export const metadata` (re-exporting from `layout.tsx` does not satisfy the scanner).
+- **Client routes:** keep logic in `*-client.tsx`; server shells handle metadata and auth redirects via `lib/auth/server-session.ts`.
 
 ## Core Priorities
 
