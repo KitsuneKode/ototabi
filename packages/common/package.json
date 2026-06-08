@@ -12,6 +12,7 @@
     "./export-routing": "./src/export-routing.ts",
     "./pipeline-status": "./src/pipeline-status.ts",
     "./reels-presets": "./src/reels-presets.ts",
+    "./sync-alignment": "./src/sync-alignment.ts",
     "./types": "./src/types/zod-schema.ts",
     "./config-loader": "./src/utils/config-loader.ts",
     "./logger": "./src/utils/logger.ts"

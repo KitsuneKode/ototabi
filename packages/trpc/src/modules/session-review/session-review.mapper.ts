@@ -3,6 +3,8 @@ import type { PipelineStatus } from "@ototabi/common/pipeline-status";
 
 import type { sessionReviewRepository } from "./session-review.repository";
 
+import { mapExportableAssets } from "../exports/exports.mapper";
+
 type SessionRecord = NonNullable<
   Awaited<ReturnType<typeof sessionReviewRepository.findSessionForActor>>
 >;
@@ -170,6 +172,7 @@ export function mapSessionReview(
       localTime: marker.localTime,
       createdAt: marker.createdAt,
       trackSid: marker.trackSid,
+      rtpTimestamp: marker.rtpTimestamp,
     })),
     transcriptSegments: bundle.transcriptSegments,
     chapters: bundle.chapters,
@@ -222,6 +225,11 @@ export function mapSessionReview(
       dbStatus: transcriptDbStatus,
       hasSegments: hasTranscript,
       micReady,
+    }),
+    exportAssets: mapExportableAssets(session, {
+      transcriptSegments: bundle.transcriptSegments,
+      clipCandidates: bundle.clipCandidates,
+      exportFields: exportFields ?? null,
     }),
   };
 }

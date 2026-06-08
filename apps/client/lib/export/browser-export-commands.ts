@@ -1,29 +1,83 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile } from "@ffmpeg/util";
 
-import { resolveTrackDownloadUrl } from "@/lib/resolve-track-download";
+import { resolveTrackDownloadUrls } from "@/lib/resolve-track-download";
 import { trpcClient } from "@/trpc/vanilla";
 
-export type TrackWithMedia = { s3Url?: string | null; s3Key?: string | null };
+export type TrackWithMedia = {
+  s3Url?: string | null;
+  s3Key?: string | null;
+  trackSid?: string;
+};
 
-/** Download tracks in parallel, then write inputs for ffmpeg concat. */
+export type WriteTracksOptions = {
+  offsetByTrackSid?: Map<string, number>;
+};
+
+/** Per-track audio filters applied before concat (delay only — noise reduction stays on merge). */
+export function buildPerTrackAudioFilter(offsetMs: number): string[] {
+  if (offsetMs <= 0) return [];
+  return [`adelay=${offsetMs}|${offsetMs}`];
+}
+
+export function buildMergeAudioFilters(noiseReduction: boolean): string[] {
+  return noiseReduction ? ["afftdn"] : [];
+}
+
+/** Download tracks in parallel, optionally align each with per-track adelay, then build concat list. */
 export async function writeTracksToFfmpeg(
   ffmpeg: FFmpeg,
   tracks: TrackWithMedia[],
+  options?: WriteTracksOptions,
 ): Promise<string> {
+  const mediaRefs = tracks.map((track, i) => {
+    const mediaRef = track.s3Url ?? track.s3Key;
+    if (!mediaRef) throw new Error(`Track ${i + 1} has no media reference`);
+    return mediaRef;
+  });
+  const downloadUrls = await resolveTrackDownloadUrls(trpcClient, mediaRefs);
+
   const prepared = await Promise.all(
     tracks.map(async (track, i) => {
-      const name = `input_${i}.mp4`;
+      const rawName = `input_${i}.mp4`;
       const mediaRef = track.s3Url ?? track.s3Key;
       if (!mediaRef) throw new Error(`Track ${i + 1} has no media reference`);
-      const downloadUrl = await resolveTrackDownloadUrl(trpcClient, mediaRef);
+      const downloadUrl = downloadUrls.get(mediaRef);
       if (!downloadUrl) throw new Error(`Could not resolve download URL for track ${i + 1}`);
       const data = await fetchFile(downloadUrl);
-      return { name, data };
+      return { rawName, data, trackSid: track.trackSid, index: i };
     }),
   );
-  await Promise.all(prepared.map(({ name, data }) => ffmpeg.writeFile(name, data)));
-  return prepared.map(({ name }) => `file '${name}'\n`).join("");
+
+  await Promise.all(prepared.map(({ rawName, data }) => ffmpeg.writeFile(rawName, data)));
+
+  const concatNames: string[] = [];
+  for (const { rawName, trackSid, index } of prepared) {
+    const offsetMs =
+      trackSid && options?.offsetByTrackSid ? (options.offsetByTrackSid.get(trackSid) ?? 0) : 0;
+    const audioFilters = buildPerTrackAudioFilter(offsetMs);
+
+    if (audioFilters.length === 0) {
+      concatNames.push(rawName);
+      continue;
+    }
+
+    const alignedName = `aligned_${index}.mp4`;
+    await ffmpeg.exec([
+      "-i",
+      rawName,
+      "-af",
+      audioFilters.join(","),
+      "-c:v",
+      "copy",
+      "-c:a",
+      "aac",
+      alignedName,
+    ]);
+    concatNames.push(alignedName);
+  }
+
+  return concatNames.map((name) => `file '${name}'\n`).join("");
 }
 
 export function buildMergeArgs(audioFilters: string[]): string[] {
@@ -72,14 +126,19 @@ export function buildTrimArgs(
   trimStart: string,
   trimEnd: string,
   noiseReduction: boolean,
+  audioDelayMs = 0,
 ): string[] {
   const args = ["-i", "input.mp4"];
   if (trimStart) args.push("-ss", String(Number(trimStart)));
   if (trimEnd) {
     args.push("-to", trimEnd);
   }
-  if (noiseReduction) {
-    args.push("-af", "afftdn", "-c:v", "copy", "-c:a", "aac");
+  const audioFilters = [
+    ...buildPerTrackAudioFilter(audioDelayMs),
+    ...(noiseReduction ? ["afftdn"] : []),
+  ];
+  if (audioFilters.length > 0) {
+    args.push("-af", audioFilters.join(","), "-c:v", "copy", "-c:a", "aac");
   } else {
     args.push("-c", "copy");
   }

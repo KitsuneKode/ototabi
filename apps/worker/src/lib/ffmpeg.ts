@@ -139,10 +139,22 @@ export async function renderClipToFile(params: {
   }
 }
 
+function appendAudioDelayFilter(args: string[], audioDelayMs: number | undefined): void {
+  if (!audioDelayMs || audioDelayMs <= 0) return;
+  const filter = `adelay=${audioDelayMs}|${audioDelayMs}`;
+  const afIndex = args.indexOf("-af");
+  if (afIndex >= 0 && args[afIndex + 1]) {
+    args[afIndex + 1] = `${args[afIndex + 1]},${filter}`;
+    return;
+  }
+  args.push("-af", filter);
+}
+
 export async function renderLandscapeEpisodeToFile(params: {
   inputPath: string;
   outputPath: string;
   audioOnly?: boolean;
+  audioDelayMs?: number;
 }): Promise<void> {
   const args: string[] = ["-y"];
 
@@ -169,6 +181,7 @@ export async function renderLandscapeEpisodeToFile(params: {
       "-shortest",
       params.outputPath,
     );
+    appendAudioDelayFilter(args, params.audioDelayMs);
   } else {
     args.push(
       "-i",
@@ -187,6 +200,7 @@ export async function renderLandscapeEpisodeToFile(params: {
       "128k",
       params.outputPath,
     );
+    appendAudioDelayFilter(args, params.audioDelayMs);
   }
 
   const exit = await runProcess("ffmpeg", args);
@@ -198,6 +212,7 @@ export async function renderLandscapeEpisodeToFile(params: {
 export async function renderEpisodeMp3ToFile(params: {
   inputPath: string;
   outputPath: string;
+  audioDelayMs?: number;
 }): Promise<void> {
   const args = [
     "-y",
@@ -210,6 +225,7 @@ export async function renderEpisodeMp3ToFile(params: {
     "2",
     params.outputPath,
   ];
+  appendAudioDelayFilter(args, params.audioDelayMs);
   const exit = await runProcess("ffmpeg", args);
   if (exit !== 0) {
     throw new Error(`ffmpeg exited with code ${exit}`);

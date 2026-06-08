@@ -73,6 +73,7 @@ On `/export/{sessionId}` with at least one **COMPLETED** track:
 1. **Timeline & preview** — scrub the global rail; playhead moves on lanes and in the preview video. Click a lane to make it active, then drag **trim in/out** handles; values sync to **Trim clip** fields.
 2. **Text cuts (Pro+)** — mark transcript segments, confirm preview stats/highlight, apply cuts (multi-track when multiple sources selected).
 3. **Sync warnings** — sparse or missing sync markers show alignment warnings before merge/export.
+4. **Per-track alignment (2 guests)** — host + guest record 30s+ with clock pulses every 2s; on export, **Sync Tape** shows per-track offset table with confidence badges; merged browser export sounds aligned on clap/stop (±50ms target).
 
 ## Smoke log checklist
 

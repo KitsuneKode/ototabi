@@ -1,13 +1,10 @@
 "use client";
 
-import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { fetchFile } from "@ffmpeg/util";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
-import { useRef, useCallback, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 
-import type { BackgroundBlurPreset } from "@/lib/demo/demo-background-presets";
-import type { DemoAspectPreset } from "@/lib/demo/demo-export-presets";
+import type { SessionReviewTrack } from "@/lib/trpc/router-types";
 
 import { ClipRenderActions } from "@/components/clips/clip-render-actions";
 import { SessionExportActions } from "@/components/clips/session-export-actions";
@@ -28,23 +25,18 @@ import { ShowNotesEditor } from "@/components/session-review/show-notes-editor";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { Led, LedInline } from "@/components/ui/led";
 import { MonoLabel, PanelTitle, StatusBadge, MechButton } from "@/components/ui/retro-primitives";
-import { computeKeepRanges, summarizeCutPreview } from "@/lib/cut-preview";
 import { formatDateTime, formatTimestamp } from "@/lib/date-utils";
-import { isValidBlurPreset } from "@/lib/demo/demo-background-presets";
+import { useBrowserFfmpegExport } from "@/lib/hooks/use-browser-ffmpeg-export";
+import { useExportBillingGate } from "@/lib/hooks/use-export-billing-gate";
 import {
-  buildDemoFfmpegExecArgs,
-  removeDemoExportInputs,
-  resolveDemoExportTracks,
-  writeDemoInputsToFfmpeg,
-} from "@/lib/demo/demo-export-pipeline";
-import {
-  writeTracksToFfmpeg,
-  buildMergeArgs,
-  buildExportArgs,
-  buildTrimArgs,
-} from "@/lib/export/browser-export-commands";
-import { loadFfmpegInstance, downloadFile, removeTrackInputs } from "@/lib/export/browser-ffmpeg";
-import { useExportConsole } from "@/lib/hooks/use-export-console";
+  useExportConsole,
+  useExportCuts,
+  useExportProcessing,
+  useExportTrackSelection,
+  useExportTrim,
+} from "@/lib/hooks/use-export-console";
+import { useExportCutPreview } from "@/lib/hooks/use-export-cut-preview";
+import { useExportSyncContext } from "@/lib/hooks/use-export-sync-context";
 import { useExportTimeline } from "@/lib/hooks/use-export-timeline";
 import { useAuthGate } from "@/lib/hooks/use-session";
 import { useSessionReview } from "@/lib/hooks/use-session-review";
@@ -58,11 +50,6 @@ import {
   RefreshCw,
   Combine,
 } from "@/lib/icons";
-import {
-  countDistinctSyncMarkerTracks,
-  getSyncAlignmentWarnings,
-  getSyncMarkerOffsetMs,
-} from "@/lib/merge-session-timeline";
 import { resolveTrackDownloadUrl } from "@/lib/resolve-track-download";
 import { useTRPC } from "@/trpc/client";
 import { trpcClient } from "@/trpc/vanilla";
@@ -116,433 +103,11 @@ function TrackStatusBadge({ status }: { status: string }) {
   );
 }
 
-export default function ExportSessionPage() {
-  const { sessionId } = useParams() as { sessionId: string };
-  const router = useRouter();
-  const trpc = useTRPC();
-  const { sessionReady } = useAuthGate();
-
-  const { data: usageData } = useQuery({
-    ...trpc.usage.get.queryOptions(),
-    enabled: sessionReady,
-  });
-  const canTextEdit = usageData?.features.textBasedEditing ?? false;
-
-  const checkout = useMutation(
-    trpc.billing.checkout.mutationOptions({
-      onSuccess: (data) => {
-        if (data.url) window.location.href = data.url;
-      },
-    }),
-  );
-
-  const startProCheckout = useCallback(() => {
-    const successUrl = `${window.location.origin}/export/${sessionId}?billing=success`;
-    checkout.mutate({ plan: "pro", successUrl });
-  }, [checkout, sessionId]);
-
-  const {
-    query,
-    session,
-    transcriptSegments,
-    chapters,
-    showNotes,
-    clipCandidates,
-    aiStatus,
-    transcriptStatus,
-    pipeline,
-    exports,
-    syncMarkers,
-    timelineEvents,
-    allUploaded,
-    aggregateUploadStatus,
-    isBootingAuth,
-  } = useSessionReview(sessionId);
-
-  const { data: demoSessionQueryData } = useQuery({
-    ...trpc.demo.getSession.queryOptions({ sessionId }),
-    enabled: sessionReady && Boolean(sessionId) && session?.mode === "DEMO",
-  });
-
-  const syncOffsetMs = getSyncMarkerOffsetMs(syncMarkers);
-  const completedTrackCount =
-    session?.tracks.filter((t) => t.status === "COMPLETED" && (t.s3Url || t.s3Key)).length ?? 0;
-  const distinctMarkerTrackCount = countDistinctSyncMarkerTracks(syncMarkers);
-  const syncAlignmentWarnings = getSyncAlignmentWarnings({
-    syncMarkerCount: syncMarkers?.length ?? 0,
-    completedTrackCount,
-    distinctMarkerTrackCount,
-  });
-
-  const {
-    ffmpegLoaded,
-    processingStatus,
-    processingMode,
-    progress,
-    selectedTrackIds,
-    cutSegmentIds,
-    trimStart,
-    trimEnd,
-    trimTrackId,
-    errorMessage,
-    noiseReduction,
-    setFfmpegLoaded,
-    beginProcessing,
-    setProcessingStatus,
-    setProgress,
-    setErrorMessage,
-    setNoiseReduction,
-    setTrimStart,
-    setTrimEnd,
-    setTrimTrackId,
-    toggleTrack,
-    toggleCutSegment,
-    clearCutSegments,
-    previewCutRange,
-    setPreviewCutRange,
-  } = useExportConsole(sessionId);
-
-  const transcriptEndSec = transcriptSegments?.[transcriptSegments.length - 1]?.endTime;
-  const exportTimeline = useExportTimeline(session, transcriptEndSec);
-
-  const cutPreviewSummary = useMemo(() => {
-    if (!transcriptSegments?.length || cutSegmentIds.length === 0) return null;
-    const cuts = transcriptSegments.filter(
-      (s): s is typeof s & { startTime: number; endTime: number } =>
-        cutSegmentIds.includes(s.id ?? "") && s.id != null,
-    );
-    const totalDuration = transcriptSegments[transcriptSegments.length - 1]?.endTime ?? 0;
-    return summarizeCutPreview(cuts, totalDuration);
-  }, [transcriptSegments, cutSegmentIds]);
-
-  useEffect(() => {
-    if (!cutPreviewSummary?.previewEnvelope) {
-      if (cutSegmentIds.length === 0) setPreviewCutRange(null);
-      return;
-    }
-    setPreviewCutRange(cutPreviewSummary.previewEnvelope);
-  }, [cutPreviewSummary, cutSegmentIds.length, setPreviewCutRange]);
-
-  const ffmpegRef = useRef(new FFmpeg());
-
-  const loadFfmpeg = useCallback(async () => {
-    if (ffmpegLoaded) return;
-    setProcessingStatus("loading-ffmpeg");
-    setErrorMessage("");
-    try {
-      await loadFfmpegInstance(ffmpegRef.current, setProgress);
-      setFfmpegLoaded(true);
-      setProcessingStatus("idle");
-    } catch (err) {
-      setProcessingStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Failed to load FFmpeg");
-    }
-  }, [ffmpegLoaded, setErrorMessage, setFfmpegLoaded, setProcessingStatus, setProgress]);
-
-  const handleMerge = useCallback(async () => {
-    if (!session) return;
-    const tracks = session.tracks.filter(
-      (t) => selectedTrackIds.includes(t.id) && t.status === "COMPLETED" && (t.s3Url || t.s3Key),
-    );
-    if (tracks.length < 2) return;
-
-    beginProcessing("merge");
-
-    try {
-      await loadFfmpeg();
-      const ffmpeg = ffmpegRef.current;
-
-      const content = await writeTracksToFfmpeg(ffmpeg, tracks);
-
-      await ffmpeg.writeFile("concat_list.txt", new TextEncoder().encode(content));
-      const audioFilters: string[] = [];
-      if (noiseReduction) audioFilters.push("afftdn");
-      if (syncOffsetMs > 0) audioFilters.push(`adelay=${syncOffsetMs}|${syncOffsetMs}`);
-
-      const mergeArgs = buildMergeArgs(audioFilters);
-      await ffmpeg.exec(mergeArgs);
-
-      await downloadFile(ffmpeg, "output.mp4", `session-${sessionId.slice(-8)}-merged.mp4`);
-
-      await removeTrackInputs(ffmpeg, tracks.length);
-
-      setProcessingStatus("done");
-    } catch (err) {
-      setProcessingStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Merge failed");
-    }
-  }, [
-    session,
-    selectedTrackIds,
-    beginProcessing,
-    loadFfmpeg,
-    sessionId,
-    noiseReduction,
-    syncOffsetMs,
-    setErrorMessage,
-    setProcessingStatus,
-  ]);
-
-  const handleExportRes = useCallback(
-    async (resolution: "720p" | "1080p") => {
-      if (!session) return;
-      const tracks = session.tracks.filter(
-        (t) => selectedTrackIds.includes(t.id) && t.status === "COMPLETED" && (t.s3Url || t.s3Key),
-      );
-      if (tracks.length === 0) return;
-
-      const mode = resolution === "720p" ? "720p" : "1080p";
-      beginProcessing(mode);
-
-      try {
-        await loadFfmpeg();
-        const ffmpeg = ffmpegRef.current;
-
-        const content = await writeTracksToFfmpeg(ffmpeg, tracks);
-
-        await ffmpeg.writeFile("concat_list.txt", new TextEncoder().encode(content));
-        const audioFilters: string[] = [];
-        if (noiseReduction) audioFilters.push("afftdn");
-        if (syncOffsetMs > 0) audioFilters.push(`adelay=${syncOffsetMs}|${syncOffsetMs}`);
-
-        const exportArgs = buildExportArgs(resolution, audioFilters);
-        await ffmpeg.exec(exportArgs);
-
-        await downloadFile(
-          ffmpeg,
-          "output.mp4",
-          `session-${sessionId.slice(-8)}-${resolution}.mp4`,
-        );
-
-        await removeTrackInputs(ffmpeg, tracks.length);
-
-        setProcessingStatus("done");
-      } catch (err) {
-        setProcessingStatus("error");
-        setErrorMessage(err instanceof Error ? err.message : `${resolution} export failed`);
-      }
-    },
-    [
-      session,
-      selectedTrackIds,
-      beginProcessing,
-      loadFfmpeg,
-      sessionId,
-      noiseReduction,
-      syncOffsetMs,
-      setErrorMessage,
-      setProcessingStatus,
-    ],
-  );
-
-  const handleDemoAspectExport = useCallback(
-    async (preset: DemoAspectPreset) => {
-      if (!session) return;
-      const resolved = resolveDemoExportTracks(session.tracks, selectedTrackIds);
-      if (!resolved.display) return;
-
-      const demoEdit = demoSessionQueryData?.demo;
-      const blurLevel = demoEdit?.backgroundBlur ?? 0;
-      const edit = {
-        trimStartMs: demoEdit?.trimStartMs ?? null,
-        trimEndMs: demoEdit?.trimEndMs ?? null,
-        playbackSpeed: demoEdit?.playbackSpeed ?? 1,
-        backgroundBlur: (isValidBlurPreset(blurLevel) ? blurLevel : 0) as BackgroundBlurPreset,
-        pipEnabled: demoEdit?.pipEnabled ?? true,
-      };
-
-      beginProcessing(preset);
-
-      try {
-        await loadFfmpeg();
-        const ffmpeg = ffmpegRef.current;
-        const inputs = await writeDemoInputsToFfmpeg(ffmpeg, {
-          display: resolved.display,
-          camera: resolved.camera,
-          mic: resolved.mic,
-        });
-        const exportArgs = buildDemoFfmpegExecArgs({
-          inputs,
-          aspectPreset: preset,
-          edit,
-          noiseReduction,
-        });
-        await ffmpeg.exec(exportArgs);
-
-        await downloadFile(
-          ffmpeg,
-          "output.mp4",
-          `demo-${sessionId.slice(-8)}-${preset.replace(":", "x")}.mp4`,
-        );
-
-        await removeDemoExportInputs(ffmpeg, inputs);
-
-        setProcessingStatus("done");
-      } catch (err) {
-        setProcessingStatus("error");
-        setErrorMessage(err instanceof Error ? err.message : `${preset} export failed`);
-      }
-    },
-    [
-      session,
-      selectedTrackIds,
-      demoSessionQueryData?.demo,
-      beginProcessing,
-      loadFfmpeg,
-      sessionId,
-      noiseReduction,
-      setErrorMessage,
-      setProcessingStatus,
-    ],
-  );
-
-  const handleTrim = useCallback(async () => {
-    if (!trimTrackId || (!trimStart && !trimEnd)) return;
-
-    beginProcessing("trim");
-
-    try {
-      await loadFfmpeg();
-      const ffmpeg = ffmpegRef.current;
-
-      const track = session?.tracks.find((t) => t.id === trimTrackId);
-      const mediaRef = track?.s3Url ?? track?.s3Key;
-      if (!mediaRef) throw new Error("Track not found");
-
-      const downloadUrl = await resolveTrackDownloadUrl(trpcClient, mediaRef);
-      if (!downloadUrl) throw new Error("Could not resolve track download URL");
-
-      const data = await fetchFile(downloadUrl);
-      await ffmpeg.writeFile("input.mp4", data);
-
-      const args = buildTrimArgs(trimStart, trimEnd, noiseReduction);
-
-      await ffmpeg.exec(args);
-
-      await downloadFile(ffmpeg, "output.mp4", `session-${sessionId.slice(-8)}-trim.mp4`);
-
-      await ffmpeg.deleteFile("input.mp4");
-
-      setProcessingStatus("done");
-    } catch (err) {
-      setProcessingStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Trim failed");
-    }
-  }, [
-    trimTrackId,
-    trimStart,
-    trimEnd,
-    session,
-    beginProcessing,
-    loadFfmpeg,
-    sessionId,
-    noiseReduction,
-    setErrorMessage,
-    setProcessingStatus,
-  ]);
-
-  const handleCuts = useCallback(async () => {
-    if (!session || cutSegmentIds.length === 0) return;
-    const segments = transcriptSegments?.filter((s) => cutSegmentIds.includes(s.id));
-    if (!segments?.length) return;
-
-    const completed = session.tracks.filter(
-      (t) => t.status === "COMPLETED" && (t.s3Url || t.s3Key),
-    );
-    const targetTracks =
-      selectedTrackIds.length > 0
-        ? completed.filter((t) => selectedTrackIds.includes(t.id))
-        : completed;
-    if (targetTracks.length === 0) throw new Error("No completed tracks to cut");
-
-    beginProcessing("cuts");
-
-    try {
-      await loadFfmpeg();
-      const ffmpeg = ffmpegRef.current;
-      const allSegments = transcriptSegments ?? [];
-      const sortedCuts = [...segments].toSorted((a, b) => a.startTime - b.startTime);
-
-      const totalDuration = allSegments[allSegments.length - 1]?.endTime ?? 9999;
-      const keepRanges = computeKeepRanges(sortedCuts, totalDuration);
-      if (keepRanges.length === 0) throw new Error("Cannot cut entire video");
-
-      for (let trackIndex = 0; trackIndex < targetTracks.length; trackIndex++) {
-        const track = targetTracks[trackIndex]!;
-        const mediaRef = track.s3Url ?? track.s3Key;
-        if (!mediaRef) continue;
-
-        const downloadUrl = await resolveTrackDownloadUrl(trpcClient, mediaRef);
-        if (!downloadUrl)
-          throw new Error(`Could not resolve download URL for track ${trackIndex + 1}`);
-
-        const data = await fetchFile(downloadUrl);
-        await ffmpeg.writeFile("input.mp4", data);
-
-        const keepNames = await keepRanges.reduce<Promise<string[]>>(async (namesPromise, r, i) => {
-          const names = await namesPromise;
-          const name = `keep_${i}.mp4`;
-          await ffmpeg.exec([
-            "-i",
-            "input.mp4",
-            "-ss",
-            String(r.start),
-            "-to",
-            String(r.end),
-            "-c",
-            "copy",
-            name,
-          ]);
-          return [...names, name];
-        }, Promise.resolve([]));
-
-        const concatContent = keepNames.map((name) => `file '${name}'\n`).join("");
-        await ffmpeg.writeFile("concat_list.txt", new TextEncoder().encode(concatContent));
-        await ffmpeg.exec([
-          "-f",
-          "concat",
-          "-safe",
-          "0",
-          "-i",
-          "concat_list.txt",
-          "-c",
-          "copy",
-          "output.mp4",
-        ]);
-
-        const suffix = targetTracks.length > 1 ? `-${track.trackSid.slice(-6)}` : "";
-        await downloadFile(
-          ffmpeg,
-          "output.mp4",
-          `session-${sessionId.slice(-8)}-edited${suffix}.mp4`,
-        );
-
-        await Promise.all([
-          ffmpeg.deleteFile("input.mp4"),
-          ...keepNames.map((name) => ffmpeg.deleteFile(name)),
-          ffmpeg.deleteFile("concat_list.txt"),
-        ]);
-      }
-
-      setProcessingStatus("done");
-      clearCutSegments();
-    } catch (err) {
-      setProcessingStatus("error");
-      setErrorMessage(err instanceof Error ? err.message : "Cut edit failed");
-    }
-  }, [
-    session,
-    cutSegmentIds,
-    transcriptSegments,
-    selectedTrackIds,
-    beginProcessing,
-    loadFfmpeg,
-    sessionId,
-    clearCutSegments,
-    setErrorMessage,
-    setProcessingStatus,
-  ]);
-
+function exportProcIndicator(
+  processingStatus: string,
+  processingMode: string | null,
+  progress: number,
+) {
   const procColor =
     processingStatus === "processing" || processingStatus === "loading-ffmpeg"
       ? ("amber" as const)
@@ -563,7 +128,94 @@ export default function ExportSessionPage() {
             ? "ERROR"
             : "STANDBY";
 
-  // ── Loading ──────────────────────────────────────────────────────────────
+  return { procColor, procLabel };
+}
+
+export default function ExportSessionPage() {
+  const { sessionId } = useParams() as { sessionId: string };
+  const router = useRouter();
+  const trpc = useTRPC();
+  const { sessionReady } = useAuthGate();
+
+  const { canTextEdit, usageData, checkoutIsPending, startProCheckout } =
+    useExportBillingGate(sessionId);
+
+  const {
+    query,
+    session,
+    transcriptSegments,
+    chapters,
+    showNotes,
+    clipCandidates,
+    aiStatus,
+    transcriptStatus,
+    pipeline,
+    exports,
+    exportAssets,
+    syncMarkers,
+    timelineEvents,
+    allUploaded,
+    aggregateUploadStatus,
+    isBootingAuth,
+  } = useSessionReview(sessionId);
+
+  const { data: demoSessionQueryData } = useQuery({
+    ...trpc.demo.getSession.queryOptions({ sessionId }),
+    enabled: sessionReady && Boolean(sessionId) && session?.mode === "DEMO",
+  });
+
+  const { trackAlignment, offsetByTrackSid, syncAlignmentWarnings } = useExportSyncContext(
+    syncMarkers,
+    session,
+  );
+
+  useExportConsole(sessionId);
+
+  const { selectedTrackIds, toggleTrack } = useExportTrackSelection();
+  const {
+    processingStatus,
+    processingMode,
+    progress,
+    errorMessage,
+    noiseReduction,
+    setNoiseReduction,
+  } = useExportProcessing();
+  const { trimStart, trimEnd, trimTrackId, setTrimStart, setTrimEnd, setTrimTrackId } =
+    useExportTrim();
+  const { cutSegmentIds, previewCutRange, toggleCutSegment, setPreviewCutRange } = useExportCuts();
+
+  const transcriptEndSec = transcriptSegments?.[transcriptSegments.length - 1]?.endTime;
+  const exportTimeline = useExportTimeline(session, transcriptEndSec);
+
+  const { cutPreviewSummary } = useExportCutPreview({
+    transcriptSegments,
+    cutSegmentIds,
+    setPreviewCutRange,
+  });
+
+  const demoEdit = useMemo(() => {
+    const demo = demoSessionQueryData?.demo;
+    if (!demo) return null;
+    return {
+      trimStartMs: demo.trimStartMs ?? null,
+      trimEndMs: demo.trimEndMs ?? null,
+      playbackSpeed: demo.playbackSpeed ?? 1,
+      backgroundBlur: demo.backgroundBlur ?? 0,
+      pipEnabled: demo.pipEnabled ?? true,
+    };
+  }, [demoSessionQueryData?.demo]);
+
+  const { handleMerge, handleExportRes, handleDemoAspectExport, handleTrim, handleCuts } =
+    useBrowserFfmpegExport({
+      sessionId,
+      session,
+      offsetByTrackSid,
+      demoEdit,
+      transcriptSegments,
+    });
+
+  const { procColor, procLabel } = exportProcIndicator(processingStatus, processingMode, progress);
+
   if (isBootingAuth || query.isLoading) {
     return (
       <AppShell maxWidth="max-w-5xl">
@@ -586,19 +238,25 @@ export default function ExportSessionPage() {
     );
   }
 
-  const data = session;
-  const completedTracks = data.tracks.filter((t) => t.status === "COMPLETED");
+  const completedTracks = session.tracks.filter(
+    (t): t is SessionReviewTrack & { s3Url: string | null; s3Key: string } =>
+      t.status === "COMPLETED",
+  );
 
   return (
     <AppShell maxWidth="max-w-5xl">
       <div className="space-y-8">
         <PageHeader
-          label={`SESSION: ${data.id.slice(-8).toUpperCase()} // ${data.room.name}`}
+          label={`SESSION: ${session.id.slice(-8).toUpperCase()} // ${session.room.name}`}
           title="Export Console"
           actions={
             <>
-              <MechButton onClick={() => router.push("/dashboard")} className="h-9 px-2.5 py-2">
-                <ArrowLeft className="h-4 w-4" />
+              <MechButton
+                onClick={() => router.push("/dashboard")}
+                className="h-9 px-2.5 py-2"
+                aria-label="Back to dashboard"
+              >
+                <ArrowLeft className="h-4 w-4" aria-hidden />
               </MechButton>
               <div className="flex items-center gap-3">
                 <Led
@@ -667,18 +325,17 @@ export default function ExportSessionPage() {
           </AnalogCard>
         ) : null}
 
-        {/* ── Session Meta Card ─────────────────────────────────────────── */}
         <AnalogCard className="p-6">
           <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
             {[
-              { label: "Session ID", value: data.id.slice(-8).toUpperCase(), accent: true },
-              { label: "Room Code", value: data.room.code, accent: false },
+              { label: "Session ID", value: session.id.slice(-8).toUpperCase(), accent: true },
+              { label: "Room Code", value: session.room.code, accent: false },
               {
                 label: "Started At",
-                value: formatDateTime(data.startedAt),
+                value: formatDateTime(session.startedAt),
                 accent: false,
               },
-              { label: "Total Tracks", value: String(data.tracks.length), accent: true },
+              { label: "Total Tracks", value: String(session.tracks.length), accent: true },
             ].map(({ label, value, accent }) => (
               <AnalogInset key={label} className="flex flex-col gap-1.5 p-4">
                 <MonoLabel>{label}</MonoLabel>
@@ -692,11 +349,10 @@ export default function ExportSessionPage() {
           </div>
         </AnalogCard>
 
-        {/* ── Tracks Section ───────────────────────────────────────────── */}
         <div className="space-y-4">
           <PanelTitle label="Source Tapes" title="Select Tracks" />
 
-          {data.tracks.length === 0 ? (
+          {session.tracks.length === 0 ? (
             <AnalogCard className="p-12 text-center">
               <Combine className="text-muted-foreground/20 mx-auto mb-4 h-12 w-12" />
               <MonoLabel className="mb-2 block">No Tracks Available</MonoLabel>
@@ -706,7 +362,7 @@ export default function ExportSessionPage() {
             </AnalogCard>
           ) : (
             <div className="space-y-2">
-              {data.tracks.map((track) => {
+              {session.tracks.map((track) => {
                 const Icon = TRACK_TYPE_ICON[track.type] ?? Mic;
                 const isCompleted = track.status === "COMPLETED" && !!(track.s3Url || track.s3Key);
                 const checked = selectedTrackIds.includes(track.id);
@@ -785,7 +441,7 @@ export default function ExportSessionPage() {
 
         <div className="space-y-4">
           <PanelTitle label="Distribution" title="Export bundle" />
-          <ExportBundlePicker sessionId={sessionId} />
+          <ExportBundlePicker sessionId={sessionId} assets={exportAssets} />
         </div>
 
         {exports ? (
@@ -842,12 +498,11 @@ export default function ExportSessionPage() {
           </div>
         ) : null}
 
-        {/* ── Text-Based Editing (Pro+) ─────────────────────────────────── */}
         {transcriptSegments && transcriptSegments.length > 0 && completedTracks.length > 0 ? (
           <TextEditPanel
             canTextEdit={canTextEdit}
             usageData={usageData}
-            checkoutIsPending={checkout.isPending}
+            checkoutIsPending={checkoutIsPending}
             startProCheckout={startProCheckout}
             transcriptSegments={transcriptSegments}
             cutSegmentIds={cutSegmentIds}
@@ -864,14 +519,14 @@ export default function ExportSessionPage() {
         ) : null}
 
         <SyncAlignmentPanel
-          syncOffsetMs={syncOffsetMs}
+          referenceTrackSid={trackAlignment.referenceTrackSid}
+          trackOffsets={trackAlignment.offsets}
           syncAlignmentWarnings={syncAlignmentWarnings}
           timelineEvents={timelineEvents}
           isLoading={query.isFetching && !query.data}
         />
 
-        {/* ── Merge / Export Section ────────────────────────────────────── */}
-        {completedTracks.length > 0 && (
+        {completedTracks.length > 0 ? (
           <ExportProcessingPanel
             syncAlignmentWarnings={syncAlignmentWarnings}
             errorMessage={errorMessage}
@@ -881,15 +536,14 @@ export default function ExportSessionPage() {
             noiseReduction={noiseReduction}
             setNoiseReduction={setNoiseReduction}
             selectedTrackIds={selectedTrackIds}
-            sessionMode={session?.mode}
+            sessionMode={session.mode}
             handleMerge={handleMerge}
             handleExportRes={handleExportRes}
             handleDemoAspectExport={handleDemoAspectExport}
           />
-        )}
+        ) : null}
 
-        {/* ── Trim Section ──────────────────────────────────────────────── */}
-        {completedTracks.length > 0 && (
+        {completedTracks.length > 0 ? (
           <BrowserExportPanel
             completedTracks={completedTracks}
             trimTrackId={trimTrackId}
@@ -903,9 +557,8 @@ export default function ExportSessionPage() {
             processingMode={processingMode}
             errorMessage={errorMessage}
           />
-        )}
+        ) : null}
 
-        {/* ── Footer ────────────────────────────────────────────────────── */}
         <div className="flex items-center gap-4 pb-8">
           <MechButton onClick={() => router.push("/dashboard")}>
             <ArrowLeft className="h-3.5 w-3.5" />

@@ -9,6 +9,7 @@ import {
   uploadObjectFromFile,
 } from "@ototabi/backend-common/s3-media";
 import { exportSessionJobId } from "@ototabi/common/export-routing";
+import { createLogger } from "@ototabi/common/logger";
 import { assertReelsPresetId } from "@ototabi/common/reels-presets";
 import { prisma } from "@ototabi/store";
 import { join } from "node:path";
@@ -22,6 +23,9 @@ import {
   withTempDir,
   type ClipRenderPreset,
 } from "@/lib/ffmpeg";
+import { resolveTrackOffsetMs } from "@/lib/sync-alignment";
+
+const log = createLogger("export-render");
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Export render failed";
@@ -35,7 +39,7 @@ async function findSourceTrack(sessionId: string) {
       status: "COMPLETED",
       OR: [{ s3Key: { not: "" } }, { s3Url: { not: null } }],
     },
-    select: { s3Key: true, s3Url: true, type: true },
+    select: { s3Key: true, s3Url: true, type: true, trackSid: true },
   });
   for (const type of ["CAMERA", "SCREENSHARE", "MICROPHONE"] as const) {
     const track = tracks.find((t) => t.type === type);
@@ -131,16 +135,19 @@ async function processSessionExport(
   const existingKey = session?.[keyField];
 
   if (!force && currentStatus === "ready" && existingKey) {
-    console.log(`[Export] Session ${sessionId} ${preset} already ready, skipping`);
+    log.info("Session export already ready, skipping", {
+      payload: { sessionId, preset, jobId: exportSessionJobId(sessionId, preset) },
+    });
     return { status: "ready", outputKey: existingKey };
   }
 
   await markSessionExportProcessing(sessionId, preset);
 
   const routeLabel = options?.preferWorker ? "worker-first" : "worker";
-  console.log(
-    `[Export] Session ${sessionId} ${preset} (${routeLabel}) job=${exportSessionJobId(sessionId, preset)}`,
-  );
+  const jobId = exportSessionJobId(sessionId, preset);
+  log.info("Session export started", {
+    payload: { sessionId, preset, route: routeLabel, jobId },
+  });
 
   const source = await findSourceTrack(sessionId);
   if (!source) {
@@ -169,17 +176,22 @@ async function processSessionExport(
       const inputFile = join(dir, `input.${inputExt ?? "webm"}`);
       const outputPath = join(dir, preset === "episode_mp3" ? "output.mp3" : "output.mp4");
 
-      console.log(`[Export] Session ${sessionId} ${preset} from ${source.type}`);
+      log.info("Rendering session export", {
+        payload: { sessionId, preset, sourceType: source.type, jobId },
+      });
 
       await downloadMediaToFile(fetchUrl, inputFile);
 
+      const audioDelayMs = await resolveTrackOffsetMs(sessionId, source.trackSid);
+
       if (preset === "episode_mp3") {
-        await renderEpisodeMp3ToFile({ inputPath: inputFile, outputPath });
+        await renderEpisodeMp3ToFile({ inputPath: inputFile, outputPath, audioDelayMs });
       } else {
         await renderLandscapeEpisodeToFile({
           inputPath: inputFile,
           outputPath,
           audioOnly,
+          audioDelayMs,
         });
       }
 
@@ -191,12 +203,14 @@ async function processSessionExport(
     });
 
     await markSessionExportReady(sessionId, preset, outputKey);
-    console.log(`[Export] Session ${sessionId} ${preset} ready → ${outputKey}`);
+    log.info("Session export ready", { payload: { sessionId, preset, outputKey, jobId } });
     return { status: "ready", outputKey };
   } catch (error) {
     const msg = errorMessage(error);
     await markSessionExportFailed(sessionId, preset, msg);
-    console.error(`[Export] Session ${sessionId} ${preset} failed:`, error);
+    log.error("Session export failed", {
+      payload: { sessionId, preset, jobId, error: msg },
+    });
     throw error instanceof Error ? error : new Error(msg);
   }
 }

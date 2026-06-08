@@ -28,7 +28,9 @@ import { useKeyboardShortcuts } from "@/lib/hooks/use-keyboard-shortcuts";
 import { useStudioConnection } from "@/lib/hooks/use-studio-connection";
 import { useTimer } from "@/lib/hooks/use-timer";
 import { ArrowLeft, CheckCircle, AlertTriangle, Radio, PanelRight } from "@/lib/icons";
+import { publishSyncMarker } from "@/lib/studio/sync-marker-publisher";
 import { useTRPC } from "@/trpc/client";
+
 function StudioPageContent() {
   const { roomId } = useParams() as { roomId: string };
   const searchParams = useSearchParams();
@@ -126,7 +128,7 @@ function StudioPageContent() {
     isError: _studioContextIsError,
     status: _studioContextStatus,
   } = useQuery(
-    trpc.rooms.getStudioContext.queryOptions(
+    trpc.studioAccess.getStudioContext.queryOptions(
       { roomId: roomDetails?.id ?? "" },
       { enabled: !!roomDetails?.id },
     ),
@@ -135,14 +137,14 @@ function StudioPageContent() {
   const canControlStudio = studioContextData?.canControlStudio ?? false;
 
   const consentMutation = useMutation(
-    trpc.rooms.acknowledgeRecordingConsent.mutationOptions({
+    trpc.studioAccess.acknowledgeRecordingConsent.mutationOptions({
       onSuccess: () => studioContextRefetch(),
     }),
   );
 
-  const startSessionMutation = useMutation(trpc.rooms.startRecordingSession.mutationOptions());
-  const stopSessionMutation = useMutation(trpc.rooms.stopRecordingSession.mutationOptions());
-  const leaveRoomMutation = useMutation(trpc.rooms.leaveRoom.mutationOptions());
+  const startSessionMutation = useMutation(trpc.recordings.startRecordingSession.mutationOptions());
+  const stopSessionMutation = useMutation(trpc.recordings.stopRecordingSession.mutationOptions());
+  const leaveRoomMutation = useMutation(trpc.studioAccess.leaveRoom.mutationOptions());
   const createEventMutation = useMutation(trpc.recordingEvents.create.mutationOptions());
   const submitSyncMarkerMutation = useMutation(trpc.syncMarkers.submit.mutationOptions());
 
@@ -215,15 +217,13 @@ function StudioPageContent() {
     if (!isRecording || isPaused || !activeSessionId) return;
 
     const publishMarker = () => {
-      const localTime = performance.now();
-      submitSyncMarkerMutateRef.current({
+      void publishSyncMarker({
+        room,
         sessionId: activeSessionId,
-        localTime,
+        submit: (input) => submitSyncMarkerMutateRef.current(input),
+        publishData: (payload) =>
+          room.localParticipant.publishData(payload, { reliable: false }).catch(() => undefined),
       });
-      const payload = new TextEncoder().encode(
-        JSON.stringify({ type: "sync_marker", localTime, sessionId: activeSessionId }),
-      );
-      room.localParticipant.publishData(payload, { reliable: false }).catch(() => undefined);
     };
 
     publishMarker();
