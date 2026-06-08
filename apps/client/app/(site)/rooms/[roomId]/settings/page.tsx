@@ -5,7 +5,7 @@ import { Label } from "@ototabi/ui/components/label";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { PageHeader } from "@/components/layout/page-header";
@@ -50,17 +50,14 @@ export default function RoomSettingsPage() {
     isSuccess: _roomInfoIsSuccess,
     isError: _roomInfoIsError,
     status: _roomInfoStatus,
-  } = useQuery(
-    trpc.rooms.getRoom.queryOptions({ code: roomId }, {
-      enabled: !!roomId,
-      onSuccess: (data: { name: string }) => {
-        if (!nameInitialized) {
-          setRoomName(data.name);
-          setNameInitialized(true);
-        }
-      },
-    } as any),
-  );
+  } = useQuery(trpc.rooms.getRoom.queryOptions({ code: roomId }, { enabled: !!roomId }));
+
+  useEffect(() => {
+    if (roomInfoData && !nameInitialized) {
+      setRoomName(roomInfoData.name);
+      setNameInitialized(true);
+    }
+  }, [roomInfoData, nameInitialized]);
 
   const {
     data: authStateData,
@@ -85,7 +82,7 @@ export default function RoomSettingsPage() {
     isError: _sessionsIsError,
     status: _sessionsStatus,
   } = useQuery(
-    trpc.rooms.getRecordingSessions.queryOptions(
+    trpc.recordings.getRecordingSessions.queryOptions(
       { roomId: roomInfoData?.id ?? "" },
       { enabled: !!roomInfoData?.id },
     ),
@@ -108,20 +105,6 @@ export default function RoomSettingsPage() {
     }),
   );
 
-  // ── Auth Gate ──────────────────────────────────────────────────────────
-  if (!authStateIsLoading && !authStateData) {
-    return (
-      <div className="bg-background flex min-h-[100dvh] flex-col items-center justify-center px-4 font-sans">
-        <MechButton
-          onClick={() => router.push("/auth/signin")}
-          className="w-full max-w-xs justify-center"
-        >
-          Sign In Required
-        </MechButton>
-      </div>
-    );
-  }
-
   const handleSave = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
@@ -143,6 +126,20 @@ export default function RoomSettingsPage() {
     if (!roomInfoData?.id) return;
     deleteMutation.mutate({ id: roomInfoData.id });
   }, [roomInfoData?.id, deleteMutation]);
+
+  // ── Auth Gate ──────────────────────────────────────────────────────────
+  if (!authStateIsLoading && !authStateData) {
+    return (
+      <div className="bg-background flex min-h-[100dvh] flex-col items-center justify-center px-4 font-sans">
+        <MechButton
+          onClick={() => router.push("/auth/signin")}
+          className="w-full max-w-xs justify-center"
+        >
+          Sign In Required
+        </MechButton>
+      </div>
+    );
+  }
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (roomInfoIsLoading) {
@@ -427,21 +424,21 @@ function StudioAccessPanel({ roomId, isLocked }: { roomId: string; isLocked: boo
     isError: _pendingIsError,
     status: _pendingStatus,
   } = useQuery(
-    trpc.rooms.listJoinRequests.queryOptions(
+    trpc.studioAccess.listJoinRequests.queryOptions(
       { roomId, status: "pending" },
       { enabled: !!roomId, refetchInterval: 5000 },
     ),
   );
 
-  const lockMutation = useMutation(trpc.rooms.lockRoom.mutationOptions());
-  const unlockMutation = useMutation(trpc.rooms.unlockRoom.mutationOptions());
+  const lockMutation = useMutation(trpc.studioAccess.lockRoom.mutationOptions());
+  const unlockMutation = useMutation(trpc.studioAccess.unlockRoom.mutationOptions());
   const admitMutation = useMutation(
-    trpc.rooms.admitJoinRequest.mutationOptions({
+    trpc.studioAccess.admitJoinRequest.mutationOptions({
       onSuccess: () => pendingRefetch(),
     }),
   );
   const denyMutation = useMutation(
-    trpc.rooms.denyJoinRequest.mutationOptions({
+    trpc.studioAccess.denyJoinRequest.mutationOptions({
       onSuccess: () => pendingRefetch(),
     }),
   );
@@ -623,10 +620,10 @@ function InvitesPanel({ roomId, roomCode }: { roomId: string; roomCode: string }
     isSuccess: _invitesIsSuccess,
     isError: _invitesIsError,
     status: _invitesStatus,
-  } = useQuery(trpc.rooms.listInvites.queryOptions({ roomId }, { enabled: !!roomId }));
+  } = useQuery(trpc.studioAccess.listInvites.queryOptions({ roomId }, { enabled: !!roomId }));
 
   const createInvite = useMutation(
-    trpc.rooms.createInvite.mutationOptions({
+    trpc.studioAccess.createInvite.mutationOptions({
       onSuccess: (invite) => {
         const link = `${window.location.origin}/rooms/${roomCode}/join?invite=${invite.token}`;
         setInviteLink(link);
@@ -638,7 +635,7 @@ function InvitesPanel({ roomId, roomCode }: { roomId: string; roomCode: string }
   );
 
   const revokeInvite = useMutation(
-    trpc.rooms.revokeInvite.mutationOptions({
+    trpc.studioAccess.revokeInvite.mutationOptions({
       onSuccess: () => invitesRefetch(),
     }),
   );

@@ -1,3 +1,6 @@
+import type { DemoAspectPreset } from "@/lib/demo/demo-export-presets";
+
+import { AlignmentNotice } from "@/components/export/alignment-notice";
 import { AnalogCard, AnalogInset } from "@/components/ui/analog-card";
 import { MonoLabel, PanelTitle, MechButton } from "@/components/ui/retro-primitives";
 import { DEMO_ASPECT_LABELS } from "@/lib/demo/demo-export-presets";
@@ -15,7 +18,7 @@ type ExportProcessingPanelProps = {
   sessionMode: string | undefined;
   handleMerge: () => void;
   handleExportRes: (res: "720p" | "1080p") => void;
-  handleDemoAspectExport: (preset: any) => void;
+  handleDemoAspectExport: (preset: DemoAspectPreset) => void;
 };
 
 export function ExportProcessingPanel({
@@ -36,15 +39,11 @@ export function ExportProcessingPanel({
     <AnalogCard className="p-6">
       <PanelTitle label="Mastering Suite" title="Merge & Export" className="mb-5" />
 
-      {syncAlignmentWarnings.map((warning) => (
-        <div
-          key={`merge-${warning}`}
-          className="border-led-on/30 bg-led-on/5 mb-4 flex items-start gap-2 rounded border p-3"
-        >
-          <AlertTriangle className="text-led-on mt-0.5 h-4 w-4 shrink-0" />
-          <p className="text-led-on font-mono text-[10px] leading-relaxed">{warning}</p>
-        </div>
-      ))}
+      <AlignmentNotice
+        warnings={syncAlignmentWarnings}
+        keyPrefix="merge"
+        className="border-led-on/30 bg-led-on/5 mb-4 flex items-start gap-2 rounded border p-3"
+      />
 
       {errorMessage && !processingMode && (
         <div className="border-led-on/30 bg-led-on/5 mb-4 flex items-start gap-2 rounded border p-3">
@@ -144,7 +143,7 @@ export function ExportProcessingPanel({
         <div className="mt-5">
           <AnalogInset className="flex h-2 items-stretch p-0.5">
             <div
-              className="rounded-sm transition-all duration-300"
+              className="rounded-sm transition-[width] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]"
               style={{
                 width: `${processingStatus === "loading-ffmpeg" ? 30 : progress}%`,
                 backgroundColor: "var(--accent)",

@@ -57,25 +57,26 @@ export function getTrackAlignmentOffsets(
   syncMarkers: SyncMarkerInput[] | undefined,
   completedTrackSids: string[],
 ): SyncAlignmentResult {
-  const tracks: TrackAlignmentInput[] = completedTrackSids.map((trackSid) => ({
-    trackSid,
-    markers: [],
-  }));
+  const trackBySid = new Map<string, TrackAlignmentInput>(
+    completedTrackSids.map((trackSid) => [trackSid, { trackSid, markers: [] }]),
+  );
 
   if (syncMarkers) {
     for (const marker of syncMarkers) {
       if (!marker.trackSid) continue;
-      const track = tracks.find((t) => t.trackSid === marker.trackSid);
+      const track = trackBySid.get(marker.trackSid);
       if (track) {
         track.markers.push(marker);
       } else {
-        tracks.push({
+        trackBySid.set(marker.trackSid, {
           trackSid: marker.trackSid,
           markers: [marker],
         });
       }
     }
   }
+
+  const tracks = [...trackBySid.values()];
 
   return computeTrackAlignmentOffsets(tracks);
 }
@@ -89,6 +90,10 @@ export function getSyncAlignmentWarnings(params: SyncAlignmentWarningInput): str
 
 export function getSyncConfidenceWarning(params: SyncAlignmentWarningInput): string | null {
   return getSyncAlignmentWarnings(params)[0] ?? null;
+}
+
+export function alignmentOffsetsToMap(result: SyncAlignmentResult): Map<string, number> {
+  return new Map(result.offsets.map((offset) => [offset.trackSid, offset.offsetMs]));
 }
 
 export function countDistinctSyncMarkerTracks(syncMarkers: SyncMarkerInput[] | undefined): number {
