@@ -1,5 +1,5 @@
 /** Minimum gap between trim in/out handles (seconds). */
-export const MIN_TRIM_GAP_SEC = 0.5;
+const MIN_TRIM_GAP_SEC = 0.5;
 
 export type TrimRangeSec = {
   trimInSec: number;

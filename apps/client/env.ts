@@ -3,15 +3,15 @@ import { z } from "zod";
 
 export const env = createEnv({
   server: {
-    DATABASE_URL: z.string().url(),
+    DATABASE_URL: z.url(),
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     BETTER_AUTH_SECRET: z.string().min(1),
-    BETTER_AUTH_URL: z.string().url(),
+    BETTER_AUTH_URL: z.url(),
   },
   client: {
-    NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
-    NEXT_PUBLIC_API_URL: z.string().url().default("http://localhost:8080"),
-    NEXT_PUBLIC_LIVEKIT_URL: z.string().url(),
+    NEXT_PUBLIC_APP_URL: z.url().default("http://localhost:3000"),
+    NEXT_PUBLIC_API_URL: z.url().default("http://localhost:8080"),
+    NEXT_PUBLIC_LIVEKIT_URL: z.url(),
     NEXT_PUBLIC_AWS_ACCESS_KEY_ID: z.string().optional(),
     NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY: z.string().optional(),
     NEXT_PUBLIC_AWS_REGION: z.string().optional(),

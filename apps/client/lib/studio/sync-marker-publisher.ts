@@ -24,13 +24,13 @@ export function encodeSyncMarkerPayload(input: PublishSyncMarkerInput): Uint8Arr
 }
 
 /** Resolves the local microphone track SID when published. */
-export function resolvePrimaryMicTrackSid(room: Room): string | undefined {
+function resolvePrimaryMicTrackSid(room: Room): string | undefined {
   const publication = room.localParticipant.getTrackPublication(Track.Source.Microphone);
   return publication?.trackSid ?? undefined;
 }
 
 /** Best-effort RTP timestamp from the local mic sender stats. */
-export async function resolveRtpTimestamp(room: Room): Promise<number | undefined> {
+async function resolveRtpTimestamp(room: Room): Promise<number | undefined> {
   const publication = room.localParticipant.getTrackPublication(Track.Source.Microphone);
   const track = publication?.track as LocalTrack | undefined;
   if (!track?.mediaStreamTrack) return undefined;
@@ -52,7 +52,7 @@ export async function resolveRtpTimestamp(room: Room): Promise<number | undefine
   return undefined;
 }
 
-export async function buildSyncMarkerInput(
+async function buildSyncMarkerInput(
   room: Room,
   sessionId: string,
 ): Promise<PublishSyncMarkerInput> {

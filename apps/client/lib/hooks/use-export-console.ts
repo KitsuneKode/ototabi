@@ -1,9 +1,29 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 
+import type { TranscriptSegment } from "@/lib/trpc/router-types";
+
+import { summarizeCutPreview } from "@/lib/cut-preview";
 import { useExportConsoleStore } from "@/lib/stores/export-console-store";
+
+function toggleSegmentId(list: string[], id: string): string[] {
+  return list.includes(id) ? list.filter((item) => item !== id) : [...list, id];
+}
+
+function summarizeCutsFromTranscript(
+  transcriptSegments: TranscriptSegment[] | undefined,
+  cutSegmentIds: string[],
+) {
+  if (!transcriptSegments?.length || cutSegmentIds.length === 0) return null;
+  const cuts = transcriptSegments.filter(
+    (s): s is TranscriptSegment & { startTime: number; endTime: number } =>
+      cutSegmentIds.includes(s.id ?? "") && s.id != null,
+  );
+  const totalDuration = transcriptSegments[transcriptSegments.length - 1]?.endTime ?? 0;
+  return summarizeCutPreview(cuts, totalDuration);
+}
 
 /** Resets export UI state when navigating between sessions. */
 export function useExportConsole(sessionId: string) {
@@ -65,4 +85,45 @@ export function useExportCuts() {
       setPreviewCutRange: s.setPreviewCutRange,
     })),
   );
+}
+
+/** Cut selection with derived preview summary — syncs preview range on toggle (no effect). */
+export function useExportCutsWithPreview(transcriptSegments?: TranscriptSegment[]) {
+  const cutSegmentIds = useExportConsoleStore((s) => s.cutSegmentIds);
+  const previewCutRange = useExportConsoleStore((s) => s.previewCutRange);
+  const toggleCutSegmentStore = useExportConsoleStore((s) => s.toggleCutSegment);
+  const clearCutSegmentsStore = useExportConsoleStore((s) => s.clearCutSegments);
+  const setPreviewCutRange = useExportConsoleStore((s) => s.setPreviewCutRange);
+
+  const cutPreviewSummary = useMemo(
+    () => summarizeCutsFromTranscript(transcriptSegments, cutSegmentIds),
+    [transcriptSegments, cutSegmentIds],
+  );
+
+  const toggleCutSegment = useCallback(
+    (segmentId: string) => {
+      const nextIds = toggleSegmentId(cutSegmentIds, segmentId);
+      toggleCutSegmentStore(segmentId);
+      if (nextIds.length === 0) {
+        setPreviewCutRange(null);
+        return;
+      }
+      const summary = summarizeCutsFromTranscript(transcriptSegments, nextIds);
+      setPreviewCutRange(summary?.previewEnvelope ?? null);
+    },
+    [cutSegmentIds, toggleCutSegmentStore, transcriptSegments, setPreviewCutRange],
+  );
+
+  const clearCutSegments = useCallback(() => {
+    clearCutSegmentsStore();
+  }, [clearCutSegmentsStore]);
+
+  return {
+    cutSegmentIds,
+    previewCutRange,
+    toggleCutSegment,
+    clearCutSegments,
+    setPreviewCutRange,
+    cutPreviewSummary,
+  };
 }

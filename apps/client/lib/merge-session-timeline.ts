@@ -103,10 +103,3 @@ export function countDistinctSyncMarkerTracks(syncMarkers: SyncMarkerInput[] | u
   }
   return trackSids.size;
 }
-
-/** @deprecated Use getTrackAlignmentOffsets instead */
-export function getSyncMarkerOffsetMs(syncMarkers: SyncMarkerInput[] | undefined): number {
-  if (!syncMarkers?.length) return 0;
-  const sorted = [...syncMarkers].toSorted((a, b) => a.localTime - b.localTime);
-  return sorted[0]?.localTime ?? 0;
-}

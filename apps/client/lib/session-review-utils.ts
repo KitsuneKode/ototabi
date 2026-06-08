@@ -1,14 +1,14 @@
-import type { UploadDisplayStatus } from "@/components/patterns/upload-status-badge";
+import type { UploadDisplayStatus } from "@/components/patterns/upload-status-utils";
 
 import { mergeSessionTimelineEvents } from "@/lib/merge-session-timeline";
 
 type TrackStatus = { status: string };
 
-export function deriveAllUploaded(tracks: TrackStatus[]): boolean {
+function deriveAllUploaded(tracks: TrackStatus[]): boolean {
   return tracks.length > 0 && tracks.every((t) => t.status === "COMPLETED");
 }
 
-export function deriveAggregateUploadStatus(tracks: TrackStatus[]): UploadDisplayStatus {
+function deriveAggregateUploadStatus(tracks: TrackStatus[]): UploadDisplayStatus {
   if (tracks.length === 0) return "recording";
   if (deriveAllUploaded(tracks)) return "complete";
   if (tracks.some((t) => t.status === "UPLOADING")) return "uploading";

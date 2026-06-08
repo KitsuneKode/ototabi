@@ -1,6 +1,6 @@
 import { TRPCClientError } from "@trpc/client";
 
-export function getTrpcErrorCode(error: unknown): string | undefined {
+function getTrpcErrorCode(error: unknown): string | undefined {
   if (error instanceof TRPCClientError) {
     return error.data?.code;
   }

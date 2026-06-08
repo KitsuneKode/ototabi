@@ -12,7 +12,8 @@ import { getApiBaseUrl } from "@/lib/api-base";
 import config from "@/utils/config";
 
 import { makeQueryClient } from "./query-client";
-export const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>();
+const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>();
+export { useTRPC };
 let browserQueryClient: QueryClient;
 let browserTrpcClient: ReturnType<typeof createTRPCClient<AppRouter>> | undefined;
 /**

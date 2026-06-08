@@ -3,13 +3,7 @@
 import { LedInline } from "@/components/ui/led";
 import { StatusBadge } from "@/components/ui/retro-primitives";
 
-export type UploadDisplayStatus =
-  | "recording"
-  | "finalizing"
-  | "uploading"
-  | "recoverable"
-  | "failed"
-  | "complete";
+import type { UploadDisplayStatus } from "./upload-status-utils";
 
 const STATUS_CONFIG: Record<
   UploadDisplayStatus,
@@ -27,17 +21,6 @@ const STATUS_CONFIG: Record<
   failed: { label: "FAILED", variant: "recording", led: "red" },
   complete: { label: "COMPLETE", variant: "ok", led: "green" },
 };
-
-export function mapTrackStatusToUploadDisplay(
-  status: string,
-  hasPendingLocalChunks?: boolean,
-): UploadDisplayStatus {
-  if (hasPendingLocalChunks) return "recoverable";
-  if (status === "COMPLETED") return "complete";
-  if (status === "UPLOADING") return "uploading";
-  if (status === "FAILED") return "failed";
-  return "uploading";
-}
 
 export function UploadStatusBadge({ status }: { status: UploadDisplayStatus }) {
   const config = STATUS_CONFIG[status];

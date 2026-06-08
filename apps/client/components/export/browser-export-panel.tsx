@@ -48,11 +48,12 @@ export function BrowserExportPanel({
         </AnalogInset>
 
         <AnalogInset className="p-3">
-          <MonoLabel as="label" htmlFor="trim-start" className="mb-1.5 block">
+          <MonoLabel as="label" id="trim-start-label" htmlFor="trim-start" className="mb-1.5 block">
             Skip Start (s)
           </MonoLabel>
           <input
             id="trim-start"
+            aria-labelledby="trim-start-label"
             type="number"
             min="0"
             step="0.5"
@@ -64,11 +65,12 @@ export function BrowserExportPanel({
         </AnalogInset>
 
         <AnalogInset className="p-3">
-          <MonoLabel as="label" htmlFor="trim-end" className="mb-1.5 block">
+          <MonoLabel as="label" id="trim-end-label" htmlFor="trim-end" className="mb-1.5 block">
             End Time (s)
           </MonoLabel>
           <input
             id="trim-end"
+            aria-labelledby="trim-end-label"
             type="number"
             min="0"
             step="0.5"

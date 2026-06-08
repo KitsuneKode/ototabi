@@ -32,32 +32,48 @@ function statusVariant(status: string): "ok" | "warn" | "recording" | "default" 
   return "default";
 }
 
+function collectReadyIds(assets: ExportBundleAsset[]): Set<string> {
+  const ids = new Set<string>();
+  for (const asset of assets) {
+    if (asset.status === "ready") ids.add(asset.id);
+  }
+  return ids;
+}
+
+function collectPresetIds(assets: ExportBundleAsset[], preset: string): Set<string> {
+  const ids = new Set<string>();
+  for (const asset of assets) {
+    if (asset.status !== "ready") continue;
+    if (preset === PRESET_ALL_TRACKS) {
+      if (asset.kind === "track") ids.add(asset.id);
+      continue;
+    }
+    if (preset === PRESET_POST_PRODUCTION) {
+      if (
+        asset.kind === "session_episode_mp3" ||
+        asset.kind === "session_landscape" ||
+        asset.kind === "transcript_json"
+      ) {
+        ids.add(asset.id);
+      }
+    }
+  }
+  return ids;
+}
+
 export function ExportBundlePicker({ sessionId, assets: assetsProp }: ExportBundlePickerProps) {
   const trpc = useTRPC();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [errorMessage, setErrorMessage] = useState("");
 
-  const {
-    data: assetsQueryData,
-    isLoading: assetsQueryIsLoading,
-    error: _assetsQueryError,
-    refetch: _assetsQueryRefetch,
-    isFetching: _assetsQueryIsFetching,
-    isPending: _assetsQueryIsPending,
-    isSuccess: _assetsQueryIsSuccess,
-    isError: _assetsQueryIsError,
-    status: _assetsQueryStatus,
-  } = useQuery({
+  const { data: assetsQueryData, isLoading: assetsQueryIsLoading } = useQuery({
     ...trpc.exports.listExportableAssets.queryOptions({ sessionId }, { staleTime: 30_000 }),
     enabled: !assetsProp,
   });
 
   const assetList = assetsProp ?? assetsQueryData?.assets;
 
-  const readyIds = useMemo(
-    () => new Set((assetList ?? []).filter((a) => a.status === "ready").map((a) => a.id)),
-    [assetList],
-  );
+  const readyIds = useMemo(() => collectReadyIds(assetList ?? []), [assetList]);
 
   const assets = assetList ?? [];
 
@@ -71,26 +87,8 @@ export function ExportBundlePicker({ sessionId, assets: assetsProp }: ExportBund
   };
 
   const applyPreset = (preset: string) => {
-    if (preset === PRESET_ALL_TRACKS) {
-      setSelected(
-        new Set(assets.filter((a) => a.kind === "track" && a.status === "ready").map((a) => a.id)),
-      );
-      return;
-    }
-    if (preset === PRESET_POST_PRODUCTION) {
-      setSelected(
-        new Set(
-          assets
-            .filter(
-              (a) =>
-                a.status === "ready" &&
-                (a.kind === "session_episode_mp3" ||
-                  a.kind === "session_landscape" ||
-                  a.kind === "transcript_json"),
-            )
-            .map((a) => a.id),
-        ),
-      );
+    if (preset === PRESET_ALL_TRACKS || preset === PRESET_POST_PRODUCTION) {
+      setSelected(collectPresetIds(assets, preset));
     }
   };
 
@@ -136,6 +134,7 @@ export function ExportBundlePicker({ sessionId, assets: assetsProp }: ExportBund
         <MechButton
           type="button"
           className="text-xs"
+          aria-label="Select all ready track assets"
           onClick={() => applyPreset(PRESET_ALL_TRACKS)}
         >
           All tracks
@@ -143,6 +142,7 @@ export function ExportBundlePicker({ sessionId, assets: assetsProp }: ExportBund
         <MechButton
           type="button"
           className="text-xs"
+          aria-label="Select post-production export pack"
           onClick={() => applyPreset(PRESET_POST_PRODUCTION)}
         >
           Post-production pack
@@ -150,13 +150,17 @@ export function ExportBundlePicker({ sessionId, assets: assetsProp }: ExportBund
         <MechButton
           type="button"
           className="text-xs"
-          onClick={() =>
-            setSelected(new Set(assets.filter((a) => a.status === "ready").map((a) => a.id)))
-          }
+          aria-label="Select every ready export asset"
+          onClick={() => setSelected(collectReadyIds(assets))}
         >
           Select all ready
         </MechButton>
-        <MechButton type="button" className="text-xs" onClick={() => setSelected(new Set())}>
+        <MechButton
+          type="button"
+          className="text-xs"
+          aria-label="Clear asset selection"
+          onClick={() => setSelected(new Set())}
+        >
           Clear
         </MechButton>
       </div>
@@ -200,19 +204,21 @@ export function ExportBundlePicker({ sessionId, assets: assetsProp }: ExportBund
         <MechButton
           type="button"
           disabled={!canDownload}
+          aria-label="Download selected assets as ZIP"
           onClick={() => downloadSelected(true)}
           className="inline-flex items-center gap-1.5"
         >
-          <FolderOpen className="h-3.5 w-3.5" />
+          <FolderOpen className="h-3.5 w-3.5" aria-hidden />
           {createBundle.isPending ? "Building ZIP…" : "Download ZIP"}
         </MechButton>
         <MechButton
           type="button"
           disabled={!canDownload}
+          aria-label="Download selected assets individually"
           onClick={() => downloadSelected(false)}
           className="inline-flex items-center gap-1.5"
         >
-          <Download className="h-3.5 w-3.5" />
+          <Download className="h-3.5 w-3.5" aria-hidden />
           Download selected
         </MechButton>
         <MonoLabel className="text-muted-foreground text-[9px]">

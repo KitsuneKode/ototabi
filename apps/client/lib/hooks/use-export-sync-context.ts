@@ -15,13 +15,18 @@ export function useExportSyncContext(
   syncMarkers: SessionReviewBundle["syncMarkers"] | undefined,
   session: SessionReviewSession | undefined,
 ) {
-  const completedTrackSids = useMemo(
-    () =>
-      session?.tracks
-        .filter((t) => t.status === "COMPLETED" && (t.s3Url || t.s3Key))
-        .map((t) => t.trackSid) ?? [],
-    [session?.tracks],
-  );
+  const tracks = session?.tracks;
+  const { completedTrackSids, completedTrackCount } = useMemo(() => {
+    const sids: string[] = [];
+    let count = 0;
+    for (const track of tracks ?? []) {
+      if (track.status === "COMPLETED" && (track.s3Url || track.s3Key)) {
+        sids.push(track.trackSid);
+        count += 1;
+      }
+    }
+    return { completedTrackSids: sids, completedTrackCount: count };
+  }, [tracks]);
 
   const trackAlignment = useMemo(
     () => getTrackAlignmentOffsets(syncMarkers, completedTrackSids),
@@ -30,8 +35,6 @@ export function useExportSyncContext(
 
   const offsetByTrackSid = useMemo(() => alignmentOffsetsToMap(trackAlignment), [trackAlignment]);
 
-  const completedTrackCount =
-    session?.tracks.filter((t) => t.status === "COMPLETED" && (t.s3Url || t.s3Key)).length ?? 0;
   const distinctMarkerTrackCount = countDistinctSyncMarkerTracks(syncMarkers);
   const syncAlignmentWarnings = getSyncAlignmentWarnings({
     syncMarkerCount: syncMarkers?.length ?? 0,
