@@ -52,9 +52,12 @@ export function DemoEditorPreview({
             ref={videoRef}
             src={videoUrl}
             controls
+            aria-label="Demo editor preview"
             className="h-full w-full object-contain"
             playsInline
-          />
+          >
+            <track kind="captions" />
+          </video>
         ) : (
           <div className="text-muted-foreground flex h-full min-h-[240px] items-center justify-center font-mono text-xs">
             Upload a screen track to preview

@@ -28,8 +28,10 @@ export function StudioParticipantRoster({
   const trpc = useTRPC();
   const participants = useParticipants();
 
-  const removeGuestMutation = useMutation(trpc.rooms.removeGuest.mutationOptions());
-  const muteRequestMutation = useMutation(trpc.rooms.requestParticipantMute.mutationOptions());
+  const removeGuestMutation = useMutation(trpc.studioAccess.removeGuest.mutationOptions());
+  const muteRequestMutation = useMutation(
+    trpc.studioAccess.requestParticipantMute.mutationOptions(),
+  );
 
   const roster = participants.map((p) => {
     const isLocal = p.isLocal;

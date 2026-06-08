@@ -22,7 +22,7 @@ export function activeZoomScale(
 }
 
 /** CSS transform-origin for zoom-at-cursor preview (percent). */
-export function zoomOriginFromCursor(
+function zoomOriginFromCursor(
   cursor: CursorEvent | null,
   viewport = DEMO_CAPTURE_VIEWPORT,
 ): string {

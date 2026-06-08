@@ -4,7 +4,7 @@ import { Label } from "@ototabi/ui/components/label";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 
 import { DashboardRoomList, type DashboardRoom } from "@/components/dashboard/dashboard-room-list";
 import { DashboardSessionsPanel } from "@/components/dashboard/dashboard-sessions-panel";
@@ -31,7 +31,17 @@ export default function DashboardPage() {
   const sessionSettled = authState.isFetched && !authState.isFetching;
   const canLoadDashboardData = sessionReady && sessionSettled;
 
-  const summary = useQuery({
+  const {
+    data: summaryData,
+    isLoading: summaryIsLoading,
+    error: summaryError,
+    refetch: summaryRefetch,
+    isFetching: _summaryIsFetching,
+    isPending: _summaryIsPending,
+    isSuccess: _summaryIsSuccess,
+    isError: _summaryIsError,
+    status: _summaryStatus,
+  } = useQuery({
     ...trpc.dashboard.getSummary.queryOptions(),
     enabled: canLoadDashboardData,
     retry: (failureCount, error) =>
@@ -42,7 +52,7 @@ export default function DashboardPage() {
     trpc.rooms.createRoom.mutationOptions({
       onSuccess: (room) => {
         setNewRoomName("");
-        summary.refetch();
+        summaryRefetch();
         if (room.lobbyInviteToken) {
           const inviteLink = `${window.location.origin}/rooms/${room.code}/join?invite=${room.lobbyInviteToken}`;
           void navigator.clipboard.writeText(inviteLink);
@@ -53,44 +63,53 @@ export default function DashboardPage() {
     }),
   );
 
-  const createInviteMutation = useMutation(trpc.rooms.createInvite.mutationOptions());
+  const createInviteMutation = useMutation(trpc.studioAccess.createInvite.mutationOptions());
 
-  const recentSessions = summary.data?.recentSessions ?? [];
+  const recentSessions = summaryData?.recentSessions ?? [];
 
   const allRooms = useMemo(() => {
-    const owned = summary.data?.ownedRooms ?? [];
-    const shared = summary.data?.sharedRooms ?? [];
+    const owned = summaryData?.ownedRooms ?? [];
+    const shared = summaryData?.sharedRooms ?? [];
     return [
       ...owned.map((r) => ({ ...r, isShared: false as const })),
       ...shared.map((r) => ({ ...r, isShared: true as const })),
     ];
-  }, [summary.data?.ownedRooms, summary.data?.sharedRooms]);
+  }, [summaryData?.ownedRooms, summaryData?.sharedRooms]);
 
-  const ownedRooms = summary.data?.ownedRooms ?? [];
-  const sharedRooms = summary.data?.sharedRooms ?? [];
+  const ownedRooms = summaryData?.ownedRooms ?? [];
+  const sharedRooms = summaryData?.sharedRooms ?? [];
 
-  useEffect(() => {
-    if (selectedRoomId || allRooms.length === 0) return;
-    if (allRooms.length === 1) {
-      setSelectedRoomId(allRooms[0]!.id);
-      return;
-    }
+  const defaultRoomId = useMemo(() => {
+    if (allRooms.length === 0) return null;
+    if (allRooms.length === 1) return allRooms[0]!.id;
     const sorted = [...allRooms].toSorted((a, b) => {
       const aTime = a.updatedAt?.getTime() ?? a.createdAt.getTime();
       const bTime = b.updatedAt?.getTime() ?? b.createdAt.getTime();
       return bTime - aTime;
     });
-    setSelectedRoomId(sorted[0]!.id);
-  }, [allRooms, selectedRoomId]);
+    return sorted[0]!.id;
+  }, [allRooms]);
 
-  const recordingSessions = useQuery({
-    ...trpc.rooms.getRecordingSessions.queryOptions(
-      { roomId: selectedRoomId || "" },
-      { enabled: !!selectedRoomId },
+  const activeRoomId = selectedRoomId ?? defaultRoomId;
+
+  const {
+    data: recordingSessionsData,
+    isLoading: recordingSessionsIsLoading,
+    error: _recordingSessionsError,
+    refetch: _recordingSessionsRefetch,
+    isFetching: _recordingSessionsIsFetching,
+    isPending: _recordingSessionsIsPending,
+    isSuccess: _recordingSessionsIsSuccess,
+    isError: _recordingSessionsIsError,
+    status: _recordingSessionsStatus,
+  } = useQuery({
+    ...trpc.recordings.getRecordingSessions.queryOptions(
+      { roomId: activeRoomId || "" },
+      { enabled: !!activeRoomId },
     ),
   });
 
-  const selectedRoom = allRooms.find((r) => r.id === selectedRoomId) ?? null;
+  const selectedRoom = allRooms.find((r) => r.id === activeRoomId) ?? null;
 
   const handleCreateRoom = useCallback(
     (e: React.FormEvent) => {
@@ -171,7 +190,7 @@ export default function DashboardPage() {
     );
   }
 
-  const dataError = summary.error;
+  const dataError = summaryError;
   const suppressDataError =
     dataError &&
     isTrpcUnauthorized(dataError) &&
@@ -202,7 +221,7 @@ export default function DashboardPage() {
           </AnalogCard>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
+        <div className="grid grid-flow-dense grid-cols-1 gap-8 md:grid-cols-12">
           <div className="flex flex-col gap-6 md:col-span-5">
             <AnalogCard className="p-4 md:p-6">
               <h2 className="mb-4 text-xl font-bold tracking-tight uppercase">Initialize Room</h2>
@@ -232,13 +251,13 @@ export default function DashboardPage() {
             <DashboardRoomList
               ownedRooms={ownedRooms}
               sharedRooms={sharedRooms}
-              selectedRoomId={selectedRoomId}
+              selectedRoomId={activeRoomId}
               onSelectRoom={setSelectedRoomId}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
               onCopyInvite={handleCopyInvite}
               onOpenStudio={handleOpenStudio}
-              isLoading={summary.isLoading}
+              isLoading={summaryIsLoading}
               copiedRoomCode={copiedRoomCode}
             />
           </div>
@@ -246,10 +265,10 @@ export default function DashboardPage() {
           <div className="md:col-span-7">
             <DashboardSessionsPanel
               selectedRoom={selectedRoom}
-              roomSessions={recordingSessions.data ?? []}
+              roomSessions={recordingSessionsData ?? []}
               recentSessions={recentSessions}
-              isLoadingRoomSessions={recordingSessions.isLoading}
-              isLoadingRecent={summary.isLoading}
+              isLoadingRoomSessions={recordingSessionsIsLoading}
+              isLoadingRecent={summaryIsLoading}
               onOpenSettings={() => {
                 if (selectedRoom) router.push(`/rooms/${selectedRoom.code}/settings`);
               }}

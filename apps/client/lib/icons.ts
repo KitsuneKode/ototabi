@@ -6,6 +6,7 @@ export {
   IconArrowRight as ArrowRight,
   IconChevronLeft as ChevronLeft,
   IconChevronRight as ChevronRight,
+  IconChevronDown as ChevronDown,
   IconAlertTriangle as AlertTriangle,
   IconCircleCheck as CheckCircle,
   IconInfoCircle as InfoCircle,

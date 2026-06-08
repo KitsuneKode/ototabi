@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { AnalogCard } from "@/components/ui/analog-card";
 import { MechButton, MonoLabel, PanelTitle, StatusBadge } from "@/components/ui/retro-primitives";
@@ -18,14 +18,24 @@ type ShowNotesEditorProps = {
   onSaved?: () => void;
 };
 
-export function ShowNotesEditor({ sessionId, showNotes, onSaved }: ShowNotesEditorProps) {
-  const trpc = useTRPC();
-  const [summary, setSummary] = useState(showNotes.summary);
-  const dirty = summary.trim() !== showNotes.summary.trim();
+type ShowNotesEditorFormProps = {
+  sessionId: string;
+  savedSummary: string;
+  keywords: unknown;
+  seoTitles: unknown;
+  onSaved?: () => void;
+};
 
-  useEffect(() => {
-    setSummary(showNotes.summary);
-  }, [showNotes.summary]);
+function ShowNotesEditorForm({
+  sessionId,
+  savedSummary,
+  keywords,
+  seoTitles,
+  onSaved,
+}: ShowNotesEditorFormProps) {
+  const trpc = useTRPC();
+  const [summary, setSummary] = useState(() => savedSummary);
+  const dirty = summary.trim() !== savedSummary.trim();
 
   const save = useMutation(
     trpc.sessionReview.updateShowNotes.mutationOptions({
@@ -33,7 +43,7 @@ export function ShowNotesEditor({ sessionId, showNotes, onSaved }: ShowNotesEdit
     }),
   );
 
-  const seoTitles = Array.isArray(showNotes.seoTitles) ? (showNotes.seoTitles as string[]) : [];
+  const seoTitleList = Array.isArray(seoTitles) ? (seoTitles as string[]) : [];
 
   return (
     <AnalogCard className="space-y-4 p-6">
@@ -61,25 +71,25 @@ export function ShowNotesEditor({ sessionId, showNotes, onSaved }: ShowNotesEdit
           {save.isPending ? "Saving…" : "Save summary"}
         </MechButton>
         {dirty ? (
-          <MechButton type="button" onClick={() => setSummary(showNotes.summary)}>
+          <MechButton type="button" onClick={() => setSummary(savedSummary)}>
             Discard
           </MechButton>
         ) : null}
       </div>
-      {Array.isArray(showNotes.keywords) && (showNotes.keywords as string[]).length > 0 ? (
+      {Array.isArray(keywords) && (keywords as string[]).length > 0 ? (
         <div className="flex flex-wrap gap-2">
-          {(showNotes.keywords as string[]).map((kw) => (
+          {(keywords as string[]).map((kw) => (
             <StatusBadge key={kw} variant="default" className="text-[10px]">
               {kw}
             </StatusBadge>
           ))}
         </div>
       ) : null}
-      {seoTitles.length > 0 ? (
+      {seoTitleList.length > 0 ? (
         <div className="space-y-2">
           <MonoLabel>SEO title ideas</MonoLabel>
           <ul className="text-muted-foreground list-inside list-disc space-y-1 font-mono text-xs">
-            {seoTitles.map((title) => (
+            {seoTitleList.map((title) => (
               <li key={title}>{title}</li>
             ))}
           </ul>
@@ -89,5 +99,18 @@ export function ShowNotesEditor({ sessionId, showNotes, onSaved }: ShowNotesEdit
         <p className="text-led-on font-mono text-[10px]">{save.error.message}</p>
       ) : null}
     </AnalogCard>
+  );
+}
+
+export function ShowNotesEditor({ sessionId, showNotes, onSaved }: ShowNotesEditorProps) {
+  return (
+    <ShowNotesEditorForm
+      key={showNotes.id}
+      sessionId={sessionId}
+      savedSummary={showNotes.summary}
+      keywords={showNotes.keywords}
+      seoTitles={showNotes.seoTitles}
+      onSaved={onSaved}
+    />
   );
 }

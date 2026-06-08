@@ -1,4 +1,4 @@
-import { addSeconds, format, formatDistanceToNow } from "date-fns";
+import { addSeconds, format } from "date-fns";
 
 export function formatDate(date: Date | string | number): string {
   return format(new Date(date), "MMM d, yyyy");
@@ -25,8 +25,4 @@ export function formatTimer(seconds: number): string {
 function formatDurationSeconds(totalSeconds: number, includeHours: boolean): string {
   const pattern = includeHours ? "H:mm:ss" : "mm:ss";
   return format(addSeconds(new Date(0), totalSeconds), pattern);
-}
-
-export function formatRelative(date: Date | string | number): string {
-  return formatDistanceToNow(new Date(date), { addSuffix: true });
 }

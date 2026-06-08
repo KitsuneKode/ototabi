@@ -14,7 +14,17 @@ type ClipReelsPresetPickerProps = {
 export function ClipReelsPresetPicker({ sessionId, clipId, onQueued }: ClipReelsPresetPickerProps) {
   const trpc = useTRPC();
 
-  const presetsQuery = useQuery(trpc.clips.listReelsPresets.queryOptions());
+  const {
+    data: presetsQueryData,
+    isLoading: _presetsQueryIsLoading,
+    error: _presetsQueryError,
+    refetch: _presetsQueryRefetch,
+    isFetching: _presetsQueryIsFetching,
+    isPending: _presetsQueryIsPending,
+    isSuccess: _presetsQueryIsSuccess,
+    isError: _presetsQueryIsError,
+    status: _presetsQueryStatus,
+  } = useQuery(trpc.clips.listReelsPresets.queryOptions());
 
   const queueReelsRender = useMutation(
     trpc.clips.queueReelsRender.mutationOptions({
@@ -22,7 +32,7 @@ export function ClipReelsPresetPicker({ sessionId, clipId, onQueued }: ClipReels
     }),
   );
 
-  const presets = presetsQuery.data ?? [];
+  const presets = presetsQueryData ?? [];
   const pendingId = queueReelsRender.isPending ? queueReelsRender.variables?.reelsPresetId : null;
 
   return (

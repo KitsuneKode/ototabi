@@ -137,36 +137,39 @@ export function DashboardRoomList({
           {filteredRooms.map((room) => (
             <div
               key={room.id}
-              onClick={() => onSelectRoom(room.id)}
-              className={`hover:border-accent/40 cursor-pointer rounded border p-4 transition-[border-color] select-none ${
+              className={`hover:border-accent/40 w-full rounded border transition-[border-color] select-none ${
                 selectedRoomId === room.id
                   ? "border-accent bg-accent/5 shadow-sm"
                   : "border-border bg-card shadow-sm"
               }`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 truncate pr-2">
-                  <span className="text-foreground text-sm font-bold uppercase">{room.name}</span>
-                  {room.isShared ? (
-                    <StatusBadge variant="warn" className="shrink-0 text-[10px]">
-                      SHARED
-                    </StatusBadge>
-                  ) : null}
+              <button
+                type="button"
+                onClick={() => onSelectRoom(room.id)}
+                className="w-full cursor-pointer p-4 pb-3 text-left"
+                aria-pressed={selectedRoomId === room.id}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 truncate pr-2">
+                    <span className="text-foreground text-sm font-bold uppercase">{room.name}</span>
+                    {room.isShared ? (
+                      <StatusBadge variant="warn" className="shrink-0 text-[10px]">
+                        SHARED
+                      </StatusBadge>
+                    ) : null}
+                  </div>
+                  <MonoLabel className="bg-popover border-border text-foreground shrink-0 rounded border px-2 py-0.5">
+                    {room.code}
+                  </MonoLabel>
                 </div>
-                <MonoLabel className="bg-popover border-border text-foreground shrink-0 rounded border px-2 py-0.5">
-                  {room.code}
-                </MonoLabel>
-              </div>
+              </button>
 
-              <div className="mt-3 flex items-center justify-between">
+              <div className="flex items-center justify-between px-4 pb-4">
                 <MonoLabel className="text-[9px]">EST: {formatDate(room.createdAt)}</MonoLabel>
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onCopyInvite(room);
-                    }}
+                    onClick={() => onCopyInvite(room)}
                     className="btn-mechanical text-secondary-foreground flex items-center gap-1 rounded px-2 py-1 text-[9px] font-bold tracking-wider uppercase transition-transform active:scale-95"
                   >
                     <Copy className="h-3 w-3" />
@@ -174,10 +177,7 @@ export function DashboardRoomList({
                   </button>
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenStudio(room);
-                    }}
+                    onClick={() => onOpenStudio(room)}
                     className="btn-mechanical text-accent border-accent/40 flex items-center gap-1 rounded border px-2.5 py-1 text-[9px] font-bold tracking-wider uppercase transition-transform active:scale-95"
                   >
                     <Video className="h-3 w-3" />
@@ -185,7 +185,6 @@ export function DashboardRoomList({
                   </button>
                   <Link
                     href={`/rooms/${room.code}/settings`}
-                    onClick={(e) => e.stopPropagation()}
                     className="text-muted-foreground hover:text-foreground font-mono text-[9px] tracking-widest uppercase underline-offset-2 hover:underline"
                   >
                     CFG

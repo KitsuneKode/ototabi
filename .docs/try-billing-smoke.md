@@ -53,6 +53,18 @@ bun run test --filter=@ototabi/billing
 - `schedule-transcript.gates.test.ts` — `evaluateTranscriptPlanGate`
 - `plan-policy.test.ts` — rank, `resolveEffectivePlan`, `satisfiesMinimumPlan`
 
+## Smoke log checklist
+
+Use this with Dodo env configured so plan gates are not bypassed. Record date, env, host plan, room/session ID, and whether each paid feature returned an allowed or upgrade state. Full end-to-end record → upload → AI → export sign-off lives in [try-local-smoke.md](./try-local-smoke.md).
+
+- [ ] Host signs in.
+- [ ] Dodo env configured so `shouldBypassPlanGates()` is false.
+- [ ] Trial transcript gate returns first-run queue and second-run `plan_upgrade_required`.
+- [ ] Trial session cap blocks the fourth completed-session recording attempt.
+- [ ] Creator clip cap blocks the 11th monthly clip operation.
+- [ ] Pro checkout / upgrade state is visible and truthful for gated actions.
+- [ ] Export Pro text-edit gate disables cut controls below Pro and enables them on Pro.
+
 ## Sign-off
 
 - [ ] Trial: 1 lifetime transcript, 3 session cap when Dodo on

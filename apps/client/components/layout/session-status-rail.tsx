@@ -1,6 +1,6 @@
 "use client";
 
-import type { UploadDisplayStatus } from "@/components/patterns/upload-status-badge";
+import type { UploadDisplayStatus } from "@/components/patterns/upload-status-utils";
 
 import { LedInline } from "@/components/ui/led";
 import { MonoLabel } from "@/components/ui/retro-primitives";
@@ -77,7 +77,6 @@ export function SessionStatusRail({
         "border-border bg-card chassis-shadow flex flex-wrap items-center gap-4 rounded-md border px-4 py-3",
         className,
       )}
-      role="status"
       aria-label="Session status"
     >
       {items.map((item) => (
@@ -90,9 +89,9 @@ export function SessionStatusRail({
           />
           <div>
             <MonoLabel className="text-[9px]">{item.label}</MonoLabel>
-            <p className="font-mono text-[10px] font-bold tracking-widest uppercase tabular-nums">
+            <output className="font-mono text-[10px] font-bold tracking-widest uppercase tabular-nums">
               {item.detail}
-            </p>
+            </output>
           </div>
         </div>
       ))}

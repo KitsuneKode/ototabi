@@ -21,12 +21,20 @@ export function StudioChatPanel({ roomDbId, sessionUserName }: StudioChatPanelPr
   const { chatMessages, send } = useChat();
   const persistMessage = useMutation(trpc.chat.sendMessage.mutationOptions());
 
-  const persistedMessagesQuery = useQuery(
-    trpc.chat.getMessages.queryOptions({ roomId: roomDbId }, { enabled: !!roomDbId }),
-  );
+  const {
+    data: persistedMessagesQueryData,
+    isLoading: _persistedMessagesQueryIsLoading,
+    error: _persistedMessagesQueryError,
+    refetch: _persistedMessagesQueryRefetch,
+    isFetching: _persistedMessagesQueryIsFetching,
+    isPending: _persistedMessagesQueryIsPending,
+    isSuccess: _persistedMessagesQueryIsSuccess,
+    isError: _persistedMessagesQueryIsError,
+    status: _persistedMessagesQueryStatus,
+  } = useQuery(trpc.chat.getMessages.queryOptions({ roomId: roomDbId }, { enabled: !!roomDbId }));
 
   const allMessages = useMemo(() => {
-    const persisted = (persistedMessagesQuery.data ?? []).map((m) => ({
+    const persisted = (persistedMessagesQueryData ?? []).map((m) => ({
       id: m.id,
       timestamp: new Date(m.createdAt).getTime(),
       message: m.message,
@@ -44,7 +52,7 @@ export function StudioChatPanel({ roomDbId, sessionUserName }: StudioChatPanelPr
     );
 
     return [...dedupedPersisted, ...chatMessages].toSorted((a, b) => a.timestamp - b.timestamp);
-  }, [persistedMessagesQuery.data, chatMessages]);
+  }, [persistedMessagesQueryData, chatMessages]);
 
   const handleSend = async () => {
     if (!chatInput.trim()) return;
@@ -103,7 +111,11 @@ export function StudioChatPanel({ roomDbId, sessionUserName }: StudioChatPanelPr
       </div>
       <div className="border-border border-t p-3">
         <div className="flex gap-2">
+          <label htmlFor="studio-chat-message" className="sr-only">
+            Studio chat message
+          </label>
           <input
+            id="studio-chat-message"
             type="text"
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
@@ -114,6 +126,7 @@ export function StudioChatPanel({ roomDbId, sessionUserName }: StudioChatPanelPr
               }
             }}
             placeholder="Type a message..."
+            aria-label="Studio chat message"
             className="bg-popover border-border text-foreground placeholder:text-muted-foreground/40 focus:border-accent/60 flex-1 rounded border px-3 py-2 font-mono text-[11px] focus:outline-none"
           />
           <MechButton onClick={() => void handleSend()} className="h-auto px-3 py-2">

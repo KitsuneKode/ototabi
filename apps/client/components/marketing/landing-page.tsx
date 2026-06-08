@@ -125,7 +125,7 @@ function HeroDeviceMockup() {
               style={{
                 height: `${height}%`,
                 animationDelay: `${index * 80}ms`,
-                animationDuration: "1.4s",
+                animationDuration: "0.5s",
               }}
             />
           ))}

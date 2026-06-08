@@ -18,9 +18,8 @@ export async function recoverPendingUpload(
   onProgress?: (progress: UploadRecoveryProgress) => void,
 ): Promise<void> {
   const uploader = new S3Uploader(session.trackSid, session.sessionId, session.type, session);
-  await uploader.recoverExistingParts();
 
-  await resetStuckUploadingChunks(session.trackSid);
+  await Promise.all([uploader.recoverExistingParts(), resetStuckUploadingChunks(session.trackSid)]);
 
   const total = await db.chunks
     .where("trackSid")
@@ -47,8 +46,10 @@ export async function recoverPendingUpload(
     async () => (await countPendingChunks(session.trackSid)) > 0,
   );
 
-  const pending = await countPendingChunks(session.trackSid);
-  const chunkParts = await db.chunks.where("trackSid").equals(session.trackSid).toArray();
+  const [pending, chunkParts] = await Promise.all([
+    countPendingChunks(session.trackSid),
+    db.chunks.where("trackSid").equals(session.trackSid).toArray(),
+  ]);
   const maxPart = chunkParts.reduce((max, chunk) => Math.max(max, chunk.partNumber), 0);
   const expectedParts = Math.max(maxPart, uploader.getUploadedPartCount());
   if (pending > 0 || !uploader.hasAllParts(expectedParts)) {
@@ -58,6 +59,8 @@ export async function recoverPendingUpload(
   }
 
   await uploader.complete();
-  await opfsStorage.deleteTrackChunks(session.sessionId, session.trackSid);
-  await db.uploadSessions.delete(session.trackSid);
+  await Promise.all([
+    opfsStorage.deleteTrackChunks(session.sessionId, session.trackSid),
+    db.uploadSessions.delete(session.trackSid),
+  ]);
 }

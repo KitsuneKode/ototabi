@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { AnalogCard } from "@/components/ui/analog-card";
 import { MonoLabel } from "@/components/ui/retro-primitives";
 import { SHORTCUTS } from "@/lib/hooks/use-keyboard-shortcuts";
+import { X } from "@/lib/icons";
 
 interface Props {
   open: boolean;
@@ -28,17 +29,26 @@ export function KeyboardShortcutsOverlay({ open, onClose }: Props) {
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      onClick={(e) => {
-        if (e.target === dialogRef.current) onClose();
-      }}
+      onCancel={onClose}
+      aria-labelledby="keyboard-shortcuts-title"
       className="border-border text-foreground rounded-xl border-2 bg-black/80 p-0 shadow-[0_0_40px_rgba(0,0,0,0.6)] backdrop-blur-md open:flex open:flex-col"
-      role="dialog"
-      aria-label="Keyboard shortcuts"
     >
       <AnalogCard className="m-0 min-w-[320px] border-0 bg-transparent">
         <div className="border-border/40 flex items-center justify-between border-b px-6 py-4">
-          <h2 className="text-sm font-bold tracking-widest uppercase">Keyboard Shortcuts</h2>
-          <MonoLabel className="text-muted-foreground">Press ? to toggle</MonoLabel>
+          <h2 id="keyboard-shortcuts-title" className="text-sm font-bold tracking-widest uppercase">
+            Keyboard Shortcuts
+          </h2>
+          <div className="flex items-center gap-3">
+            <MonoLabel className="text-muted-foreground">Press ? to toggle</MonoLabel>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close keyboard shortcuts"
+              className="border-border bg-popover text-muted-foreground hover:text-foreground rounded border p-1.5 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <div className="space-y-1.5 p-4">

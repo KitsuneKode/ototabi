@@ -74,6 +74,9 @@ jobs:
       - name: Lint
         run: bun lint
 
+      - name: React Doctor (client score ≥ 85)
+        run: cd apps/client && bun run doctor:ci
+
       - name: Generate Prisma client
         run: bun run db:generate
 

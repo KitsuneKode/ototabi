@@ -25,7 +25,7 @@ export function PageHeader({
     >
       <div className="min-w-0">
         {label ? <MonoLabel>{label}</MonoLabel> : null}
-        <h1 className="mt-1 text-3xl leading-none font-bold tracking-tight uppercase md:text-4xl">
+        <h1 className="mt-1 text-3xl leading-none font-bold tracking-tight text-balance uppercase md:text-4xl">
           {title}
         </h1>
         {description ? (

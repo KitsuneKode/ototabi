@@ -30,7 +30,7 @@ export interface UploadSession {
  * A Dexie wrapper around our IndexedDB database.
  * This class makes database operations (put, get, update, delete) simple and type-safe.
  */
-export class ResilientRecordingDB extends Dexie {
+class ResilientRecordingDB extends Dexie {
   // Define the tables (object stores) in our database.
   // The '!' tells TypeScript that these properties will be initialized by Dexie.
   chunks!: Table<StoredChunk>;

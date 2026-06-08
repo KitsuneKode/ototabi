@@ -1,7 +1,6 @@
-"use client";
+import { requireHostSession } from "@/lib/auth/server-session";
 
-import { RequireHost } from "@/components/auth/require-host";
-
-export default function DemoEditLayout({ children }: { children: React.ReactNode }) {
-  return <RequireHost>{children}</RequireHost>;
+export default async function DemoEditLayout({ children }: { children: React.ReactNode }) {
+  await requireHostSession();
+  return children;
 }

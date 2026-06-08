@@ -1,12 +1,13 @@
-"use client";
+import type { Metadata } from "next";
 
-import { RequireAuth } from "@/components/auth/require-auth";
-import { RequireHost } from "@/components/auth/require-host";
+import { requireHostSession } from "@/lib/auth/server-session";
 
-export default function ExportSessionLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <RequireAuth>
-      <RequireHost>{children}</RequireHost>
-    </RequireAuth>
-  );
+export const metadata: Metadata = {
+  title: "Export Console | Ototabi",
+  description: "Browser export console for multi-track recording sessions.",
+};
+
+export default async function ExportSessionLayout({ children }: { children: React.ReactNode }) {
+  await requireHostSession();
+  return children;
 }

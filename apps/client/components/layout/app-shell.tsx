@@ -15,12 +15,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Film,
-  FolderOpen,
   HardDrive,
   LayoutDashboard,
   LogOut,
   Settings,
-  Sliders,
   Presentation,
 } from "@/lib/icons";
 import { cn } from "@/lib/utils";
@@ -188,41 +186,6 @@ export function AppShell({
           {children}
         </main>
       </div>
-    </div>
-  );
-}
-
-export function AppShellQuickLinks() {
-  return (
-    <div className="text-muted-foreground flex flex-wrap gap-4 font-mono text-[10px] font-bold tracking-widest uppercase">
-      <Link
-        href="/dashboard"
-        className="hover:text-accent inline-flex items-center gap-1.5 transition-colors"
-      >
-        <FolderOpen className="h-3.5 w-3.5" />
-        Rooms
-      </Link>
-      <Link
-        href="/recovery"
-        className="hover:text-accent inline-flex items-center gap-1.5 transition-colors"
-      >
-        <HardDrive className="h-3.5 w-3.5" />
-        Recovery
-      </Link>
-      <Link
-        href="/settings"
-        className="hover:text-accent inline-flex items-center gap-1.5 transition-colors"
-      >
-        <Sliders className="h-3.5 w-3.5" />
-        Settings
-      </Link>
-      <Link
-        href="/recordings"
-        className="hover:text-accent inline-flex items-center gap-1.5 transition-colors"
-      >
-        <Film className="h-3.5 w-3.5" />
-        Sessions
-      </Link>
     </div>
   );
 }

@@ -34,3 +34,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# react-doctor install artifacts (IDE/agent skill stubs)
+.agents/
+.augment/
+.claude/
+.factory/
+.junie/
+.kiro/
+.qoder/
+.windsurf/
+.zencoder/

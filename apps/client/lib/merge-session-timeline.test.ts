@@ -4,6 +4,7 @@ import {
   countDistinctSyncMarkerTracks,
   getSyncAlignmentWarnings,
   getSyncConfidenceWarning,
+  getTrackAlignmentOffsets,
 } from "./merge-session-timeline";
 
 describe("getSyncAlignmentWarnings", () => {
@@ -49,5 +50,31 @@ describe("countDistinctSyncMarkerTracks", () => {
         { id: "3", localTime: 2, createdAt: new Date(), trackSid: "B" },
       ]),
     ).toBe(2);
+  });
+});
+
+describe("getTrackAlignmentOffsets", () => {
+  test("computes offset using sync markers", () => {
+    const result = getTrackAlignmentOffsets(
+      [
+        { id: "1", localTime: 1000, createdAt: new Date(), trackSid: "track-1" },
+        { id: "2", localTime: 2000, createdAt: new Date(), trackSid: "track-1" },
+        { id: "3", localTime: 3000, createdAt: new Date(), trackSid: "track-1" },
+        { id: "4", localTime: 1250, createdAt: new Date(), trackSid: "track-2" },
+        { id: "5", localTime: 2250, createdAt: new Date(), trackSid: "track-2" },
+        { id: "6", localTime: 3250, createdAt: new Date(), trackSid: "track-2" },
+      ],
+      ["track-1", "track-2"],
+    );
+
+    expect(result.referenceTrackSid).toBe("track-1");
+    expect(result.offsets.find((o) => o.trackSid === "track-1")?.offsetMs).toBe(0);
+    expect(result.offsets.find((o) => o.trackSid === "track-2")?.offsetMs).toBe(250);
+  });
+
+  test("handles empty tracks", () => {
+    const result = getTrackAlignmentOffsets([], ["track-1", "track-2"]);
+    expect(result.offsets.every((o) => o.offsetMs === 0)).toBe(true);
+    expect(result.referenceTrackSid).toBeNull();
   });
 });

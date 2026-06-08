@@ -71,7 +71,17 @@ export default function DemoEditPage() {
     markSaved,
   } = useDemoEditorStore();
 
-  const demoQuery = useQuery({
+  const {
+    data: demoQueryData,
+    isLoading: demoQueryIsLoading,
+    error: _demoQueryError,
+    refetch: _demoQueryRefetch,
+    isFetching: _demoQueryIsFetching,
+    isPending: _demoQueryIsPending,
+    isSuccess: _demoQueryIsSuccess,
+    isError: demoQueryIsError,
+    status: _demoQueryStatus,
+  } = useQuery({
     ...trpc.demo.getSession.queryOptions({ sessionId }),
     enabled: sessionReady && Boolean(sessionId),
   });
@@ -83,33 +93,33 @@ export default function DemoEditPage() {
   );
 
   useEffect(() => {
-    if (!demoQuery.data) return;
+    if (!demoQueryData) return;
     bindSession(sessionId, {
-      zoomRegions: demoQuery.data.demo.zoomRegions,
-      trimStartMs: demoQuery.data.demo.trimStartMs,
-      trimEndMs: demoQuery.data.demo.trimEndMs,
-      playbackSpeed: demoQuery.data.demo.playbackSpeed,
-      backgroundBlur: demoQuery.data.demo.backgroundBlur,
-      pipEnabled: demoQuery.data.demo.pipEnabled,
-      background: demoQuery.data.demo.background,
+      zoomRegions: demoQueryData.demo.zoomRegions,
+      trimStartMs: demoQueryData.demo.trimStartMs,
+      trimEndMs: demoQueryData.demo.trimEndMs,
+      playbackSpeed: demoQueryData.demo.playbackSpeed,
+      backgroundBlur: demoQueryData.demo.backgroundBlur,
+      pipEnabled: demoQueryData.demo.pipEnabled,
+      background: demoQueryData.demo.background,
     });
-  }, [demoQuery.data, sessionId, bindSession]);
+  }, [demoQueryData, sessionId, bindSession]);
 
   const displayTrack = useMemo(() => {
-    const tracks = demoQuery.data?.session.tracks ?? [];
+    const tracks = demoQueryData?.session.tracks ?? [];
     return (
       tracks.find((t) => t.trackSid === DEMO_DISPLAY_TRACK_SID && t.status === "COMPLETED") ??
       tracks.find((t) => t.type === "SCREENSHARE" && t.status === "COMPLETED") ??
       null
     );
-  }, [demoQuery.data?.session.tracks]);
+  }, [demoQueryData?.session.tracks]);
 
   const hasWebcamTrack = useMemo(
     () =>
-      (demoQuery.data?.session.tracks ?? []).some(
+      (demoQueryData?.session.tracks ?? []).some(
         (t) => t.type === "CAMERA" && t.status === "COMPLETED",
       ),
-    [demoQuery.data?.session.tracks],
+    [demoQueryData?.session.tracks],
   );
 
   const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string | null>(null);
@@ -163,7 +173,7 @@ export default function DemoEditPage() {
     );
   }
 
-  if (demoQuery.isLoading) {
+  if (demoQueryIsLoading) {
     return (
       <AppShell>
         <AnalogCard className="p-8">
@@ -173,7 +183,7 @@ export default function DemoEditPage() {
     );
   }
 
-  if (demoQuery.isError || !demoQuery.data) {
+  if (demoQueryIsError || !demoQueryData) {
     return (
       <AppShell>
         <AnalogCard className="p-8">
@@ -214,7 +224,7 @@ export default function DemoEditPage() {
       <div className="space-y-6">
         <DemoEditorPreview
           videoUrl={resolvedVideoUrl}
-          cursorEvents={demoQuery.data.demo.cursorEvents}
+          cursorEvents={demoQueryData.demo.cursorEvents}
           zoomRegions={zoomRegions}
           previewTimeMs={previewTimeMs}
           background={background}
@@ -331,7 +341,7 @@ export default function DemoEditPage() {
           <MechButton
             type="button"
             onClick={() => {
-              const suggested = suggestZoomRegionsFromCursor(demoQuery.data.demo.cursorEvents);
+              const suggested = suggestZoomRegionsFromCursor(demoQueryData.demo.cursorEvents);
               if (suggested.length === 0) return;
               mergeSuggestedZoomRegions(suggested);
             }}

@@ -21,7 +21,7 @@ export function AnalogCard({
   return (
     <Tag
       className={cn(
-        "bg-card border-border chassis-shadow rounded-lg border",
+        "bg-card border-border chassis-shadow rounded-2xl border",
         interactive &&
           "transition-[transform,filter,box-shadow] duration-700 ease-[var(--ease-mechanical)] hover:scale-[1.01] hover:brightness-105 motion-safe:hover:shadow-[0_8px_24px_rgba(0,0,0,0.35)]",
         className,
@@ -44,7 +44,7 @@ interface AnalogInsetProps extends React.HTMLAttributes<HTMLDivElement> {
 export function AnalogInset({ children, className, ...props }: AnalogInsetProps) {
   return (
     <div
-      className={cn("bg-popover border-border rounded border shadow-inner", className)}
+      className={cn("bg-popover border-border rounded-xl border shadow-inner", className)}
       {...props}
     >
       {children}

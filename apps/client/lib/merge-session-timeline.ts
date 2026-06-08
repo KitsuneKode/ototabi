@@ -1,3 +1,11 @@
+import {
+  computeTrackAlignmentOffsets,
+  getSyncAlignmentWarnings as getCommonSyncAlignmentWarnings,
+  type SyncAlignmentResult,
+  type SyncAlignmentWarningInput,
+  type TrackAlignmentInput,
+} from "@ototabi/common/sync-alignment";
+
 import type { SessionTimelineEvent } from "@/components/patterns/session-timeline";
 
 type RecordingEventInput = {
@@ -14,6 +22,7 @@ type SyncMarkerInput = {
   localTime: number;
   createdAt: Date | string;
   trackSid?: string | null;
+  rtpTimestamp?: number | null;
 };
 
 export function mergeSessionTimelineEvents(
@@ -43,54 +52,48 @@ export function mergeSessionTimelineEvents(
   );
 }
 
-/** First sync marker localTime (ms) as export alignment offset. */
-export function getSyncMarkerOffsetMs(syncMarkers: SyncMarkerInput[] | undefined): number {
-  if (!syncMarkers?.length) return 0;
-  const sorted = [...syncMarkers].toSorted((a, b) => a.localTime - b.localTime);
-  return sorted[0]?.localTime ?? 0;
+/** Computes per-track alignment offsets based on sync markers */
+export function getTrackAlignmentOffsets(
+  syncMarkers: SyncMarkerInput[] | undefined,
+  completedTrackSids: string[],
+): SyncAlignmentResult {
+  const trackBySid = new Map<string, TrackAlignmentInput>(
+    completedTrackSids.map((trackSid) => [trackSid, { trackSid, markers: [] }]),
+  );
+
+  if (syncMarkers) {
+    for (const marker of syncMarkers) {
+      if (!marker.trackSid) continue;
+      const track = trackBySid.get(marker.trackSid);
+      if (track) {
+        track.markers.push(marker);
+      } else {
+        trackBySid.set(marker.trackSid, {
+          trackSid: marker.trackSid,
+          markers: [marker],
+        });
+      }
+    }
+  }
+
+  const tracks = [...trackBySid.values()];
+
+  return computeTrackAlignmentOffsets(tracks);
 }
 
-export type SyncAlignmentWarningInput = {
-  syncMarkerCount: number;
-  completedTrackCount: number;
-  distinctMarkerTrackCount?: number;
-};
+export type { SyncAlignmentWarningInput };
 
 /** Plan 03 slice: export-page alignment warnings before multi-track merge. */
 export function getSyncAlignmentWarnings(params: SyncAlignmentWarningInput): string[] {
-  if (params.completedTrackCount < 2) return [];
-
-  const warnings: string[] = [];
-
-  if (params.syncMarkerCount === 0) {
-    warnings.push(
-      "No sync markers recorded — multi-track merge/export may be out of phase. Use clock pulses in the studio before exporting.",
-    );
-    return warnings;
-  }
-
-  if (params.syncMarkerCount < 3) {
-    warnings.push(
-      "Few sync pulses recorded — alignment confidence is low. Re-export after a session with steady clock markers.",
-    );
-  }
-
-  const distinctTracks = params.distinctMarkerTrackCount ?? 0;
-  if (
-    distinctTracks > 0 &&
-    distinctTracks < params.completedTrackCount &&
-    params.completedTrackCount >= 2
-  ) {
-    warnings.push(
-      `Sync markers cover ${distinctTracks} of ${params.completedTrackCount} tracks — some sources may drift relative to the baseline.`,
-    );
-  }
-
-  return warnings;
+  return getCommonSyncAlignmentWarnings(params);
 }
 
 export function getSyncConfidenceWarning(params: SyncAlignmentWarningInput): string | null {
   return getSyncAlignmentWarnings(params)[0] ?? null;
+}
+
+export function alignmentOffsetsToMap(result: SyncAlignmentResult): Map<string, number> {
+  return new Map(result.offsets.map((offset) => [offset.trackSid, offset.offsetMs]));
 }
 
 export function countDistinctSyncMarkerTracks(syncMarkers: SyncMarkerInput[] | undefined): number {

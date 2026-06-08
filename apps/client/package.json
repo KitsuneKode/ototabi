@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "doctor": "react-doctor --verbose",
+    "doctor:ci": "node scripts/doctor-ci.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.864.0",
@@ -52,6 +54,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "react-doctor": "^0.4.2",
     "typescript": "catalog:"
   }
 }

@@ -8,6 +8,7 @@ import helmet from "helmet";
 import { timingMiddleWare } from "@/middlewares/timing-middleware";
 import dodoWebhookRouter from "@/routes/dodo-webhook";
 import guestAuthRouter from "@/routes/guest-auth";
+import healthRouter from "@/routes/health";
 import liveKitAuthRouter from "@/routes/live-kit-auth";
 import config from "@/utils/config";
 
@@ -74,6 +75,8 @@ const liveKitTokenLimiter = rateLimit({
 });
 
 app.use(timingMiddleWare);
+
+app.use(healthRouter);
 
 app.use("/api/trpc", expressMiddleWare);
 

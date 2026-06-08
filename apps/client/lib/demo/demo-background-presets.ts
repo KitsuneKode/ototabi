@@ -32,7 +32,7 @@ export function blurPresetToFfmpeg(level: BackgroundBlurPreset): string {
   return DEMO_BLUR_PRESETS.find((p) => p.level === level)?.ffmpeg ?? "";
 }
 
-export function blurPresetBackdrop(level: BackgroundBlurPreset): string | undefined {
+function blurPresetBackdrop(level: BackgroundBlurPreset): string | undefined {
   const px = DEMO_BLUR_PRESETS.find((p) => p.level === level)?.backdropPx ?? 0;
   return px > 0 ? `blur(${px}px)` : undefined;
 }

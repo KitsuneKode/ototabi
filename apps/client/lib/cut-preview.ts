@@ -28,7 +28,7 @@ export function computeKeepRanges(
   return keepRanges.filter((r) => r.end > r.start);
 }
 
-export function computeCutPreviewEnvelope(
+function computeCutPreviewEnvelope(
   cuts: CutSegmentInput[],
 ): { startTime: number; endTime: number } | null {
   if (cuts.length === 0) return null;

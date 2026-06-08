@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
+
 import { LegalDocument } from "@/components/marketing/legal-document";
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description: "Terms governing use of the Ototabi browser-based recording studio.",
+};
 
 export default function TermsPage() {
   return (

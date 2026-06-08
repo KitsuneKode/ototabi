@@ -1,7 +1,15 @@
-"use client";
+import type { Metadata } from "next";
 
-import { RequireHost } from "@/components/auth/require-host";
+import { requireHostSession } from "@/lib/auth/server-session";
 
-export default function RecordingsLayout({ children }: { children: React.ReactNode }) {
-  return <RequireHost>{children}</RequireHost>;
+import RecordingsLayoutClient from "./recordings-layout-client";
+
+export const metadata: Metadata = {
+  title: "Recordings",
+  description: "Recent sessions across your studios — open review, export, or clips.",
+};
+
+export default async function RecordingsLayout({ children }: { children: React.ReactNode }) {
+  await requireHostSession();
+  return <RecordingsLayoutClient>{children}</RecordingsLayoutClient>;
 }

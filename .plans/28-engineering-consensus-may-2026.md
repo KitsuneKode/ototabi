@@ -1,26 +1,28 @@
 # Plan 28: Engineering & Product Consensus (May 2026)
 
-**Status:** in-progress (living document)  
+**Status:** parity-v1 consensus record; superseded by Plan 31 for execution order  
 **Priority:** P0 (alignment before large PRs)  
 **Audience:** founders, implementers, agents
 
-This plan consolidates what is **shipped**, **partial**, and **blocked**, plus **architecture decisions** that need shared agreement before the next wave of work. It continues the [Creator Suite session](a0703cdf-5a64-4c43-8bd8-35f7c0ceb079) and the May 2026 doc sync on `main`.
+This plan consolidates what is **shipped**, **partial**, and **blocked**, plus **architecture decisions** that needed shared agreement for the parity-v1 milestone. It remains the parity-v1 consensus record. Current operational execution order for production hardening and architecture cleanup lives in [Plan 31](31-production-hardening-master-plan.md). Plan 30 remains a draft v1.1 scope proposal until reconciled with that hardening order.
+
+Deferred v1.1 features may continue to be planned, but they should not be built ahead of sync/export reliability and architecture cleanup.
 
 ---
 
 ## 1. Where we are (truth table)
 
-| Area               | Reality on `main`                                                     | Doc/plan gap                                                                         |
-| ------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| **Trust & upload** | Upload sessions, ownership policy, Plan 27 pool, private S3, recovery | Plan 02 edge cases; Plan 03 RTP still TBD                                            |
-| **Studio access**  | Invites, lock, admit/deny, `enterStudio`                              | Plan 13 Phase 2: preflight, health, consent UI                                       |
-| **Session review** | `sessionReview.get` bundle, export console zustand                    | —                                                                                    |
-| **AI pipeline**    | Whisper → LLM → clips; status + dedup                                 | Plan 06: regen UX, filler words, monthly clip caps                                   |
-| **Text editing**   | `TranscriptEditor` + FFmpeg cut concat on export page                 | Plan 05 marked TBD but **cuts ship in browser**; server gate + preview polish remain |
-| **Billing**        | Dodo checkout + webhook                                               | **Plan gating wired** when `DODO_PAYMENTS_API_KEY` set (see §4)                      |
-| **Export**         | Browser FFmpeg + worker presets + ZIP bundles (Plan 09 v1)            | Server FFmpeg for long sessions (Plan 13 Phase 4)                                    |
-| **Architecture**   | Most domains under `packages/trpc/src/modules/*`                      | Plan 11: rooms.router still ~200 lines; legacy `routers/` for auth/billing/user      |
-| **Deploy**         | Railway doc exists; split client/API                                  | Operator: push + migrate + smoke                                                     |
+| Area               | Reality on `main`                                                                                                     | Doc/plan gap                                                                         |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **Trust & upload** | Upload sessions, ownership policy, Plan 27 pool, private S3, recovery                                                 | Plan 02 edge cases; Plan 03 RTP still TBD                                            |
+| **Studio access**  | Invites, lock, admit/deny, `enterStudio`, preflight, consent, health, mute/remove, co-host policy                     | Smoke/staging validation pending                                                     |
+| **Session review** | `sessionReview.get` bundle, export console zustand                                                                    | —                                                                                    |
+| **AI pipeline**    | Whisper → LLM → clips; status + dedup                                                                                 | Plan 06: regen UX, filler words, monthly clip caps                                   |
+| **Text editing**   | `TranscriptEditor` + FFmpeg cut concat on export page                                                                 | Plan 05 marked TBD but **cuts ship in browser**; server gate + preview polish remain |
+| **Billing**        | Dodo checkout + webhook, plan gates, trial transcript teaser, trial session cap, Creator clip cap, export Pro UI gate | Smoke/staging validation pending when `DODO_PAYMENTS_API_KEY` set                    |
+| **Export**         | Browser FFmpeg + worker presets + ZIP bundles (Plan 09 v1)                                                            | Server FFmpeg for long sessions (Plan 13 Phase 4)                                    |
+| **Architecture**   | Most domains under `packages/trpc/src/modules/*`                                                                      | Plan 11: rooms.router still ~200 lines; legacy `routers/` for auth/billing/user      |
+| **Deploy**         | Railway doc exists; split client/API                                                                                  | Operator: push + migrate + smoke                                                     |
 
 ---
 
@@ -35,28 +37,28 @@ Order reflects **reliability → monetization → differentiation → scale**.
 3. Dodo dashboard: products, `DODO_PRODUCT_*`, webhook → `/api/dodo-webhook`
 4. Confirm plan gating in staging with a Trial test user (403 on clips regen, Pro for transcript retry)
 
-### Wave B — Studio trust (Plan 13 Phase 2 remainder) — **P0**
+### Wave B — Studio trust (Plan 13 Phase 2) — **landed in code; smoke pending**
 
-| Item                     | Why                      | Acceptance                                                      |
-| ------------------------ | ------------------------ | --------------------------------------------------------------- |
-| **Preflight route**      | Reduces failed sessions  | Mic/camera/storage/network checks before `enterStudio`          |
-| **Recording consent**    | Legal + Riverside parity | All participants see consent before local capture               |
-| **Session health panel** | Host sees risk early     | Per-participant: connection, OPFS, upload queue, devices        |
-| **Host controls**        | Production feel          | Mute request, remove guest (partially exists via join requests) |
+| Item                     | Why                      | Acceptance                                                                             |
+| ------------------------ | ------------------------ | -------------------------------------------------------------------------------------- |
+| **Preflight route**      | Reduces failed sessions  | **Landed** — mic/camera/storage/network checks before `enterStudio`; smoke pending     |
+| **Recording consent**    | Legal + Riverside parity | **Landed** — participants acknowledge before local capture; smoke pending              |
+| **Session health panel** | Host sees risk early     | **Landed** — per-participant connection, OPFS, upload queue, devices; smoke pending    |
+| **Host controls**        | Production feel          | **Landed** — mute request, remove guest, and shared recording indicator; smoke pending |
 
 **Architecture note:** Preflight and health should read from **one studio readiness module** (`apps/client/lib/studio/readiness.ts`) fed by existing upload/recorder stores — avoid duplicating device logic in page components.
 
 ### Wave C — Monetization hardening (Plan 08 follow-up) — **P1**
 
-| Item                                              | Status                                                                                       |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `requirePlan` on clips mutations                  | **Done** (Creator+)                                                                          |
-| `requirePlan` on chapters/show notes              | **Done** (Pro+)                                                                              |
-| Host plan check before Whisper queue              | **Done** (Pro+ when Dodo configured)                                                         |
-| Trial session cap (3)                             | **Not done** — needs `recordings.service` counter                                            |
-| Creator 10 clips/month                            | **Not done** — needs usage table or Redis counter                                            |
-| Client export: disable Pro-only actions for Trial | **Not done** — read `billing.getSubscription` in export console                              |
-| Text-edit (browser FFmpeg cuts)                   | **Client-only today** — gate UI on Pro; optional `exports.assertTextEdit` mutation for audit |
+| Item                                              | Status                                                                                |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `requirePlan` on clips mutations                  | **Done** (Creator+)                                                                   |
+| `requirePlan` on chapters/show notes              | **Done** (Pro+)                                                                       |
+| Host plan check before Whisper queue              | **Done** (Pro+ when Dodo configured)                                                  |
+| Trial session cap (3)                             | **Done in code** — staging smoke pending when Dodo gates are active                   |
+| Creator 10 clips/month                            | **Done in code** — staging smoke pending when Dodo gates are active                   |
+| Client export: disable Pro-only actions for Trial | **Done in code** — export Pro UI gate landed; staging smoke pending                   |
+| Text-edit (browser FFmpeg cuts)                   | **Done in code** — browser cuts remain client-side and UI-gated to Pro; smoke pending |
 
 ### Wave D — Post-production depth — **P1/P2**
 

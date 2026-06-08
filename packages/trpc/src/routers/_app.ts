@@ -4,8 +4,10 @@ import { dashboardRouter } from "../modules/dashboard/dashboard.router";
 import { demoRouter } from "../modules/demo/demo.router";
 import { exportsRouter } from "../modules/exports/exports.router";
 import { recordingEventsRouter } from "../modules/recording-events/recording-events.router";
+import { recordingsRouter } from "../modules/recordings/recordings.router";
 import { roomsRouter } from "../modules/rooms/rooms.router";
 import { sessionReviewRouter } from "../modules/session-review/session-review.router";
+import { studioAccessRouter } from "../modules/studio-access/studio-access.router";
 import { syncMarkersRouter } from "../modules/sync-markers/sync-markers.router";
 import { transcriptRouter } from "../modules/transcript/transcript.router";
 import { uploadsRouter } from "../modules/uploads/uploads.router";
@@ -22,6 +24,8 @@ export const appRouter = createTRPCRouter({
   user: userRouter,
   dashboard: dashboardRouter,
   rooms: roomsRouter,
+  studioAccess: studioAccessRouter,
+  recordings: recordingsRouter,
   uploads: uploadsRouter,
   clips: clipsRouter,
   demo: demoRouter,

@@ -1,9 +1,10 @@
 "use client";
 
 import { Button } from "@ototabi/ui/components/button";
+import { useEffect, useRef } from "react";
 
 import { AnalogCard } from "@/components/ui/analog-card";
-import { MechButton, MonoLabel, PanelTitle } from "@/components/ui/retro-primitives";
+import { MechButton, MonoLabel } from "@/components/ui/retro-primitives";
 
 type StudioRecordingConsentProps = {
   open: boolean;
@@ -18,17 +19,36 @@ export function StudioRecordingConsent({
   onDecline,
   loading = false,
 }: StudioRecordingConsentProps) {
-  if (!open) return null;
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const el = dialogRef.current;
+    if (!el) return;
+    if (open) {
+      el.showModal();
+    } else {
+      el.close();
+    }
+  }, [open]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
+      onClose={onDecline}
+      onCancel={onDecline}
       aria-labelledby="recording-consent-title"
+      className="border-0 bg-transparent p-0 backdrop:bg-black/60 open:flex open:items-center open:justify-center"
     >
       <AnalogCard className="w-full max-w-md p-6">
-        <PanelTitle label="Legal" title="Recording consent" className="mb-4" />
+        <div className="mb-4">
+          <MonoLabel>Legal</MonoLabel>
+          <h2
+            id="recording-consent-title"
+            className="font-display text-xl font-bold tracking-tight uppercase"
+          >
+            Recording consent
+          </h2>
+        </div>
         <p className="text-muted-foreground mb-6 font-mono text-xs leading-relaxed">
           This studio captures your microphone, camera, and screen feeds locally for upload to the
           host&apos;s session. By continuing, you consent to being recorded for this room.
@@ -55,6 +75,6 @@ export function StudioRecordingConsent({
           Consent is stored per participant for this room and required before local capture starts.
         </MonoLabel>
       </AnalogCard>
-    </div>
+    </dialog>
   );
 }

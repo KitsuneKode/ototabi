@@ -25,7 +25,8 @@ export const updateShowNotesSchema = z.object({
  * {
  *   session: { id, mode, status, startedAt, endedAt, room, tracks[] };
  *   events: Array<{ id, type, occurredAt, trackSid, message, user }>;
- *   syncMarkers: Array<{ id, localTime, createdAt, trackSid }>;
+ *   syncMarkers: Array<{ id, localTime, createdAt, trackSid, rtpTimestamp }>;
+ *   exportAssets: Array<{ id, kind, label, status }>;
  *   transcriptSegments: Array<{ id, sessionId, startTime, endTime, text, confidence }>;
  *   chapters: Array<{ id, sessionId, startTime, endTime, title }>;
  *   showNotes: { id, summary, keywords, seoTitles, createdAt } | null;
@@ -74,6 +75,7 @@ export type SessionReviewGetResponse = {
     localTime: number;
     createdAt: Date;
     trackSid: string | null;
+    rtpTimestamp: number | null;
   }>;
   transcriptSegments: Array<{
     id: string;
@@ -119,4 +121,10 @@ export type SessionReviewGetResponse = {
   };
   aiStatus: "pending" | "processing" | "ready" | "failed" | "skipped";
   transcriptStatus: "none" | "queued" | "ready" | "waiting_upload" | "failed" | "skipped";
+  exportAssets: Array<{
+    id: string;
+    kind: string;
+    label: string;
+    status: "pending" | "processing" | "ready" | "unavailable";
+  }>;
 };

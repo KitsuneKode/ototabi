@@ -28,6 +28,49 @@ async function scheduleTranscriptIfReady(sessionId: string) {
   }
 }
 
+async function signDownloadUrlsForKeys(
+  keys: string[],
+  userId: string,
+): Promise<Record<string, string>> {
+  const uniqueKeys = [...new Set(keys.filter(Boolean))].slice(0, 20);
+  if (uniqueKeys.length === 0) return {};
+
+  const tracks = await uploadsRepository.findAccessibleTracksByMediaRefs(uniqueKeys, userId);
+  const trackByRef = new Map<string, (typeof tracks)[number]>();
+  for (const track of tracks) {
+    if (track.s3Key) trackByRef.set(track.s3Key, track);
+    if (track.s3Url) trackByRef.set(track.s3Url, track);
+  }
+
+  const urls: Record<string, string> = {};
+  await Promise.all(
+    uniqueKeys.map(async (key) => {
+      const track = trackByRef.get(key);
+      if (!track) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Track not found for key: ${key}`,
+        });
+      }
+      const objectKey = parseS3KeyFromReference(key);
+      if (!isS3Configured) {
+        urls[key] = `/mock-uploads/${objectKey}`;
+        return;
+      }
+      const url = await getSignedGetUrl(objectKey);
+      if (!url) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Could not generate download URL",
+        });
+      }
+      urls[key] = url;
+    }),
+  );
+
+  return urls;
+}
+
 const s3Client = getS3Client();
 
 if (!isS3Configured) {
@@ -232,26 +275,17 @@ export const uploadsService = {
   },
 
   async getSignedDownloadUrl(params: { key: string; userId: string }) {
-    const track = await uploadsRepository.findTrackByS3Key(params.key);
-    if (!track) {
+    const urls = await signDownloadUrlsForKeys([params.key], params.userId);
+    const url = urls[params.key];
+    if (!url) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Track not found" });
     }
-    const canAccess = await uploadsRepository.canUserAccessTrack(track.id, params.userId);
-    if (!canAccess) {
-      throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized to access this track" });
-    }
-    const objectKey = parseS3KeyFromReference(params.key);
-    if (!isS3Configured) {
-      return { url: `/mock-uploads/${objectKey}` };
-    }
-    const url = await getSignedGetUrl(objectKey);
-    if (!url) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Could not generate download URL",
-      });
-    }
     return { url };
+  },
+
+  async getSignedDownloadUrls(params: { keys: string[]; userId: string }) {
+    const urls = await signDownloadUrlsForKeys(params.keys, params.userId);
+    return { urls };
   },
 
   async retryUpload(params: { trackId: string; userId: string }) {
