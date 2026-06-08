@@ -25,6 +25,13 @@ export const sessionReviewRouter = {
     }),
   ),
 
+  getStatus: hostProcedure.input(getSessionReviewSchema).query(({ input, ctx }) =>
+    sessionReviewService.getSessionStatus({
+      actorId: ctx.session.user.id,
+      sessionId: input.sessionId,
+    }),
+  ),
+
   retryTranscript: hostProProcedure.input(retryTranscriptSchema).mutation(({ input, ctx }) =>
     sessionReviewService.retryTranscript({
       actorId: ctx.session.user.id,

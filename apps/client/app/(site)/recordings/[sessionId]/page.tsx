@@ -58,6 +58,7 @@ export default function RecordingSessionPage() {
     transcriptStatus,
     pipeline,
     exports,
+    exportAssets,
     timelineEvents,
     allUploaded,
     aggregateUploadStatus,
@@ -375,7 +376,7 @@ export default function RecordingSessionPage() {
 
         <div className="space-y-4">
           <PanelTitle label="Distribution" title="Export bundle" />
-          <ExportBundlePicker sessionId={sessionId} />
+          <ExportBundlePicker sessionId={sessionId} assets={exportAssets} />
         </div>
 
         {exports ? (

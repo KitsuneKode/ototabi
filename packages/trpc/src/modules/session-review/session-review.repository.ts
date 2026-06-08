@@ -94,29 +94,54 @@ export const sessionReviewRepository = {
   },
 
   async getSessionExportFields(sessionId: string) {
+    const fields = await this.getSessionStatusFields(sessionId);
+    if (!fields) return null;
+    return {
+      episodeMp3Status: fields.episodeMp3Status,
+      episodeMp3S3Key: fields.episodeMp3S3Key,
+      episodeMp3Error: fields.episodeMp3Error,
+      landscapeStatus: fields.landscapeStatus,
+      landscapeS3Key: fields.landscapeS3Key,
+      landscapeError: fields.landscapeError,
+    };
+  },
+
+  async getSessionPipelineFields(sessionId: string) {
+    const fields = await this.getSessionStatusFields(sessionId);
+    if (!fields) return null;
+    return {
+      transcriptStatus: fields.transcriptStatus,
+      transcriptError: fields.transcriptError,
+      llmStatus: fields.llmStatus,
+      llmError: fields.llmError,
+      clipsStatus: fields.clipsStatus,
+      clipsError: fields.clipsError,
+    };
+  },
+
+  async getSessionStatusFields(sessionId: string) {
     return prisma.recordingSession.findUnique({
       where: { id: sessionId },
       select: {
+        status: true,
         episodeMp3Status: true,
         episodeMp3S3Key: true,
         episodeMp3Error: true,
         landscapeStatus: true,
         landscapeS3Key: true,
         landscapeError: true,
-      },
-    });
-  },
-
-  async getSessionPipelineFields(sessionId: string) {
-    return prisma.recordingSession.findUnique({
-      where: { id: sessionId },
-      select: {
         transcriptStatus: true,
         transcriptError: true,
         llmStatus: true,
         llmError: true,
         clipsStatus: true,
         clipsError: true,
+        clipCandidates: {
+          select: {
+            id: true,
+            renderStatus: true,
+          },
+        },
       },
     });
   },

@@ -120,6 +120,27 @@ export const uploadsRepository = {
     });
   },
 
+  async findAccessibleTracksByMediaRefs(keys: string[], userId: string) {
+    const uniqueKeys = [...new Set(keys.filter(Boolean))];
+    if (uniqueKeys.length === 0) return [];
+
+    return prisma.recordingTrack.findMany({
+      where: {
+        OR: uniqueKeys.flatMap((key) => [{ s3Key: key }, { s3Url: key }]),
+        session: {
+          room: {
+            OR: [
+              { creatorId: userId },
+              { members: { some: { userId } } },
+              { participants: { some: { userId } } },
+            ],
+          },
+        },
+      },
+      select: { id: true, s3Key: true, s3Url: true },
+    });
+  },
+
   async resetTrackStatus(trackId: string) {
     return prisma.recordingTrack.update({
       where: { id: trackId },

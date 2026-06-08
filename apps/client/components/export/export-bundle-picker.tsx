@@ -9,8 +9,17 @@ import { MechButton, MonoLabel, StatusBadge } from "@/components/ui/retro-primit
 import { Download, FolderOpen } from "@/lib/icons";
 import { useTRPC } from "@/trpc/client";
 
+export type ExportBundleAsset = {
+  id: string;
+  kind: string;
+  label: string;
+  status: "pending" | "processing" | "ready" | "unavailable";
+  error?: string | null;
+};
+
 type ExportBundlePickerProps = {
   sessionId: string;
+  assets?: ExportBundleAsset[];
 };
 
 const PRESET_ALL_TRACKS = "all-tracks";
@@ -23,7 +32,7 @@ function statusVariant(status: string): "ok" | "warn" | "recording" | "default" 
   return "default";
 }
 
-export function ExportBundlePicker({ sessionId }: ExportBundlePickerProps) {
+export function ExportBundlePicker({ sessionId, assets: assetsProp }: ExportBundlePickerProps) {
   const trpc = useTRPC();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [errorMessage, setErrorMessage] = useState("");
@@ -38,11 +47,12 @@ export function ExportBundlePicker({ sessionId }: ExportBundlePickerProps) {
     isSuccess: _assetsQueryIsSuccess,
     isError: _assetsQueryIsError,
     status: _assetsQueryStatus,
-  } = useQuery(
-    trpc.exports.listExportableAssets.queryOptions({ sessionId }, { staleTime: 30_000 }),
-  );
+  } = useQuery({
+    ...trpc.exports.listExportableAssets.queryOptions({ sessionId }, { staleTime: 30_000 }),
+    enabled: !assetsProp,
+  });
 
-  const assetList = assetsQueryData?.assets;
+  const assetList = assetsProp ?? assetsQueryData?.assets;
 
   const readyIds = useMemo(
     () => new Set((assetList ?? []).filter((a) => a.status === "ready").map((a) => a.id)),
@@ -110,7 +120,7 @@ export function ExportBundlePicker({ sessionId }: ExportBundlePickerProps) {
     createBundle.mutate({ sessionId, assetIds: selectedReady, asZip });
   };
 
-  if (assetsQueryIsLoading) {
+  if (!assetsProp && assetsQueryIsLoading) {
     return (
       <MonoLabel className="text-muted-foreground text-[10px]">Loading export assets…</MonoLabel>
     );
