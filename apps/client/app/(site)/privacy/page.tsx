@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
+
 import { LegalDocument } from "@/components/marketing/legal-document";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description: "How Ototabi handles account data, recordings, and self-hosted deployments.",
+};
 
 export default function PrivacyPage() {
   return (
