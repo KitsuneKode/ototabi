@@ -9,17 +9,7 @@ import { useAuthGate } from "@/lib/hooks/use-session";
  * this avoids flashing sign-in UI while session state hydrates.
  */
 export function RedirectIfAuthenticated({ children }: { children: ReactNode }) {
-  const { user, isBooting } = useAuthGate();
-
-  if (user) {
-    return (
-      <div className="bg-background flex min-h-[100dvh] items-center justify-center font-sans">
-        <p className="animate-pulse font-mono text-xs font-bold tracking-widest uppercase">
-          Opening dashboard...
-        </p>
-      </div>
-    );
-  }
+  const { isBooting } = useAuthGate();
 
   if (isBooting) {
     return (

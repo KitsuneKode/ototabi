@@ -1,3 +1,5 @@
+import type { Archiver } from "archiver";
+
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import {
   getS3Client,
@@ -8,9 +10,9 @@ import {
   uploadObjectFromFile,
 } from "@ototabi/backend-common/s3-media";
 import { TRPCError } from "@trpc/server";
-import archiver from "archiver";
 import { createWriteStream } from "node:fs";
 import { mkdir, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { finished } from "node:stream/promises";
@@ -20,6 +22,11 @@ import type { CreateExportBundleResult, ExportableAssetDto } from "./exports.dto
 import { buildTranscriptJson, mapExportableAssets } from "./exports.mapper";
 import { exportsPolicy } from "./exports.policy";
 import { exportsRepository } from "./exports.repository";
+
+const require = createRequire(import.meta.url);
+const { ZipArchive } = require("archiver") as {
+  ZipArchive: new (options?: { zlib?: { level?: number } }) => Archiver;
+};
 
 const s3Client = getS3Client();
 
@@ -93,7 +100,7 @@ async function buildZipArchive(
 ): Promise<void> {
   await mkdir(join(outPath, ".."), { recursive: true });
   const output = createWriteStream(outPath);
-  const archive = archiver("zip", { zlib: { level: 6 } });
+  const archive = new ZipArchive({ zlib: { level: 6 } });
   archive.pipe(output);
   for (const entry of entries) {
     archive.append(entry.body, { name: entry.filename });
