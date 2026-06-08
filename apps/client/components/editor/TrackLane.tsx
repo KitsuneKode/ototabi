@@ -78,6 +78,7 @@ export function TrackLane({
   const trimInPct = secToPercent(trimRange.trimInSec, duration);
   const trimOutPct = secToPercent(trimRange.trimOutSec, duration);
   const playheadPct = secToPercent(playheadSec, duration);
+  const clampedPlayhead = Math.min(Math.max(playheadSec, 0), duration);
 
   return (
     <AnalogInset
@@ -92,19 +93,33 @@ export function TrackLane({
       </div>
       <div
         ref={railRef}
+        role="slider"
+        aria-label={`${track.label} timeline position`}
+        aria-valuemin={0}
+        aria-valuemax={duration}
+        aria-valuenow={clampedPlayhead}
         className="bg-popover relative h-10 cursor-pointer overflow-hidden rounded border"
         onClick={(e) => {
           e.stopPropagation();
           seekFromClientX(e.clientX);
         }}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
+          const step = e.shiftKey ? 5 : 1;
+          if (e.key === "ArrowLeft") {
             e.preventDefault();
+            e.stopPropagation();
+            onSeek(Math.max(0, clampedPlayhead - step));
+          } else if (e.key === "ArrowRight") {
+            e.preventDefault();
+            e.stopPropagation();
+            onSeek(Math.min(duration, clampedPlayhead + step));
+          } else if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
             onSelect();
           }
         }}
         tabIndex={0}
-        aria-label={`${track.label} timeline lane`}
       >
         <div
           className="bg-muted/40 absolute top-0 left-0 h-full rounded-sm"

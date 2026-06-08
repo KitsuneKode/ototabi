@@ -113,9 +113,13 @@ export function OtotabiLogoLockup({
     );
   }
 
-  return (
-    <div className={rootClass} onClick={onClick} onKeyDown={undefined}>
-      {body}
-    </div>
-  );
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={rootClass}>
+        {body}
+      </button>
+    );
+  }
+
+  return <div className={rootClass}>{body}</div>;
 }

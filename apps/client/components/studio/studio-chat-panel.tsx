@@ -111,7 +111,11 @@ export function StudioChatPanel({ roomDbId, sessionUserName }: StudioChatPanelPr
       </div>
       <div className="border-border border-t p-3">
         <div className="flex gap-2">
+          <label htmlFor="studio-chat-message" className="sr-only">
+            Studio chat message
+          </label>
           <input
+            id="studio-chat-message"
             type="text"
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
@@ -122,6 +126,7 @@ export function StudioChatPanel({ roomDbId, sessionUserName }: StudioChatPanelPr
               }
             }}
             placeholder="Type a message..."
+            aria-label="Studio chat message"
             className="bg-popover border-border text-foreground placeholder:text-muted-foreground/40 focus:border-accent/60 flex-1 rounded border px-3 py-2 font-mono text-[11px] focus:outline-none"
           />
           <MechButton onClick={() => void handleSend()} className="h-auto px-3 py-2">
